@@ -3,7 +3,7 @@ panic = 'unwind'
 
 [workspace]
 members = [
-	"runtime",
+	"example/runtime",
 	"zenlink-protocol",
 	"zenlink-protocol/rpc/",
 ]
