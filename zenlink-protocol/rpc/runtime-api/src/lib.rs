@@ -21,9 +21,18 @@ sp_api::decl_runtime_apis! {
 		fn get_owner_pairs(owner: AccountId) -> Vec<PairInfo<AccountId, TokenBalance>>;
 
 		//buy amount token price
-		fn get_amount_in_price(path: Vec<AssetId>) -> TokenBalance;
+		fn get_amount_in_price(supply: TokenBalance, path: Vec<AssetId>) -> TokenBalance;
 
 		//sell amount token price
-		fn get_amount_out_price(path: Vec<AssetId>) -> TokenBalance;
+		fn get_amount_out_price(supply: TokenBalance, path: Vec<AssetId>) -> TokenBalance;
+
+		fn get_estimate_lptoken(
+			token_0: AssetId,
+			token_1: AssetId,
+			amount_0_desired: TokenBalance,
+			amount_1_desired: TokenBalance,
+			amount_0_min: TokenBalance,
+			amount_1_min: TokenBalance,
+		) -> TokenBalance;
 	 }
 }

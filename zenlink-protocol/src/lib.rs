@@ -2,51 +2,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(or_patterns)]
 
-pub use cumulus_primitives::{
-    relay_chain::Balance as RelayChainBalance, DownwardMessageHandler,
-    HrmpMessageHandler, HrmpMessageSender, InboundDownwardMessage,
-    InboundHrmpMessage, OutboundHrmpMessage, ParaId,
-    UpwardMessage, UpwardMessageSender
-};
-use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
-    ensure,
-    traits::{Currency, Get},
-};
-use frame_system::ensure_signed;
-use sp_runtime::{
-    traits::{Convert, StaticLookup},
-    ModuleId,
-};
-use sp_std::prelude::*;
-pub use xcm::{
-    v0::{
-        Error as XcmError, ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order,
-        Result as XcmResult, SendXcm, Xcm,
-    },
-    VersionedXcm,
-};
-pub use xcm_builder::{
-    AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative,
-    SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-    SovereignSignedViaLocation,
-};
-pub use xcm_executor::{
-    traits::{FilterAssetLocation, LocationConversion, TransactAsset},
-    Config as XcmCfg, XcmExecutor,
-};
-pub use polkadot_parachain::primitives::Sibling;
-pub use crate::{
-    primitives::{
-        AssetId, MultiAsset as ZenlinkMultiAsset, PairId, TokenBalance
-    },
-    rpc::PairInfo,
-    swap::Pair,
-    xcm_support::{ Transactor, ParaChainWhiteList },
-    xtransfer::Origin,
-};
-
 mod assets;
 mod primitives;
 mod rpc;
@@ -54,22 +9,65 @@ mod swap;
 mod xcm_support;
 mod xtransfer;
 
-pub trait Config: frame_system::Config {
-    /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-    /// This chain native currency.
-    type NativeCurrency: Currency<Self::AccountId>;
-    /// Something to execute an XCM message.
-    type XcmExecutor: ExecuteXcm;
-    /// Something to send an upward message.
-    type UpwardMessageSender: UpwardMessageSender;
-    /// Something to send an HRMP message.
-    type HrmpMessageSender: HrmpMessageSender;
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage,
+	dispatch::DispatchResult,
+	ensure,
+	traits::{Currency, Get},
+};
+use frame_system::ensure_signed;
+use sp_runtime::{
+	traits::{Convert, StaticLookup},
+	ModuleId,
+};
+use sp_std::prelude::Vec;
 
-    type ModuleId: Get<ModuleId>;
-    type AccountIdConverter: LocationConversion<Self::AccountId>;
-    type AccountId32Converter: Convert<Self::AccountId, [u8; 32]>;
-    type ParaId: Get<ParaId>;
+pub use crate::{
+	primitives::{AssetId, MultiAsset as ZenlinkMultiAsset, PairId, TokenBalance},
+	rpc::PairInfo,
+	swap::Pair,
+	xcm_support::{ParaChainWhiteList, Transactor},
+	xtransfer::Origin,
+};
+pub use cumulus_primitives::{
+	relay_chain::Balance as RelayChainBalance, DownwardMessageHandler, HrmpMessageHandler,
+	HrmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, OutboundHrmpMessage, ParaId,
+	UpwardMessage, UpwardMessageSender,
+};
+pub use polkadot_parachain::primitives::Sibling;
+pub use xcm::{
+	v0::{
+		Error as XcmError, ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order,
+		Result as XcmResult, SendXcm, Xcm,
+	},
+	VersionedXcm,
+};
+pub use xcm_builder::{
+	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SovereignSignedViaLocation,
+};
+pub use xcm_executor::{
+	traits::{FilterAssetLocation, LocationConversion, TransactAsset},
+	Config as XcmCfg, XcmExecutor,
+};
+
+pub trait Config: frame_system::Config {
+	/// The overarching event type.
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
+	/// This chain native currency.
+	type NativeCurrency: Currency<Self::AccountId>;
+	/// Something to execute an XCM message.
+	type XcmExecutor: ExecuteXcm;
+	/// Something to send an upward message.
+	type UpwardMessageSender: UpwardMessageSender;
+	/// Something to send an HRMP message.
+	type HrmpMessageSender: HrmpMessageSender;
+
+	type ModuleId: Get<ModuleId>;
+	type AccountIdConverter: LocationConversion<Self::AccountId>;
+	type AccountId32Converter: Convert<Self::AccountId, [u8; 32]>;
+	type ParaId: Get<ParaId>;
 }
 
 decl_storage! {
@@ -124,7 +122,7 @@ decl_event! {
 		/// An HRMP message was sent to a sibling parachainchain.
 		HrmpMessageSent(Hash),
 
-        /// Create a trading pair
+		/// Create a trading pair
 		PairCreated(AccountId, AssetId, AssetId),
 		/// Add liquidity
 		LiquidityAdded(AccountId, AssetId, AssetId),
@@ -151,29 +149,29 @@ decl_error! {
 		/// Transfer to self by XCM message
 		DeniedTransferToSelf,
 
-        /// Trading pair can't be created.
+		/// Trading pair can't be created.
 		DeniedCreatePair,
 		/// Trading pair already exists.
 		PairAlreadyExists,
-        /// Trading pair does not exist.
+		/// Trading pair does not exist.
 		PairNotExists,
 		/// Swap in local parachain by XCM message
 		DeniedSwapInLocal,
 		/// Liquidity is not enough.
 		InsufficientLiquidity,
-        /// Trading pair does have enough asset.
+		/// Trading pair does have enough asset.
 		InsufficientPairReserve,
 		/// Get target amount is less than exception.
 		InsufficientTargetAmount,
 		/// Sold amount is more than exception.
 		ExcessiveSoldAmount,
-        /// Can't find pair though trading path.
+		/// Can't find pair though trading path.
 		InvalidPath,
-        /// Ensure correct parameter in cross chain add liquidity.
+		/// Ensure correct parameter in cross chain add liquidity.
 		DeniedAddLiquidityToParachain,
 		/// Incorrect asset amount range.
 		IncorrectAssetAmountRange,
-        /// Overflow.
+		/// Overflow.
 		Overflow,
 		/// Transaction block number is larger than the end block number.
 		Deadline,
@@ -225,7 +223,7 @@ decl_module! {
 			account: T::AccountId,
 			amount: TokenBalance
 		) -> DispatchResult {
-		    ensure!(para_id != T::ParaId::get(), Error::<T>::DeniedTransferToSelf);
+			ensure!(para_id != T::ParaId::get(), Error::<T>::DeniedTransferToSelf);
 			let who = ensure_signed(origin)?;
 			let xcm = Self::make_xcm_transfer_to_parachain(&asset_id, para_id, &account, amount);
 
@@ -234,8 +232,8 @@ decl_module! {
 
 			T::XcmExecutor::execute_xcm(xcm_origin, xcm)
 				.map_err(|err| {
-				    frame_support::debug::print!("zenlink::<transfer_to_parachain>: err = {:?}", err);
-				    Error::<T>::ExecutionFailed
+					frame_support::debug::print!("zenlink::<transfer_to_parachain>: err = {:?}", err);
+					Error::<T>::ExecutionFailed
 				})?;
 
 			Self::deposit_event(
@@ -251,7 +249,7 @@ decl_module! {
 			token_0: AssetId,
 			token_1: AssetId,
 		 ) -> DispatchResult {
-		 	let _who = ensure_signed(origin)?;
+			 let _who = ensure_signed(origin)?;
 			Self::inner_create_pair(&token_0, &token_1)?;
 			Ok(())
 		}
@@ -272,10 +270,10 @@ decl_module! {
 			let now = frame_system::Module::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 			let who = ensure_signed(origin)?;
-            if target_parachain == T::ParaId::get(){
-			    Self::inner_add_liquidity_local(&who, &token_0, &token_1, amount_0_desired, amount_1_desired, amount_0_min, amount_1_min)?;
+			if target_parachain == T::ParaId::get(){
+				Self::inner_add_liquidity_local(&who, &token_0, &token_1, amount_0_desired, amount_1_desired, amount_0_min, amount_1_min)?;
 			}else{
-			    Self::inner_add_liquidity_foreign(&who, &token_0, &token_1, amount_0_desired, amount_1_desired, target_parachain)?;
+				Self::inner_add_liquidity_foreign(&who, &token_0, &token_1, amount_0_desired, amount_1_desired, target_parachain)?;
 			}
 			Self::deposit_event(RawEvent::LiquidityAdded(who, token_0, token_1));
 			Ok(())
@@ -321,7 +319,7 @@ decl_module! {
 			if target_parachain == T::ParaId::get(){
 				Self::inner_swap_exact_tokens_for_tokens_local(&who, amount_in, amount_out_min, &path, &to)?;
 			}else{
-                Self::inner_swap_exact_tokens_for_tokens_foreign(&who, amount_in, amount_out_min, &path, target_parachain)?;
+				Self::inner_swap_exact_tokens_for_tokens_foreign(&who, amount_in, amount_out_min, &path, target_parachain)?;
 			}
 			Self::deposit_event(RawEvent::TokenSwap(who, to, path));
 			Ok(())
@@ -343,9 +341,9 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
 			if target_parachain == T::ParaId::get(){
-			    Self::inner_swap_tokens_for_exact_tokens_local(&who, amount_out, amount_in_max, &path, &to)?;
+				Self::inner_swap_tokens_for_exact_tokens_local(&who, amount_out, amount_in_max, &path, &to)?;
 			}else{
-			    Self::inner_swap_tokens_for_exact_tokens_foreign(&who, amount_out, amount_in_max, &path, target_parachain)?;
+				Self::inner_swap_tokens_for_exact_tokens_foreign(&who, amount_out, amount_in_max, &path, target_parachain)?;
 			}
 			Self::deposit_event(RawEvent::TokenSwap(who, to, path));
 			Ok(())
