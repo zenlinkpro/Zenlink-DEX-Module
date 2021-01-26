@@ -1,5 +1,16 @@
 # Integration
 
+##  Supported dependencies
+
+It should at least work until the following commits
+
+-   rustc 1.49.0-nightly (beb5ae474 2020-10-04)
+-   polkadot.js.org (apps v0.76.2-29)
+-   Polkadot rococo-v1 @ `bb0ed79311b89049088bc6d8e8aefba6ea09a95f`
+-   Cumulus rococo-v1 @ `89762272e30f7479c15b374ca3402cfbf93343c0`
+-   Substrate rococo-v1 (newer than 2.0.0) @ `4b687dfb4def2b5eee9f5a20629e3fc3563587ee`
+
+
 ## Precondition
 * Open Native Currency asset control to Zenlink Dex Module. BThe ZenLink DEX Module can call both the Withdraw and Deposit methods.
 * Parachain’s MessageBroker routes XCM messages to the Zenlink Dex Module.
@@ -276,6 +287,14 @@ Transaction type
   "Keys": "(AccountId,AccountId,AccountId,AccountId,AccountId,AccountId)",
   "AccountInfo": "AccountInfoWithRefCount",
   "PairId": "u32",
+  "PerDispatchClass": {
+    "normal": "u32",
+    "operational": "u32",
+    "mandatory": "u32"
+  },
+  "BlockLength": {
+    "max": "PerDispatchClass"
+  },
   "Pair": {
     "token_0": "AssetId",
     "token_1": "AssetId",
@@ -666,7 +685,7 @@ Transaction type
     "validation_data": "ValidationData",
     "relay_chain_state": "StorageProof"
   }
-
+}
 ```
 
 Switch to 'Settings' -> 'Developer', input the above json, then save.
