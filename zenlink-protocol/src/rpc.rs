@@ -1,9 +1,10 @@
 #![allow(clippy::type_complexity)]
 
-use super::*;
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+
+use super::*;
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

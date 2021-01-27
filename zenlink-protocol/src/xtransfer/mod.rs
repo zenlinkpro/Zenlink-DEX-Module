@@ -40,8 +40,7 @@ impl<T: Config> Module<T> {
 	// Return Zenlink Protocol Pallet index
 	fn index() -> u8 {
 		T::PalletInfo::index::<Self>()
-			.map(|index| index as u8)
-			.unwrap_or_default()
+			.map_or(0u8, |index| index as u8)
 	}
 
 	// Make the deposit asset order

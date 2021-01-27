@@ -236,7 +236,7 @@ where
 			.map(|price| price.into())
 			.map_err(runtime_error_into_rpc_err)?)
 	}
-	
+
 	fn get_estimate_lptoken(
 		&self,
 		token_0: AssetId,

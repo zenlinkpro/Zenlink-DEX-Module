@@ -22,15 +22,15 @@
 use dev_parachain_primitives::*;
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
-use sp_std::{
-	vec,
-	prelude::{ Vec, Box }
-};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{BlakeTwo256, Block as BlockT, Convert, IdentityLookup},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, ModuleId, Perbill
+	ApplyExtrinsicResult, ModuleId, Perbill,
+};
+use sp_std::{
+	prelude::{Box, Vec},
+	vec,
 };
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -43,19 +43,13 @@ use frame_support::{
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
-	}
+	},
 };
-use frame_system::limits::{
-	BlockLength, BlockWeights
-};
-use pallet_transaction_payment_rpc_runtime_api::{
-	FeeDetails, RuntimeDispatchInfo
-};
+use frame_system::limits::{BlockLength, BlockWeights};
+use pallet_transaction_payment_rpc_runtime_api::{FeeDetails, RuntimeDispatchInfo};
 
 mod zenlink;
-use zenlink_protocol::{
-	PairInfo, TokenBalance, AssetId
-};
+use zenlink_protocol::{AssetId, PairInfo, TokenBalance};
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -111,7 +105,7 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 
 parameter_types! {
- 	pub const SS58Prefix: u8 = 42;
+	 pub const SS58Prefix: u8 = 42;
 	pub const BlockHashCount: BlockNumber = 250;
 	pub const Version: RuntimeVersion = VERSION;
 	pub RuntimeBlockLength: BlockLength =
@@ -217,13 +211,10 @@ impl pallet_sudo::Config for Runtime {
 	type Event = Event;
 }
 
-impl cumulus_parachain_upgrade::Config for Runtime {
+impl cumulus_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
 	type SelfParaId = ParachainInfo;
-}
-
-impl cumulus_message_broker::Config for Runtime {
 	type DownwardMessageHandlers = ZenlinkProtocol;
 	type HrmpMessageHandlers = ZenlinkProtocol;
 }
@@ -241,8 +232,7 @@ construct_runtime! {
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Sudo: pallet_sudo::{Module, Call, Storage, Config<T>, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-		ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
-		MessageBroker: cumulus_message_broker::{Module, Storage, Call, Inherent},
+		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		ParachainInfo: parachain_info::{Module, Storage, Config},
 		ZenlinkProtocol: zenlink_protocol::{Module, Origin, Call, Storage, Event<T>},
@@ -377,16 +367,35 @@ impl_runtime_apis! {
 
 		//buy amount token price
 		fn get_amount_in_price(
+			supply: TokenBalance,
 			path: Vec<AssetId>
 		) -> TokenBalance {
-			ZenlinkProtocol::get_in_price(path)
+			ZenlinkProtocol::get_in_price(supply, path)
 		}
 
 		//sell amount token price
 		fn get_amount_out_price(
+			supply: TokenBalance,
 			path: Vec<AssetId>
 		) -> TokenBalance {
-			ZenlinkProtocol::get_out_price(path)
+			ZenlinkProtocol::get_out_price(supply, path)
+		}
+
+		fn get_estimate_lptoken(
+			token_0: AssetId,
+			token_1: AssetId,
+			amount_0_desired: TokenBalance,
+			amount_1_desired: TokenBalance,
+			amount_0_min: TokenBalance,
+			amount_1_min: TokenBalance,
+		) -> TokenBalance{
+			ZenlinkProtocol::get_estimate_lptoken(
+				token_0,
+				token_1,
+				amount_0_desired,
+				amount_1_desired,
+				amount_0_min,
+				amount_1_min)
 		}
 	}
 
