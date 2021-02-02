@@ -105,22 +105,12 @@ impl<
             MultiLocation::X2(
                 Junction::PalletInstance { .. },
                 Junction::GeneralIndex { id }) => {
-                sp_std::if_std! { println!("zenlink::<deposit> amount = {:?}", amount); }
-                let asset_id = AssetId::from(*id);
-                let para_id: u32 = ParaChainId::get().into();
-                if para_id as u128 == *id {
-                    sp_std::if_std! { println!("zenlink::<deposit> para_id = {:?}, id = {:?}", para_id, id); }
-                    return Err(XcmError::Unimplemented);
-                }
-                //  asset_id must be ParaCurrency
-                ZenlinkAssets::deposit(asset_id, &who, amount as TokenBalance)
-                    .map_err(|err| {
-                        sp_std::if_std! { println!("zenlink::<deposit> err = {:?}", err); }
-                        XcmError::Undefined
-                    })?;
-                sp_std::if_std! { println!("zenlink::<deposit> success"); }
-                Ok(())
-            }
+				deposit_para_currency::<
+					AccountId,
+					ParaChainId,
+					ZenlinkAssets
+				>(who, amount, id)
+			}
             // Deposit native Currency
             // length == 2
             MultiLocation::X2(
@@ -135,23 +125,12 @@ impl<
                 Junction::PalletInstance { .. },
                 Junction::GeneralIndex { .. })
             => {
-                let para_id: u32 = ParaChainId::get().into();
-                sp_std::if_std! { println!("zenlink::<deposit> amount = {:?}, para_id = {:?}", amount, para_id); }
-
-                if (length == 2 && *id == para_id)
-                    || (length == 4 && *id != para_id) {
-                    let value = <<NativeCurrency as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(amount)
-                        .map_err(|_| {
-                            sp_std::if_std! { println!("zenlink::<deposit> amount convert to Balance failed"); }
-                        })?;
-                    let _ = NativeCurrency::deposit_creating(&who, value);
-                    sp_std::if_std! { println!("zenlink::<deposit> success"); }
-                    Ok(())
-                } else {
-                    sp_std::if_std! { println!("zenlink::<deposit> discard"); }
-                    Err(XcmError::UnhandledXcmMessage)
-                }
-            }
+				deposit_native_currency::<
+					AccountId,
+					ParaChainId,
+					NativeCurrency
+				>(who, amount, length, id)
+			}
             _ => {
                 sp_std::if_std! { println!("zenlink::<deposit> Undefined id = {:?}", id); }
                 Err(XcmError::Undefined)
@@ -167,21 +146,12 @@ impl<
                 Junction::PalletInstance { .. },
                 Junction::GeneralIndex { id },
             ) => {
-                sp_std::if_std! { println!("zenlink::<withdraw> amount = {:?}", amount); }
-                let asset_id = AssetId::from(*id);
-                let para_id: u32 = ParaChainId::get().into();
-                if para_id as u128 == *id {
-                    sp_std::if_std! { println!("zenlink::<withdraw> para_id = {:?}, id = {:?}", para_id, id); }
-                    return Err(XcmError::Unimplemented);
-                }
-                // asset_id must be ParaCurrency
-                ZenlinkAssets::withdraw(asset_id, &who, amount as TokenBalance).map_err(|err| {
-                    sp_std::if_std! { println!("zenlink::<withdraw> err = {:?}", err); }
-                    XcmError::Undefined
-                })?;
-                sp_std::if_std! { println!("zenlink::<withdraw> success"); }
-                Ok(())
-            }
+				withdraw_para_currency::<
+					AccountId,
+					ParaChainId,
+					ZenlinkAssets
+				>(who, amount, id)
+			},
             // Withdraw native Currency
             // length == 2
             MultiLocation::X2(
@@ -197,29 +167,12 @@ impl<
                 Junction::PalletInstance { .. },
                 Junction::GeneralIndex { .. },
             ) => {
-                let para_id: u32 = ParaChainId::get().into();
-                sp_std::if_std! { println!("zenlink::<withdraw> amount = {:?}, para_id = {:?}", amount, para_id); }
-
-                if (length == 2 && *id == para_id)
-                    || (length == 4 && *id != para_id) {
-                    let value = <<NativeCurrency as Currency<AccountId>>::Balance as TryFrom<u128, >>::try_from(amount)
-                        .map_err(|_| {
-                            sp_std::if_std! { println!("zenlink::<withdraw> amount convert to Balance failed"); }
-                        })?;
-                    let _ = NativeCurrency::withdraw(
-                        &who,
-                        value,
-                        WithdrawReasons::TRANSFER,
-                        ExistenceRequirement::AllowDeath,
-                    )
-                        .map_err(|_| XcmError::Undefined)?;
-                    sp_std::if_std! { println!("zenlink::<withdraw> success"); }
-                    Ok(())
-                } else {
-                    sp_std::if_std! { println!("zenlink::<withdraw> discard"); }
-                    Err(XcmError::UnhandledXcmMessage)
-                }
-            }
+				withdraw_native_currency::<
+					AccountId,
+					ParaChainId,
+					NativeCurrency
+				>(who, amount, length, id)
+			}
             _ => {
                 sp_std::if_std! { println!("zenlink::<withdraw> Undefined id = {:?}", id); }
                 Err(XcmError::Undefined)
@@ -459,5 +412,125 @@ impl<
 			id: id.to_vec(),
 			amount,
 		})
+	}
+}
+
+fn withdraw_para_currency<AccountId, ParaChainId, ZenlinkAssets>(
+	who: &AccountId,
+	amount: u128,
+	id: &u128,
+) -> Result<(), XcmError>
+where
+	AccountId: sp_std::fmt::Debug,
+	ParaChainId: Get<ParaId>,
+	ZenlinkAssets:
+		ZenlinkMultiAsset<AccountId, TokenBalance> + OperateAsset<AccountId, TokenBalance>,
+{
+	sp_std::if_std! { println!("zenlink::<withdraw> amount = {:?}", amount); }
+	let asset_id = AssetId::from(*id);
+	let para_id: u32 = ParaChainId::get().into();
+	if para_id as u128 == *id {
+		sp_std::if_std! { println!("zenlink::<withdraw> para_id = {:?}, id = {:?}", para_id, id); }
+		return Err(XcmError::Unimplemented);
+	}
+	// asset_id must be ParaCurrency
+	ZenlinkAssets::withdraw(asset_id, &who, amount as TokenBalance).map_err(|err| {
+		sp_std::if_std! { println!("zenlink::<withdraw> err = {:?}", err); }
+		XcmError::Undefined
+	})?;
+	sp_std::if_std! { println!("zenlink::<withdraw> success"); }
+
+	Ok(())
+}
+
+fn withdraw_native_currency<AccountId, ParaChainId, NativeCurrency>(
+	who: &AccountId,
+	amount: u128,
+	length: usize,
+	id: &u32,
+) -> Result<(), XcmError>
+where
+	AccountId: sp_std::fmt::Debug,
+	ParaChainId: Get<ParaId>,
+	NativeCurrency: Currency<AccountId>,
+{
+	let para_id: u32 = ParaChainId::get().into();
+	sp_std::if_std! { println!("zenlink::<withdraw> amount = {:?}, para_id = {:?}", amount, para_id); }
+
+	if (length == 2 && *id == para_id) || (length == 4 && *id != para_id) {
+		let value =
+			<<NativeCurrency as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(amount)
+				.map_err(|_| {
+				sp_std::if_std! { println!("zenlink::<withdraw> amount convert to Balance failed"); }
+			})?;
+		let _ = NativeCurrency::withdraw(
+			&who,
+			value,
+			WithdrawReasons::TRANSFER,
+			ExistenceRequirement::AllowDeath,
+		)
+		.map_err(|_| XcmError::Undefined)?;
+		sp_std::if_std! { println!("zenlink::<withdraw> success"); }
+		Ok(())
+	} else {
+		sp_std::if_std! { println!("zenlink::<withdraw> discard"); }
+		Err(XcmError::UnhandledXcmMessage)
+	}
+}
+
+fn deposit_para_currency<AccountId, ParaChainId, ZenlinkAssets>(
+	who: &AccountId,
+	amount: u128,
+	id: &u128,
+) -> Result<(), XcmError>
+where
+	AccountId: sp_std::fmt::Debug,
+	ParaChainId: Get<ParaId>,
+	ZenlinkAssets:
+		ZenlinkMultiAsset<AccountId, TokenBalance> + OperateAsset<AccountId, TokenBalance>,
+{
+	sp_std::if_std! { println!("zenlink::<deposit> amount = {:?}", amount); }
+	let asset_id = AssetId::from(*id);
+	let para_id: u32 = ParaChainId::get().into();
+	if para_id as u128 == *id {
+		sp_std::if_std! { println!("zenlink::<deposit> para_id = {:?}, id = {:?}", para_id, id); }
+		return Err(XcmError::Unimplemented);
+	}
+	//  asset_id must be ParaCurrency
+	ZenlinkAssets::deposit(asset_id, &who, amount as TokenBalance).map_err(|err| {
+		sp_std::if_std! { println!("zenlink::<deposit> err = {:?}", err); }
+		XcmError::Undefined
+	})?;
+	sp_std::if_std! { println!("zenlink::<deposit> success"); }
+
+	Ok(())
+}
+
+fn deposit_native_currency<AccountId, ParaChainId, NativeCurrency>(
+	who: &AccountId,
+	amount: u128,
+	length: usize,
+	id: &u32,
+) -> Result<(), XcmError>
+where
+	AccountId: sp_std::fmt::Debug,
+	ParaChainId: Get<ParaId>,
+	NativeCurrency: Currency<AccountId>,
+{
+	let para_id: u32 = ParaChainId::get().into();
+	sp_std::if_std! { println!("zenlink::<deposit> amount = {:?}, para_id = {:?}", amount, para_id); }
+
+	if (length == 2 && *id == para_id) || (length == 4 && *id != para_id) {
+		let value =
+			<<NativeCurrency as Currency<AccountId>>::Balance as TryFrom<u128>>::try_from(amount)
+				.map_err(|_| {
+				sp_std::if_std! { println!("zenlink::<deposit> amount convert to Balance failed"); }
+			})?;
+		let _ = NativeCurrency::deposit_creating(&who, value);
+		sp_std::if_std! { println!("zenlink::<deposit> success"); }
+		Ok(())
+	} else {
+		sp_std::if_std! { println!("zenlink::<deposit> discard"); }
+		Err(XcmError::UnhandledXcmMessage)
 	}
 }
