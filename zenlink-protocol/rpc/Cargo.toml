@@ -27,13 +27,3 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", default-features
 
 zenlink-protocol = { path = "..", default-features = false }
 zenlink-protocol-runtime-api = { path = "./runtime-api", default-features = false }
-
-[features]
-default = ["std"]
-std = [
-    'serde',
-    'codec/std',
-    'sp-api/std',
-    'sp-runtime/std',
-    'zenlink-protocol-runtime-api/std'
-]
