@@ -19,7 +19,15 @@ parameter_types! {
 	}.into();
 
 	pub SiblingParachains: Vec<MultiLocation> = vec![
+        // Sherpax live
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 59 }),
+        // Bifrost local and live
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 107 }),
+        // Zenlink live
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 188 }),
+        // Zenlink local
 		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 200 }),
+        // Sherpax local
 		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 300 })
 	];
 }

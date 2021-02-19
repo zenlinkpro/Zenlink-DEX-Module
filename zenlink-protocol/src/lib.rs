@@ -28,7 +28,7 @@ pub use crate::{
 	xcm_support::{ParaChainWhiteList, Transactor},
 	xtransfer::Origin,
 };
-pub use cumulus_primitives::{
+pub use cumulus_primitives_core::{
 	relay_chain::Balance as RelayChainBalance, DownwardMessageHandler, HrmpMessageHandler,
 	HrmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, OutboundHrmpMessage, ParaId,
 	UpwardMessage, UpwardMessageSender,

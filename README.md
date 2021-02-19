@@ -4,11 +4,11 @@
 
 It should at least work until the following commits
 
--   rustc 1.49.0-nightly (beb5ae474 2020-10-04)
--   polkadot.js.org (apps v0.78.2-6)
--   Polkadot rococo-v1 @ `dcebc8177412a3ac7891283d1441f1a346e9982c`
--   Cumulus rococo-v1 @ `4b69b8d4bfa113fb3af2da34d1b71313bc43fb0c`
--   Substrate rococo-v1 (newer than 2.0.0) @ `0b0d124d5f9be89f614f2be8e9da038fcb9f540e`
+-   rustc 1.52.0-nightly (d1206f950 2021-02-15)
+-   polkadot.js.org (apps v0.80.2-19)
+-   Polkadot rococo-v1 @ `8daf974142f1a29624e6598ccb167c0d238f7134`
+-   Cumulus rococo-v1 @ `e5f8fd4e34e47e0559dc650f2f237e7a2f3a60a1`
+-   Substrate rococo-v1 (newer than 2.0.0) @ `743accbe3256de2fc615adcaa3ab03ebdbbb4dbd`
 
 
 ## Precondition
