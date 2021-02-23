@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Zenlink
+// Licensed under GPL-3.0.
+
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -19,7 +22,7 @@ use sp_runtime::{
 	traits::{Convert, StaticLookup},
 	ModuleId,
 };
-use sp_std::prelude::Vec;
+use sp_std::{vec, prelude::Vec};
 
 pub use crate::{
 	primitives::{AssetId, MultiAsset as ZenlinkMultiAsset, PairId, TokenBalance},
@@ -269,11 +272,8 @@ decl_module! {
 			let now = frame_system::Module::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 			let who = ensure_signed(origin)?;
-			if target_parachain == T::ParaId::get(){
-				Self::inner_add_liquidity_local(&who, &token_0, &token_1, amount_0_desired, amount_1_desired, amount_0_min, amount_1_min)?;
-			}else{
-				Self::inner_add_liquidity_foreign(&who, &token_0, &token_1, amount_0_desired, amount_1_desired, target_parachain)?;
-			}
+
+			Self::inner_add_liquidity(&who, &token_0, &token_1, amount_0_desired, amount_1_desired, amount_0_min, amount_1_min)?;
 			Self::deposit_event(RawEvent::LiquidityAdded(who, token_0, token_1));
 			Ok(())
 		}
@@ -315,11 +315,8 @@ decl_module! {
 
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
-			if target_parachain == T::ParaId::get(){
-				Self::inner_swap_exact_tokens_for_tokens_local(&who, amount_in, amount_out_min, &path, &to)?;
-			}else{
-				Self::inner_swap_exact_tokens_for_tokens_foreign(&who, amount_in, amount_out_min, &path, target_parachain)?;
-			}
+			Self::inner_swap_exact_tokens_for_tokens(&who, amount_in, amount_out_min, &path, &to)?;
+
 			Self::deposit_event(RawEvent::TokenSwap(who, to, path));
 			Ok(())
 		}
@@ -339,11 +336,8 @@ decl_module! {
 
 			let who = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(to)?;
-			if target_parachain == T::ParaId::get(){
-				Self::inner_swap_tokens_for_exact_tokens_local(&who, amount_out, amount_in_max, &path, &to)?;
-			}else{
-				Self::inner_swap_tokens_for_exact_tokens_foreign(&who, amount_out, amount_in_max, &path, target_parachain)?;
-			}
+			Self::inner_swap_tokens_for_exact_tokens(&who, amount_out, amount_in_max, &path, &to)?;
+
 			Self::deposit_event(RawEvent::TokenSwap(who, to, path));
 			Ok(())
 		}

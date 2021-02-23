@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Zenlink
+// Licensed under GPL-3.0.
+
 #![allow(clippy::type_complexity)]
 
 use codec::{Decode, Encode};

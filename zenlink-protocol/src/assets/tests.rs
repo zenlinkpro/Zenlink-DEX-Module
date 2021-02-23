@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Zenlink
+// Licensed under GPL-3.0.
+
 use frame_support::{assert_noop, assert_ok};
 
 use super::{mock::*, AssetId, Error};

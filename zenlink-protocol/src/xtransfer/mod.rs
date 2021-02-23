@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Zenlink
+// Licensed under GPL-3.0.
+
 use codec::{Decode, Encode};
 use sp_runtime::traits::Hash;
 use sp_std::{
@@ -112,25 +115,6 @@ impl<T: Config> Module<T> {
 		}
 	}
 
-	pub(crate) fn make_xcm_by_cross_chain_operate(
-		target_chain: u32,
-		account: &T::AccountId,
-		amount: TokenBalance,
-		operate_encode: &[u8],
-	) -> Xcm {
-		Xcm::WithdrawAsset {
-			assets: vec![MultiAsset::AbstractFungible {
-				id: operate_encode.to_vec(),
-				amount,
-			}],
-			effects: vec![Order::DepositReserveAsset {
-				assets: vec![MultiAsset::All],
-				dest: MultiLocation::X2(Junction::Parent, Junction::Parachain { id: target_chain }),
-				effects: vec![Self::make_deposit_asset_order((*account).clone())],
-			}],
-		}
-	}
-
 	pub(crate) fn make_xcm_transfer_to_parachain(
 		asset_id: &AssetId,
 		para_id: ParaId,
@@ -215,19 +199,23 @@ fn shift_xcm(index: u8, msg: Xcm) -> Option<Xcm> {
 			let assets = assets
 				.iter()
 				.filter_map(|asset| match asset {
-					MultiAsset::ConcreteFungible { id, amount } => match id {
-						MultiLocation::X2(Junction::Parent, Junction::Parachain { id }) => {
-							Some(MultiAsset::ConcreteFungible {
-								id: MultiLocation::X2(
-									Junction::PalletInstance { id: index },
-									Junction::GeneralIndex { id: *id as u128 },
-								),
-								amount: *amount,
-							})
-						}
-						_ => None,
+					MultiAsset::ConcreteFungible {
+						id: MultiLocation::X2(
+							Junction::Parent,
+							Junction::Parachain { id }
+						) ,
+						amount
+					} =>  {
+						Some(
+							MultiAsset::ConcreteFungible {
+								 id: MultiLocation::X2(
+									 Junction::PalletInstance { id: index },
+									 Junction::GeneralIndex { id: *id as u128 },
+								 ),
+								 amount: *amount,
+							}
+						)
 					},
-					MultiAsset::AbstractFungible { .. } => Some((*asset).clone()),
 					_ => None,
 				})
 				.collect::<Vec<_>>();

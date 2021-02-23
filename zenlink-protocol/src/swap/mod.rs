@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Zenlink
+// Licensed under GPL-3.0.
+
 use codec::{Decode, Encode};
 use frame_support::traits::ExistenceRequirement::KeepAlive;
 use sp_core::U256;
@@ -9,12 +12,11 @@ use sp_std::convert::{TryFrom, TryInto};
 
 use crate::{
 	ensure,
-	primitives::{CrossChainOperation, OperateAsset},
 	sp_api_hidden_includes_decl_storage::hidden_include::{
 		traits::Currency, StorageMap, StorageValue,
 	},
-	AssetId, AssetsToPair, Config, Error, ExecuteXcm, Get, LiquidityPool, LocationConversion,
-	Module, NextPairId, Pairs, ParaId, TokenBalance, Vec, Xcm,
+	AssetId, AssetsToPair, Config, Error, Get, LiquidityPool,
+	Module, NextPairId, Pairs, TokenBalance, Vec, vec,
 };
 
 #[cfg(test)]
@@ -58,7 +60,7 @@ impl<T: Config> Module<T> {
 	}
 
 	#[allow(clippy::too_many_arguments)]
-	pub(crate) fn inner_add_liquidity_local(
+	pub(crate) fn inner_add_liquidity(
 		who: &T::AccountId,
 		token_0: &AssetId,
 		token_1: &AssetId,
@@ -67,8 +69,7 @@ impl<T: Config> Module<T> {
 		amount_0_min: TokenBalance,
 		amount_1_min: TokenBalance,
 	) -> DispatchResult {
-		let mut pair =
-			Self::get_pair_from_asset_id(token_0, token_1).ok_or(Error::<T>::PairNotExists)?;
+		let mut pair = Self::get_pair_from_asset_id(token_0, token_1).ok_or(Error::<T>::PairNotExists)?;
 		let reserve_0 = Self::asset_balance_of(&token_0, &pair.account);
 		let reserve_1 = Self::asset_balance_of(&token_1, &pair.account);
 
@@ -128,49 +129,6 @@ impl<T: Config> Module<T> {
 				Self::calculate_share_amount(amount_1, reserve_1, total_liquidity),
 			)
 		}
-	}
-
-	pub(crate) fn inner_add_liquidity_foreign(
-		who: &T::AccountId,
-		token_0: &AssetId,
-		token_1: &AssetId,
-		amount_0_desired: TokenBalance,
-		amount_1_desired: TokenBalance,
-		target_parachain: ParaId,
-	) -> DispatchResult {
-		let local_para_id = T::ParaId::get();
-		ensure!(
-			target_parachain != local_para_id,
-			Error::<T>::DeniedSwapInLocal
-		);
-		ensure!(
-			*token_0 == AssetId::NativeCurrency,
-			Error::<T>::DeniedAddLiquidityToParachain
-		);
-
-		let parachain_asset = match token_1 {
-			AssetId::NativeCurrency => local_para_id.into(),
-			AssetId::ParaCurrency(parachain_asset) => *parachain_asset,
-		};
-
-		let add_liquidity_operate_encode = CrossChainOperation::AddLiquidity {
-			origin_chain: local_para_id.into(),
-			target_chain: target_parachain.into(),
-			token_0: local_para_id.into(),
-			token_1: parachain_asset,
-			amount_1: amount_1_desired.saturated_into::<TokenBalance>(),
-		}
-		.encode();
-
-		let xcm = Self::make_xcm_by_cross_chain_operate(
-			target_parachain.into(),
-			&who,
-			amount_0_desired,
-			&add_liquidity_operate_encode,
-		);
-
-		Self::inner_execute_xcm(who, xcm)?;
-		Ok(())
 	}
 
 	pub(crate) fn calculate_added_amount(
@@ -243,46 +201,10 @@ impl<T: Config> Module<T> {
 			}
 		});
 
-		Self::restore_parachain_asset(&to, amount_0, token_0)?;
-		Self::restore_parachain_asset(&to, amount_1, token_1)?;
-
 		Ok(())
 	}
 
-	pub(crate) fn inner_swap_exact_tokens_for_tokens_foreign(
-		who: &T::AccountId,
-		amount_in: TokenBalance,
-		amount_out_min: TokenBalance,
-		path: &[AssetId],
-		target_parachain: ParaId,
-	) -> DispatchResult {
-		let local_para_id = T::ParaId::get();
-		ensure!(
-			target_parachain != local_para_id,
-			Error::<T>::DeniedSwapInLocal
-		);
-		let asset_id_path = Self::convert_asset_path(local_para_id, path);
-
-		let swap_exact_tokens_for_tokens_encode = CrossChainOperation::SwapExactTokensForTokens {
-			origin_chain: local_para_id.into(),
-			target_chain: target_parachain.into(),
-			amount_out_min: amount_out_min.saturated_into::<TokenBalance>(),
-			path: asset_id_path,
-		}
-		.encode();
-
-		let xcm = Self::make_xcm_by_cross_chain_operate(
-			target_parachain.into(),
-			&who,
-			amount_in,
-			&swap_exact_tokens_for_tokens_encode,
-		);
-		Self::inner_execute_xcm(who, xcm)?;
-
-		Ok(())
-	}
-
-	pub(crate) fn inner_swap_exact_tokens_for_tokens_local(
+	pub(crate) fn inner_swap_exact_tokens_for_tokens(
 		who: &T::AccountId,
 		amount_in: TokenBalance,
 		amount_out_min: TokenBalance,
@@ -297,55 +219,14 @@ impl<T: Config> Module<T> {
 
 		let pair =
 			Self::get_pair_from_asset_id(&path[0], &path[1]).ok_or(Error::<T>::PairNotExists)?;
-		let path_last = path.last().ok_or(Error::<T>::InvalidPath)?;
-
-		let target_asset_balance_reserve = Self::asset_balance_of(path_last, who);
 
 		Self::asset_transfer(&path[0], &who, &pair.account, amount_in)?;
 		Self::swap(&amounts, &path, &to)?;
 
-		let target_asset_reserve_balance =
-			Self::asset_balance_of(path_last, who).saturating_sub(target_asset_balance_reserve);
-		Self::restore_parachain_asset(&who, target_asset_reserve_balance, path_last)?;
-
 		Ok(())
 	}
 
-	pub fn inner_swap_tokens_for_exact_tokens_foreign(
-		who: &T::AccountId,
-		amount_out: TokenBalance,
-		amount_in_max: TokenBalance,
-		path: &[AssetId],
-		target_parachain: ParaId,
-	) -> DispatchResult {
-		let local_para_id = T::ParaId::get();
-		ensure!(
-			target_parachain != local_para_id,
-			Error::<T>::DeniedSwapInLocal
-		);
-		let asset_id_path = Self::convert_asset_path(local_para_id, path);
-
-		let swap_tokens_for_exact_tokens_encode = CrossChainOperation::SwapTokensForExactTokens {
-			origin_chain: local_para_id.into(),
-			target_chain: target_parachain.into(),
-			path: asset_id_path,
-			amount_out: amount_out.saturated_into::<TokenBalance>(),
-		}
-		.encode();
-
-		let xcm = Self::make_xcm_by_cross_chain_operate(
-			target_parachain.into(),
-			&who,
-			amount_in_max,
-			&swap_tokens_for_exact_tokens_encode,
-		);
-
-		Self::inner_execute_xcm(who, xcm)?;
-
-		Ok(())
-	}
-
-	pub fn inner_swap_tokens_for_exact_tokens_local(
+	pub fn inner_swap_tokens_for_exact_tokens(
 		who: &T::AccountId,
 		amount_out: TokenBalance,
 		amount_in_max: TokenBalance,
@@ -358,19 +239,8 @@ impl<T: Config> Module<T> {
 		let pair =
 			Self::get_pair_from_asset_id(&path[0], &path[1]).ok_or(Error::<T>::PairNotExists)?;
 
-		let path_target = path.last().ok_or(Error::<T>::InvalidPath)?;
-		let path_first = path.first().ok_or(Error::<T>::InvalidPath)?;
-		let target_asset_balance_reserve = Self::asset_balance_of(path_target, who);
-
 		Self::asset_transfer(&path[0], &who, &pair.account, amounts[0])?;
 		Self::swap(&amounts, &path, &to)?;
-
-		let target_asset_reserve_balance =
-			Self::asset_balance_of(path_target, who).saturating_sub(target_asset_balance_reserve);
-		let supply_asset_reserve_balance = amount_in_max.saturating_sub(amounts[0]);
-
-		Self::restore_parachain_asset(&who, target_asset_reserve_balance, path_target)?;
-		Self::restore_parachain_asset(&who, supply_asset_reserve_balance, path_first)?;
 
 		Ok(())
 	}
@@ -382,8 +252,7 @@ impl<T: Config> Module<T> {
 		ensure!(path.len() > 1, Error::<T>::InvalidPath);
 
 		let len = path.len() - 1;
-		let mut out_vec = Vec::new();
-		out_vec.push(amount_in);
+		let mut out_vec = vec![amount_in];
 
 		for i in 0..len {
 			if let Some(pair) = Self::get_pair_from_asset_id(&path[i], &path[i + 1]) {
@@ -411,9 +280,9 @@ impl<T: Config> Module<T> {
 		let len = path.len();
 		ensure!(len > 1, Error::<T>::InvalidPath);
 
-		let mut tvec = Vec::new();
-		tvec.push(amount_out);
+		let mut tvec = vec![amount_out];
 		let mut i = len - 1;
+
 		while i > 0 {
 			if let Some(pair) = Self::get_pair_from_asset_id(&path[i], &path[i - 1]) {
 				let reserve_0 = Self::asset_balance_of(&path[i], &pair.account);
@@ -575,85 +444,5 @@ impl<T: Config> Module<T> {
 			}
 			AssetId::ParaCurrency(_) => Self::balance_of(*token, &owner),
 		}
-	}
-
-	fn inner_execute_xcm(who: &T::AccountId, xcm: Xcm) -> DispatchResult {
-		let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
-			.map_err(|_| Error::<T>::AccountIdBadLocation)?;
-
-		T::XcmExecutor::execute_xcm(xcm_origin, xcm).map_err(|_| Error::<T>::ExecutionFailed)?;
-		Ok(())
-	}
-
-	fn convert_asset_path(local_para_id: ParaId, path: &[AssetId]) -> Vec<u32> {
-		path.iter()
-			.map(|id| match *id {
-				AssetId::NativeCurrency => local_para_id.into(),
-				AssetId::ParaCurrency(currency_id) => currency_id,
-			})
-			.collect()
-	}
-}
-
-impl<T: Config> OperateAsset<T::AccountId, TokenBalance> for Module<T> {
-	fn add_liquidity(
-		who: &T::AccountId,
-		token_0: &AssetId,
-		token_1: &AssetId,
-		amount_0_desired: TokenBalance,
-		amount_1_desired: TokenBalance,
-	) -> DispatchResult {
-		let pair = Self::get_pair_from_asset_id(token_0, token_1);
-		if pair.is_none() {
-			Self::inner_create_pair(token_0, token_1)?;
-		}
-		Self::inner_add_liquidity_local(
-			who,
-			token_0,
-			token_1,
-			amount_0_desired,
-			amount_1_desired,
-			Zero::zero(),
-			Zero::zero(),
-		)?;
-
-		Ok(())
-	}
-
-	fn swap_in(
-		who: &T::AccountId,
-		amount_in: TokenBalance,
-		amount_out_min: TokenBalance,
-		path: &[AssetId],
-	) -> DispatchResult {
-		Self::inner_swap_exact_tokens_for_tokens_local(who, amount_in, amount_out_min, path, who)?;
-
-		Ok(())
-	}
-
-	fn swap_out(
-		who: &T::AccountId,
-		amount_out: TokenBalance,
-		amount_in_max: TokenBalance,
-		path: &[AssetId],
-	) -> DispatchResult {
-		Self::inner_swap_tokens_for_exact_tokens_local(who, amount_out, amount_in_max, path, who)?;
-
-		Ok(())
-	}
-
-	fn restore_parachain_asset(
-		who: &T::AccountId,
-		amount: TokenBalance,
-		asset_id: &AssetId,
-	) -> DispatchResult {
-		if amount == Zero::zero() {
-			return Ok(());
-		}
-		if let AssetId::ParaCurrency(id) = *asset_id {
-			let xcm = Self::make_xcm_transfer_to_parachain(asset_id, id.into(), who, amount);
-			Self::inner_execute_xcm(who, xcm)?;
-		}
-		Ok(())
 	}
 }

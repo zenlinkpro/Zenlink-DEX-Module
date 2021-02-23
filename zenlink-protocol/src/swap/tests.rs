@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Zenlink
+// Licensed under GPL-3.0.
+
 use super::{mock::*, AssetId, Error};
 use frame_support::{assert_noop, assert_ok};
 
@@ -44,7 +47,7 @@ fn inner_add_liquidity_should_work() {
 		let total_supply_dot: u128 = 1 * DOT_UNIT;
 		let total_supply_btc: u128 = 1 * BTC_UNIT;
 
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE,
 			&DOT,
 			&BTC,
@@ -57,7 +60,7 @@ fn inner_add_liquidity_should_work() {
 		let total_supply_dot = 50 * DOT_UNIT;
 		let total_supply_btc = 50 * BTC_UNIT;
 
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE,
 			&BTC,
 			&DOT,
@@ -85,7 +88,7 @@ fn inner_get_in_price_should_work() {
 		let total_supply_dot = 10000 * DOT_UNIT;
 		let total_supply_btc = 10000 * BTC_UNIT;
 
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE,
 			&DOT,
 			&BTC,
@@ -127,7 +130,7 @@ fn inner_get_out_price_should_work() {
 		let total_supply_dot = 1000000 * DOT_UNIT;
 		let total_supply_btc = 1000000 * BTC_UNIT;
 
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE,
 			&DOT,
 			&BTC,
@@ -167,7 +170,7 @@ fn remove_liquidity_should_work() {
 
 		let total_supply_dot = 50 * DOT_UNIT;
 		let total_supply_btc = 50 * BTC_UNIT;
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE,
 			&DOT,
 			&BTC,
@@ -209,7 +212,7 @@ fn inner_swap_exact_tokens_for_tokens_should_work() {
 		let total_supply_dot = 50000 * DOT_UNIT;
 		let total_supply_btc = 50000 * BTC_UNIT;
 
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE,
 			&DOT,
 			&BTC,
@@ -225,7 +228,7 @@ fn inner_swap_exact_tokens_for_tokens_should_work() {
 		let path = vec![DOT.clone(), BTC.clone()];
 		let amount_in = 1 * DOT_UNIT;
 		let amount_out_min = BTC_UNIT * 996 / 1000;
-		assert_ok!(DexModule::inner_swap_exact_tokens_for_tokens_local(
+		assert_ok!(DexModule::inner_swap_exact_tokens_for_tokens(
 			&ALICE,
 			amount_in,
 			amount_out_min,
@@ -240,7 +243,7 @@ fn inner_swap_exact_tokens_for_tokens_should_work() {
 		let path = vec![BTC.clone(), DOT.clone()];
 		let amount_in = 1 * BTC_UNIT;
 		let amount_out_min = DOT_UNIT * 996 / 1000;
-		assert_ok!(DexModule::inner_swap_exact_tokens_for_tokens_local(
+		assert_ok!(DexModule::inner_swap_exact_tokens_for_tokens(
 			&ALICE,
 			amount_in,
 			amount_out_min,
@@ -265,7 +268,7 @@ fn inner_swap_exact_tokens_for_tokens_in_pairs_should_work() {
 		let total_supply_btc = 5000 * BTC_UNIT;
 		let total_supply_dev = 5000 * DEV_UNIT;
 
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE,
 			&DOT,
 			&BTC,
@@ -274,7 +277,7 @@ fn inner_swap_exact_tokens_for_tokens_in_pairs_should_work() {
 			0,
 			0
 		));
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE,
 			&BTC,
 			&DEV,
@@ -287,7 +290,7 @@ fn inner_swap_exact_tokens_for_tokens_in_pairs_should_work() {
 		let path = vec![DOT.clone(), BTC.clone(), DEV.clone()];
 		let amount_in = 1 * DOT_UNIT;
 		let amount_out_min = 1 * DEV_UNIT * 996 / 1000 * 996 / 1000;
-		assert_ok!(DexModule::inner_swap_exact_tokens_for_tokens_local(
+		assert_ok!(DexModule::inner_swap_exact_tokens_for_tokens(
 			&ALICE,
 			amount_in,
 			amount_out_min,
@@ -303,7 +306,7 @@ fn inner_swap_exact_tokens_for_tokens_in_pairs_should_work() {
 		let dot_balance = DexModule::asset_balance_of(&DOT, &BOB);
 		println!("dot_balance {}", dot_balance);
 
-		assert_ok!(DexModule::inner_swap_exact_tokens_for_tokens_local(
+		assert_ok!(DexModule::inner_swap_exact_tokens_for_tokens(
 			&ALICE,
 			amount_in,
 			amount_out_min,
@@ -328,13 +331,13 @@ fn inner_swap_tokens_for_exact_tokens_should_work() {
 		let supply_dot = 5000 * DOT_UNIT;
 		let supply_btc = 5000 * BTC_UNIT;
 
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE, &DOT, &BTC, supply_dot, supply_btc, 0, 0
 		));
 		let path = vec![DOT.clone(), BTC.clone()];
 		let amount_out = 1 * BTC_UNIT;
 		let amount_in_max = 1 * DOT_UNIT * 1004 / 1000;
-		assert_ok!(DexModule::inner_swap_tokens_for_exact_tokens_local(
+		assert_ok!(DexModule::inner_swap_tokens_for_exact_tokens(
 			&ALICE,
 			amount_out,
 			amount_in_max,
@@ -352,7 +355,7 @@ fn inner_swap_tokens_for_exact_tokens_should_work() {
 		let path = vec![BTC.clone(), DOT.clone()];
 		let amount_out = 1 * DOT_UNIT;
 		let amount_in_max = 1 * BTC_UNIT * 1004 / 1000;
-		assert_ok!(DexModule::inner_swap_tokens_for_exact_tokens_local(
+		assert_ok!(DexModule::inner_swap_tokens_for_exact_tokens(
 			&ALICE,
 			amount_out,
 			amount_in_max,
@@ -386,11 +389,11 @@ fn inner_swap_tokens_for_exact_tokens_in_pairs_should_work() {
 		let supply_btc = 5000 * BTC_UNIT;
 		let supply_dev = 5000 * DEV_UNIT;
 
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE, &DOT, &BTC, supply_dot, supply_btc, 0, 0
 		));
 
-		assert_ok!(DexModule::inner_add_liquidity_local(
+		assert_ok!(DexModule::inner_add_liquidity(
 			&ALICE, &BTC, &DEV, supply_btc, supply_dev, 0, 0
 		));
 
@@ -398,7 +401,7 @@ fn inner_swap_tokens_for_exact_tokens_in_pairs_should_work() {
 		let amount_out = 1 * DEV_UNIT;
 		let amount_in_max = 1 * DOT_UNIT * 1004 / 1000 * 1004 / 1000;
 		let bob_dev_balance = DexModule::asset_balance_of(&DEV, &BOB);
-		assert_ok!(DexModule::inner_swap_tokens_for_exact_tokens_local(
+		assert_ok!(DexModule::inner_swap_tokens_for_exact_tokens(
 			&ALICE,
 			amount_out,
 			amount_in_max,
@@ -412,7 +415,7 @@ fn inner_swap_tokens_for_exact_tokens_in_pairs_should_work() {
 		let path = vec![DEV.clone(), BTC.clone(), DOT.clone()];
 		let amount_out = 1 * DOT_UNIT;
 		let amount_in_max = 1 * DEV_UNIT * 1004 / 1000 * 1004 / 1000;
-		assert_ok!(DexModule::inner_swap_tokens_for_exact_tokens_local(
+		assert_ok!(DexModule::inner_swap_tokens_for_exact_tokens(
 			&ALICE,
 			amount_out,
 			amount_in_max,

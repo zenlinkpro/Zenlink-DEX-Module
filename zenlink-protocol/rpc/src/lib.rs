@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Zenlink
+// Licensed under GPL-3.0.
+
 //! RPC interface for the zenlink dex module.
 #![allow(clippy::type_complexity)]
 #![allow(clippy::too_many_arguments)]

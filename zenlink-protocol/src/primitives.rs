@@ -1,8 +1,10 @@
+// Copyright 2020-2021 Zenlink
+// Licensed under GPL-3.0.
+
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{DispatchResult, RuntimeDebug};
-use sp_std::prelude::Vec;
 
 /// The balance of zenlink asset
 pub type TokenBalance = u128;
@@ -38,31 +40,6 @@ impl From<u128> for AssetId {
 	}
 }
 
-#[derive(Clone, Eq, PartialEq, Encode, Decode, Debug)]
-pub enum CrossChainOperation {
-	AddLiquidity {
-		origin_chain: u32,
-		target_chain: u32,
-		token_0: u32,
-		token_1: u32,
-		amount_1: TokenBalance,
-	},
-
-	SwapExactTokensForTokens {
-		origin_chain: u32,
-		target_chain: u32,
-		amount_out_min: TokenBalance,
-		path: Vec<u32>,
-	},
-
-	SwapTokensForExactTokens {
-		origin_chain: u32,
-		target_chain: u32,
-		amount_out: TokenBalance,
-		path: Vec<u32>,
-	},
-}
-
 pub trait MultiAsset<AccountId, TokenBalance> {
 	fn total_supply(asset_id: AssetId) -> TokenBalance;
 
@@ -78,34 +55,4 @@ pub trait MultiAsset<AccountId, TokenBalance> {
 	fn withdraw(asset_id: AssetId, who: &AccountId, amount: TokenBalance) -> DispatchResult;
 
 	fn deposit(asset_id: AssetId, who: &AccountId, amount: TokenBalance) -> DispatchResult;
-}
-
-pub trait OperateAsset<AccountId, TokenBalance> {
-	fn add_liquidity(
-		who: &AccountId,
-		token_0: &AssetId,
-		token_1: &AssetId,
-		amount_0_desired: TokenBalance,
-		amount_1_desired: TokenBalance,
-	) -> DispatchResult;
-
-	fn swap_in(
-		who: &AccountId,
-		amount_in: TokenBalance,
-		amount_out_min: TokenBalance,
-		path: &[AssetId],
-	) -> DispatchResult;
-
-	fn swap_out(
-		who: &AccountId,
-		amount_out: TokenBalance,
-		amount_in_max: TokenBalance,
-		path: &[AssetId],
-	) -> DispatchResult;
-
-	fn restore_parachain_asset(
-		who: &AccountId,
-		amount_out: TokenBalance,
-		asset_id: &AssetId,
-	) -> DispatchResult;
 }
