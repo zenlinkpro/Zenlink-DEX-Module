@@ -18,41 +18,41 @@ pub type PairId = u32;
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetId {
-	NativeCurrency,
-	ParaCurrency(u32),
+    NativeCurrency,
+    ParaCurrency(u32),
 }
 
 impl AssetId {
-	pub fn is_para_currency(&self) -> bool {
-		matches!(self, AssetId::ParaCurrency(_))
-	}
+    pub fn is_para_currency(&self) -> bool {
+        matches!(self, AssetId::ParaCurrency(_))
+    }
 }
 
 impl From<u32> for AssetId {
-	fn from(id: u32) -> Self {
-		AssetId::ParaCurrency(id)
-	}
+    fn from(id: u32) -> Self {
+        AssetId::ParaCurrency(id)
+    }
 }
 
 impl From<u128> for AssetId {
-	fn from(id: u128) -> Self {
-		AssetId::ParaCurrency(id as u32)
-	}
+    fn from(id: u128) -> Self {
+        AssetId::ParaCurrency(id as u32)
+    }
 }
 
 pub trait MultiAsset<AccountId, TokenBalance> {
-	fn total_supply(asset_id: AssetId) -> TokenBalance;
+    fn total_supply(asset_id: AssetId) -> TokenBalance;
 
-	fn balance_of(asset_id: AssetId, who: &AccountId) -> TokenBalance;
+    fn balance_of(asset_id: AssetId, who: &AccountId) -> TokenBalance;
 
-	fn transfer(
-		asset_id: AssetId,
-		from: &AccountId,
-		to: &AccountId,
-		amount: TokenBalance,
-	) -> DispatchResult;
+    fn transfer(
+        asset_id: AssetId,
+        from: &AccountId,
+        to: &AccountId,
+        amount: TokenBalance,
+    ) -> DispatchResult;
 
-	fn withdraw(asset_id: AssetId, who: &AccountId, amount: TokenBalance) -> DispatchResult;
+    fn withdraw(asset_id: AssetId, who: &AccountId, amount: TokenBalance) -> DispatchResult;
 
-	fn deposit(asset_id: AssetId, who: &AccountId, amount: TokenBalance) -> DispatchResult;
+    fn deposit(asset_id: AssetId, who: &AccountId, amount: TokenBalance) -> DispatchResult;
 }
