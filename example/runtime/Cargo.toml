@@ -52,7 +52,6 @@ std = [
 	'dev-parachain-primitives/std',
 	'zenlink-protocol/std',
 	'zenlink-protocol-runtime-api/std',
-
 	'sp-std/std',
 	'sp-api/std',
 	'sp-io/std',

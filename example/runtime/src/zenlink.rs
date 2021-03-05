@@ -78,4 +78,5 @@ impl zenlink_protocol::Config for Runtime {
     type AccountId32Converter = AccountId32Converter;
     type ParaId = ParachainInfo;
     type ModuleId = DEXModuleId;
+    type TargetChains = SiblingParachains;
 }
