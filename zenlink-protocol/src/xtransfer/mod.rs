@@ -45,6 +45,12 @@ impl<T: Config> Module<T> {
         T::PalletInfo::index::<Self>().map_or(0u8, |index| index as u8)
     }
 
+    // Return true if the parachain id is in the set of the target parachains
+    pub(crate) fn is_reachable(para_id: ParaId) -> bool {
+        let location = MultiLocation::X2(Junction::Parent, Junction::Parachain { id: para_id.into() });
+        T::TargetChains::get().contains(&location)
+    }
+
     // Make the deposit asset order
     fn make_deposit_asset_order(account: T::AccountId) -> Order {
         Order::DepositAsset {
@@ -55,6 +61,7 @@ impl<T: Config> Module<T> {
             }),
         }
     }
+
     // Transfer zenlink assets which are native to this parachain
     pub(crate) fn make_xcm_lateral_transfer_native(
         location: MultiLocation,
@@ -145,18 +152,16 @@ impl<T: Config> DownwardMessageHandler for Module<T> {
         frame_support::debug::print!("Processing Downward XCM: hash = {:?}", &hash);
         match VersionedXcm::decode(&mut &msg.msg[..]).map(Xcm::try_from) {
             Ok(Ok(xcm)) => {
-                match T::XcmExecutor::execute_xcm(Junction::Parent.into(), xcm) {
+                match T::XcmExecutor::execute_xcm(Junction::Parent.into(), xcm.clone()) {
                     Ok(..) => Self::deposit_event(XcmExecuteSuccess(hash)),
+                    Err(_e @ XcmError::UnhandledXcmMessage) => {
+                        frame_support::debug::print!("Receive Downward XCM: xcm = {:?}", xcm);
+                    }
                     Err(e) => Self::deposit_event(XcmExecuteFail(hash, e)),
                 };
             }
             Ok(Err(..)) => Self::deposit_event(XcmBadVersion(hash)),
-            Err(..) => match Xcm::decode(&mut &msg.msg[..]) {
-                Ok(xcm) => {
-                    frame_support::debug::print!("Processing Downward XCM: xcm = {:?}", xcm);
-                }
-                Err(..) => Self::deposit_event(XcmBadFormat(hash)),
-            },
+            Err(..) => Self::deposit_event(XcmBadFormat(hash)),
         }
     }
 }

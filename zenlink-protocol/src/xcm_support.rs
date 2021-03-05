@@ -215,6 +215,7 @@ where
         )
         .map_err(|_| {
             sp_std::if_std! { println!("zenlink::<withdraw> amount convert to Balance failed"); }
+            XcmError::Undefined
         })?;
         let _ = NativeCurrency::withdraw(
             &who,
@@ -222,7 +223,10 @@ where
             WithdrawReasons::TRANSFER,
             ExistenceRequirement::AllowDeath,
         )
-        .map_err(|_| XcmError::Undefined)?;
+        .map_err(|err| {
+            sp_std::if_std! { println!("zenlink::<withdraw> native currency error = {:?}", err); }
+            XcmError::Undefined
+        })?;
         sp_std::if_std! { println!("zenlink::<withdraw> success"); }
         Ok(())
     } else {

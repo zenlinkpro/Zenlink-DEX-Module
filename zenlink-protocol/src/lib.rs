@@ -66,10 +66,15 @@ pub trait Config: frame_system::Config {
     type UpwardMessageSender: UpwardMessageSender;
     /// Something to send an HRMP message.
     type HrmpMessageSender: HrmpMessageSender;
-
+    /// The set of parachains which the xcm can reach
+    type TargetChains: Get<Vec<MultiLocation>>;
+    /// The Zenlink Protocol Module Id
     type ModuleId: Get<ModuleId>;
+    /// Convert AccountId to MultiLocation
     type AccountIdConverter: LocationConversion<Self::AccountId>;
+    /// Convert AccountId to [u8; 32]
     type AccountId32Converter: Convert<Self::AccountId, [u8; 32]>;
+    /// Get this parachain Id
     type ParaId: Get<ParaId>;
 }
 
@@ -149,6 +154,10 @@ decl_error! {
 
         /// Location given was invalid or unsupported.
         AccountIdBadLocation,
+        /// The target chain is not in whitelist.
+        DeniedReachTargetChain,
+        /// XCM can not reach target chain, probably because of the hrmp channel is closed.
+        MaybeHrmpChannelIsClosed,
         /// XCM execution failed
         ExecutionFailed,
         /// Transfer to self by XCM message
@@ -231,17 +240,24 @@ decl_module! {
             account: T::AccountId,
             #[compact] amount: TokenBalance
         ) -> DispatchResult {
-            ensure!(para_id != T::ParaId::get(), Error::<T>::DeniedTransferToSelf);
             let who = ensure_signed(origin)?;
-            let xcm = Self::make_xcm_transfer_to_parachain(&asset_id, para_id, &account, amount);
-
+            ensure!(para_id != T::ParaId::get(), Error::<T>::DeniedTransferToSelf);
+            ensure!(Self::is_reachable(para_id), Error::<T>::DeniedReachTargetChain);
+            ensure!(Self::asset_balance_of(&asset_id, &account) >= amount, Error::<T>::InsufficientAssetBalance);
             let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
                 .map_err(|_| Error::<T>::AccountIdBadLocation)?;
 
+            let xcm = Self::make_xcm_transfer_to_parachain(&asset_id, para_id, &account, amount);
+
             T::XcmExecutor::execute_xcm(xcm_origin, xcm)
                 .map_err(|err| {
-                    frame_support::debug::print!("zenlink::<transfer_to_parachain>: err = {:?}", err);
-                    Error::<T>::ExecutionFailed
+                    match err {
+                        XcmError::CannotReachDestination => Error::<T>::MaybeHrmpChannelIsClosed,
+                        _ => {
+                            frame_support::debug::print!("zenlink::<transfer_to_parachain>: err = {:?}", err);
+                            Error::<T>::ExecutionFailed
+                        }
+                    }
                 })?;
 
             Self::deposit_event(
