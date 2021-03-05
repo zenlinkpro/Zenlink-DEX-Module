@@ -113,13 +113,13 @@ decl_event! {
         /// Transferred to parachain. \[asset_id, src, para_id, dest, amount\]
         TransferredToParachain(AssetId, AccountId, ParaId, AccountId, TokenBalance),
         /// Some XCM was executed ok. \[xcm_hash\]
-        Success(Hash),
+        XcmExecuteSuccess(Hash),
         /// Some XCM failed. \[xcm_hash, xcm_error\]
-        Fail(Hash, XcmError),
+        XcmExecuteFail(Hash, XcmError),
         /// Bad XCM version used. \[xcm_hash\]
-        BadVersion(Hash),
+        XcmBadVersion(Hash),
         /// Bad XCM format used. \[xcm_hash\]
-        BadFormat(Hash),
+        XcmBadFormat(Hash),
         /// An upward message was sent to the relay chain. \[xcm_hash\]
         UpwardMessageSent(Hash),
         /// An HRMP message was sent to a sibling parachainchain. \[xcm_hash\]

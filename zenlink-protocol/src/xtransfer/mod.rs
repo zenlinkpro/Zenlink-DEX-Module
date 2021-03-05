@@ -13,7 +13,7 @@ use crate::{
     AssetId, Config, Convert, DownwardMessageHandler, ExecuteXcm, Get, HrmpMessageHandler,
     HrmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, Junction, Module, MultiAsset,
     MultiLocation, NetworkId, Order, OutboundHrmpMessage, ParaId,
-    RawEvent::{BadFormat, BadVersion, Fail, HrmpMessageSent, Success, UpwardMessageSent},
+    RawEvent::{XcmBadFormat, XcmBadVersion, XcmExecuteFail, HrmpMessageSent, XcmExecuteSuccess, UpwardMessageSent},
     SendXcm, TokenBalance, UpwardMessageSender, Vec, VersionedXcm, Xcm, XcmError,
 };
 
@@ -146,16 +146,16 @@ impl<T: Config> DownwardMessageHandler for Module<T> {
         match VersionedXcm::decode(&mut &msg.msg[..]).map(Xcm::try_from) {
             Ok(Ok(xcm)) => {
                 match T::XcmExecutor::execute_xcm(Junction::Parent.into(), xcm) {
-                    Ok(..) => Self::deposit_event(Success(hash)),
-                    Err(e) => Self::deposit_event(Fail(hash, e)),
+                    Ok(..) => Self::deposit_event(XcmExecuteSuccess(hash)),
+                    Err(e) => Self::deposit_event(XcmExecuteFail(hash, e)),
                 };
             }
-            Ok(Err(..)) => Self::deposit_event(BadVersion(hash)),
+            Ok(Err(..)) => Self::deposit_event(XcmBadVersion(hash)),
             Err(..) => match Xcm::decode(&mut &msg.msg[..]) {
                 Ok(xcm) => {
                     frame_support::debug::print!("Processing Downward XCM: xcm = {:?}", xcm);
                 }
-                Err(..) => Self::deposit_event(BadFormat(hash)),
+                Err(..) => Self::deposit_event(XcmBadFormat(hash)),
             },
         }
     }
@@ -163,7 +163,7 @@ impl<T: Config> DownwardMessageHandler for Module<T> {
 
 impl<T: Config> HrmpMessageHandler for Module<T> {
     fn handle_hrmp_message(sender: ParaId, msg: InboundHrmpMessage) {
-        let hash = msg.using_encoded(T::Hashing::hash);
+        let hash = T::Hashing::hash(&msg.data);
         frame_support::debug::print!("Processing HRMP XCM: {:?}", &hash);
         match VersionedXcm::decode(&mut &msg.data[..]).map(Xcm::try_from) {
             Ok(Ok(xcm)) => {
@@ -171,12 +171,12 @@ impl<T: Config> HrmpMessageHandler for Module<T> {
                 let origin =
                     MultiLocation::X2(Junction::Parent, Junction::Parachain { id: sender.into() });
                 match T::XcmExecutor::execute_xcm(origin, xcm) {
-                    Ok(..) => Self::deposit_event(Success(hash)),
-                    Err(e) => Self::deposit_event(Fail(hash, e)),
+                    Ok(..) => Self::deposit_event(XcmExecuteSuccess(hash)),
+                    Err(e) => Self::deposit_event(XcmExecuteFail(hash, e)),
                 };
             }
-            Ok(Err(..)) => Self::deposit_event(BadVersion(hash)),
-            Err(..) => Self::deposit_event(BadFormat(hash)),
+            Ok(Err(..)) => Self::deposit_event(XcmBadVersion(hash)),
+            Err(..) => Self::deposit_event(XcmBadFormat(hash)),
         }
     }
 }
