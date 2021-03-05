@@ -193,6 +193,9 @@ fn shift_xcm(index: u8, msg: Xcm) -> Option<Xcm> {
             let assets = assets
                 .iter()
                 .filter_map(|asset| match asset {
+                    // In case 1: Asset'
+                    //
+                    // Asset (on chain A) -> Asset' (on chain B)
                     MultiAsset::ConcreteFungible {
                         id: MultiLocation::X2(Junction::Parent, Junction::Parachain { id }),
                         amount,
@@ -200,6 +203,21 @@ fn shift_xcm(index: u8, msg: Xcm) -> Option<Xcm> {
                         id: MultiLocation::X2(
                             Junction::PalletInstance { id: index },
                             Junction::GeneralIndex { id: *id as u128 },
+                        ),
+                        amount: *amount,
+                    }),
+                    // In case 2: Asset''
+                    //
+                    // Asset (on chain A) -> Asset' (on chain B), Asset' (on chain B) -> Asset'' (on chain C)
+                    // In Actually, `Asset' (on chain B) -> Asset'' (on chain C)` is equal to:
+                    // Asset' (on chain B) -> Asset (on chain A) -> Asset'' (on chain C)
+                    MultiAsset::ConcreteFungible {
+                        id: MultiLocation::X4(Junction::Parent, Junction::Parachain { .. }, Junction::PalletInstance { .. }, Junction::GeneralIndex { id }),
+                        amount,
+                    } => Some(MultiAsset::ConcreteFungible {
+                        id: MultiLocation::X2(
+                            Junction::PalletInstance { id: index },
+                            Junction::GeneralIndex { id: *id },
                         ),
                         amount: *amount,
                     }),
@@ -260,7 +278,7 @@ impl<T: Config> SendXcm for Module<T> {
                         let hash = T::Hashing::hash(&data);
                         let message = OutboundHrmpMessage { recipient: (*id).into(), data };
 
-                        sp_std::if_std! { println!("zenlink::<send_xcm> X2 hrmp message = {:?}", message); }
+                        sp_std::if_std! { println!("zenlink::<send_xcm> X2 hrmp message = {:?}, data detail = {:?}", message, vmsg); }
                         // TODO: Better error here
                         T::HrmpMessageSender::send_hrmp_message(message)
                             .map_err(|_| XcmError::CannotReachDestination)?;

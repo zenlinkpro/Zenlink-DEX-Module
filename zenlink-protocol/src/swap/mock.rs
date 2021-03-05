@@ -122,6 +122,7 @@ impl Config for Test {
     type AccountId32Converter = Converter;
     type ModuleId = DEXModuleId;
     type ParaId = ();
+    type TargetChains = ();
 }
 
 pub type DexModule = Module<Test>;

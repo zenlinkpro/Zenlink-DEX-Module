@@ -38,6 +38,7 @@ default = ["std"]
 std = [
     "serde",
     "codec/std",
+    "sp-core/std",
     "frame-support/std",
     "frame-system/std",
     "sp-runtime/std",

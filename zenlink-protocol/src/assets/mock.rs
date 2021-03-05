@@ -97,6 +97,7 @@ impl Config for Test {
     type AccountId32Converter = ();
     type ModuleId = TestModuleId;
     type ParaId = ();
+    type TargetChains = ();
 }
 
 pub type Assets = Module<Test>;
