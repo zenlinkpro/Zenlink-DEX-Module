@@ -30,6 +30,13 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
         at: Option<BlockHash>,
     ) -> Result<NumberOrHex>;
 
+    #[rpc(name = "zenlinkProtocol_getSovereignsInfo")]
+    fn get_sovereigns_info(
+        &self,
+        asset_id: AssetId,
+        at: Option<BlockHash>,
+    ) -> Result<Vec<(u32, AccountId, NumberOrHex)>>;
+
     #[rpc(name = "zenlinkProtocol_getAllPairs")]
     fn get_all_pairs(&self, at: Option<BlockHash>)
         -> Result<Vec<PairInfo<AccountId, NumberOrHex>>>;
@@ -105,7 +112,7 @@ where
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-        Ok(api.get_assets(&at).map_err(runtime_error_into_rpc_err)?)
+        api.get_assets(&at).map_err(runtime_error_into_rpc_err)
     }
 
     fn get_balance(
@@ -117,10 +124,29 @@ where
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-        Ok(api
-            .get_balance(&at, asset_id, account)
+        api.get_balance(&at, asset_id, account)
             .map(|token_balance| token_balance.into())
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
+    }
+
+    fn get_sovereigns_info(
+        &self,
+        asset_id: AssetId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Vec<(u32, AccountId, NumberOrHex)>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+        api.get_sovereigns_info(&at, asset_id)
+            .map(|infos| {
+                infos
+                    .into_iter()
+                    .map(|(para_id, account, token_balance)| {
+                        (para_id, account, token_balance.into())
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn get_all_pairs(
@@ -130,8 +156,7 @@ where
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-        Ok(api
-            .get_all_pairs(&at)
+        api.get_all_pairs(&at)
             .map(|pairs| {
                 pairs
                     .into_iter()
@@ -146,7 +171,7 @@ where
                     })
                     .collect::<Vec<_>>()
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn get_owner_pairs(
@@ -157,8 +182,7 @@ where
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-        Ok(api
-            .get_owner_pairs(&at, owner)
+        api.get_owner_pairs(&at, owner)
             .map(|pairs| {
                 pairs
                     .into_iter()
@@ -173,7 +197,7 @@ where
                     })
                     .collect::<Vec<_>>()
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn get_pair_by_asset_id(
@@ -185,8 +209,7 @@ where
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-        Ok(api
-            .get_all_pairs(&at)
+        api.get_all_pairs(&at)
             .map(|pairs| {
                 pairs
                     .into_iter()
@@ -204,7 +227,7 @@ where
                         reserve_1: pair.reserve_1.into(),
                     })
             })
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     //buy amount token price
@@ -216,10 +239,10 @@ where
     ) -> Result<NumberOrHex> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .get_amount_in_price(&at, supply, path)
+
+        api.get_amount_in_price(&at, supply, path)
             .map(|price| price.into())
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     //sell amount token price
@@ -231,10 +254,10 @@ where
     ) -> Result<NumberOrHex> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .get_amount_out_price(&at, supply, path)
+
+        api.get_amount_out_price(&at, supply, path)
             .map(|price| price.into())
-            .map_err(runtime_error_into_rpc_err)?)
+            .map_err(runtime_error_into_rpc_err)
     }
 
     fn get_estimate_lptoken(
@@ -249,18 +272,18 @@ where
     ) -> Result<NumberOrHex> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        Ok(api
-            .get_estimate_lptoken(
-                &at,
-                token_0,
-                token_1,
-                amount_0_desired,
-                amount_1_desired,
-                amount_0_min,
-                amount_1_min,
-            )
-            .map(|price| price.into())
-            .map_err(runtime_error_into_rpc_err)?)
+
+        api.get_estimate_lptoken(
+            &at,
+            token_0,
+            token_1,
+            amount_0_desired,
+            amount_1_desired,
+            amount_0_min,
+            amount_1_min,
+        )
+        .map(|price| price.into())
+        .map_err(runtime_error_into_rpc_err)
     }
 }
 

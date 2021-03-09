@@ -352,6 +352,12 @@ impl_runtime_apis! {
             ZenlinkProtocol::asset_balance_of(&asset_id, &owner)
         }
 
+        fn get_sovereigns_info(
+            asset_id: AssetId
+        ) -> Vec<(u32, AccountId, TokenBalance)> {
+            ZenlinkProtocol::get_sovereigns_info(&asset_id)
+        }
+
         fn get_all_pairs() -> Vec<PairInfo<AccountId, TokenBalance>> {
             ZenlinkProtocol::get_all_pairs()
         }

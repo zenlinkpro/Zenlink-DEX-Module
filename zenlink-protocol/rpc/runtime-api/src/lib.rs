@@ -19,6 +19,8 @@ sp_api::decl_runtime_apis! {
 
         fn get_balance(asset_id: AssetId, owner: AccountId) -> TokenBalance;
 
+        fn get_sovereigns_info(asset_id: AssetId) -> Vec<(u32, AccountId, TokenBalance)>;
+
         fn get_all_pairs() -> Vec<PairInfo<AccountId, TokenBalance>>;
 
         fn get_owner_pairs(owner: AccountId) -> Vec<PairInfo<AccountId, TokenBalance>>;

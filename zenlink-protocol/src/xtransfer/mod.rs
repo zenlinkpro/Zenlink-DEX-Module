@@ -13,7 +13,10 @@ use crate::{
     AssetId, Config, Convert, DownwardMessageHandler, ExecuteXcm, Get, HrmpMessageHandler,
     HrmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, Junction, Module, MultiAsset,
     MultiLocation, NetworkId, Order, OutboundHrmpMessage, ParaId,
-    RawEvent::{XcmBadFormat, XcmBadVersion, XcmExecuteFail, HrmpMessageSent, XcmExecuteSuccess, UpwardMessageSent},
+    RawEvent::{
+        HrmpMessageSent, UpwardMessageSent, XcmBadFormat, XcmBadVersion, XcmExecuteFail,
+        XcmExecuteSuccess,
+    },
     SendXcm, TokenBalance, UpwardMessageSender, Vec, VersionedXcm, Xcm, XcmError,
 };
 
@@ -47,7 +50,8 @@ impl<T: Config> Module<T> {
 
     // Return true if the parachain id is in the set of the target parachains
     pub(crate) fn is_reachable(para_id: ParaId) -> bool {
-        let location = MultiLocation::X2(Junction::Parent, Junction::Parachain { id: para_id.into() });
+        let location =
+            MultiLocation::X2(Junction::Parent, Junction::Parachain { id: para_id.into() });
         T::TargetChains::get().contains(&location)
     }
 
@@ -212,7 +216,13 @@ fn shift_xcm(index: u8, msg: Xcm) -> Option<Xcm> {
                     // In Actually, `Asset' (on chain B) -> Asset'' (on chain C)` is equal to:
                     // Asset' (on chain B) -> Asset (on chain A) -> Asset'' (on chain C)
                     MultiAsset::ConcreteFungible {
-                        id: MultiLocation::X4(Junction::Parent, Junction::Parachain { .. }, Junction::PalletInstance { .. }, Junction::GeneralIndex { id }),
+                        id:
+                            MultiLocation::X4(
+                                Junction::Parent,
+                                Junction::Parachain { .. },
+                                Junction::PalletInstance { .. },
+                                Junction::GeneralIndex { id },
+                            ),
                         amount,
                     } => Some(MultiAsset::ConcreteFungible {
                         id: MultiLocation::X2(

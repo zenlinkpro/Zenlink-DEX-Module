@@ -40,6 +40,27 @@ impl<T: Config> Module<T> {
             .collect::<Vec<_>>()
     }
 
+    pub fn get_sovereigns_info(asset_id: &AssetId) -> Vec<(u32, T::AccountId, TokenBalance)> {
+        T::TargetChains::get()
+            .iter()
+            .filter_map(|location| match location {
+                MultiLocation::X2(Junction::Parent, Junction::Parachain { id }) => {
+                    if let Some(sovereign) = T::AccountIdConverter::from_location(location) {
+                        Some((*id, sovereign))
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            })
+            .map(|(para_id, account)| {
+                let balance = Self::asset_balance_of(asset_id, &account);
+
+                (para_id, account, balance)
+            })
+            .collect::<Vec<_>>()
+    }
+
     pub fn get_owner_pairs(owner: &T::AccountId) -> Vec<PairInfo<T::AccountId, TokenBalance>> {
         <Pairs>::get()
             .iter()
