@@ -19,7 +19,7 @@ impl<ParachainList: Get<Vec<MultiLocation>>> FilterAssetLocation
     for ParaChainWhiteList<ParachainList>
 {
     fn filter_asset_location(_asset: &MultiAsset, origin: &MultiLocation) -> bool {
-        frame_support::debug::print!("filter_asset_location {:?}", origin);
+        log::debug!("filter_asset_location {:?}", origin);
         sp_std::if_std! {println!("zenlink::<filter_asset_location> {:?}", origin)}
 
         ParachainList::get().contains(origin)

@@ -254,7 +254,7 @@ decl_module! {
                     match err {
                         XcmError::CannotReachDestination => Error::<T>::MaybeHrmpChannelIsClosed,
                         _ => {
-                            frame_support::debug::print!("zenlink::<transfer_to_parachain>: err = {:?}", err);
+                            log::debug!("zenlink::<transfer_to_parachain>: err = {:?}", err);
                             Error::<T>::ExecutionFailed
                         }
                     }

@@ -153,13 +153,13 @@ impl<T: Config> Module<T> {
 impl<T: Config> DownwardMessageHandler for Module<T> {
     fn handle_downward_message(msg: InboundDownwardMessage) {
         let hash = msg.using_encoded(T::Hashing::hash);
-        frame_support::debug::print!("Processing Downward XCM: hash = {:?}", &hash);
+        log::debug!("Processing Downward XCM: hash = {:?}", &hash);
         match VersionedXcm::decode(&mut &msg.msg[..]).map(Xcm::try_from) {
             Ok(Ok(xcm)) => {
                 match T::XcmExecutor::execute_xcm(Junction::Parent.into(), xcm.clone()) {
                     Ok(..) => Self::deposit_event(XcmExecuteSuccess(hash)),
                     Err(_e @ XcmError::UnhandledXcmMessage) => {
-                        frame_support::debug::print!("Receive Downward XCM: xcm = {:?}", xcm);
+                        log::debug!("Receive Downward XCM: xcm = {:?}", xcm);
                     }
                     Err(e) => Self::deposit_event(XcmExecuteFail(hash, e)),
                 };
@@ -173,7 +173,7 @@ impl<T: Config> DownwardMessageHandler for Module<T> {
 impl<T: Config> HrmpMessageHandler for Module<T> {
     fn handle_hrmp_message(sender: ParaId, msg: InboundHrmpMessage) {
         let hash = T::Hashing::hash(&msg.data);
-        frame_support::debug::print!("Processing HRMP XCM: {:?}", &hash);
+        log::debug!("Processing HRMP XCM: {:?}", &hash);
         match VersionedXcm::decode(&mut &msg.data[..]).map(Xcm::try_from) {
             Ok(Ok(xcm)) => {
                 sp_std::if_std! { println!("zenlink::<handle_hrmp_message> xcm {:?}", xcm); }
