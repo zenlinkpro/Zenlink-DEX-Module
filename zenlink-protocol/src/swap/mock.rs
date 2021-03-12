@@ -2,17 +2,19 @@
 // Licensed under GPL-3.0.
 
 //! Test utilities
-use crate as pallet_zenlink;
-
-use crate::{
-    Config, Convert, ExecuteXcm, HrmpMessageSender, LocationConversion, Module, ModuleId,
-    MultiLocation, OutboundHrmpMessage, UpwardMessage, UpwardMessageSender, Xcm, XcmResult,
-};
 use frame_support::{parameter_types, Hashable};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    DispatchResult,
+};
+
+use crate as pallet_zenlink;
+use crate::{
+    Config, Convert, ExecuteXcm, HrmpMessageSender, LocationConversion, Module, ModuleId,
+    MultiLocation, OperationalAsset, OutboundHrmpMessage, UpwardMessage, UpwardMessageSender, Xcm,
+    XcmResult,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -24,9 +26,9 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        Zenlink: pallet_zenlink::{Module, Origin, Call, Storage, Event<T>},
+        System: frame_system::{Module, Call, Config, Storage, Event<T>} = 0,
+        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 8,
+        Zenlink: pallet_zenlink::{Module, Origin, Call, Storage, Event<T>} = 9,
     }
 );
 
@@ -76,6 +78,34 @@ impl pallet_balances::Config for Test {
 
 pub struct TestSender;
 
+pub struct TestAssets;
+
+impl OperationalAsset<u32, u128, u128> for TestAssets {
+    fn module_index() -> u8 {
+        unimplemented!()
+    }
+
+    fn balance(_id: u32, _who: u128) -> u128 {
+        unimplemented!()
+    }
+
+    fn total_supply(_id: u32) -> u128 {
+        unimplemented!()
+    }
+
+    fn inner_transfer(_id: u32, _origin: u128, _target: u128, _amount: u128) -> DispatchResult {
+        unimplemented!()
+    }
+
+    fn inner_deposit(_id: u32, _origin: u128, _amount: u128) -> DispatchResult {
+        unimplemented!()
+    }
+
+    fn inner_withdraw(_id: u32, _origin: u128, _amount: u128) -> DispatchResult {
+        unimplemented!()
+    }
+}
+
 impl UpwardMessageSender for TestSender {
     fn send_upward_message(_msg: UpwardMessage) -> Result<(), ()> {
         unimplemented!()
@@ -123,6 +153,7 @@ impl Config for Test {
     type ModuleId = DEXModuleId;
     type ParaId = ();
     type TargetChains = ();
+    type OperationalAsset = TestAssets;
 }
 
 pub type DexModule = Module<Test>;

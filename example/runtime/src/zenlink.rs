@@ -1,13 +1,13 @@
 use super::{
-    parameter_types, vec, AccountId, Balances, Call, Convert, Event, ModuleId, Origin,
-    ParachainInfo, ParachainSystem, Runtime, Vec, ZenlinkProtocol,
+    parameter_types, vec, AccountId, Balances, Call, Convert, DispatchResult, Event, ModuleId,
+    Origin, ParachainInfo, ParachainSystem, Runtime, Vec, ZenlinkProtocol,
 };
 
 use zenlink_protocol::{
-    AccountId32Aliases, Junction, LocationInverter, MultiLocation, NetworkId,
+    AccountId32Aliases, Junction, LocationInverter, MultiLocation, NetworkId, OperationalAsset,
     Origin as ZenlinkOrigin, ParaChainWhiteList, ParentIsDefault, RelayChainAsNative, Sibling,
     SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-    SovereignSignedViaLocation, Transactor, XcmCfg, XcmExecutor,
+    SovereignSignedViaLocation, TokenBalance, Transactor, XcmCfg, XcmExecutor,
 };
 
 parameter_types! {
@@ -68,6 +68,39 @@ impl XcmCfg for XcmConfig {
     type LocationInverter = LocationInverter<Ancestry>;
 }
 
+pub struct OtherAssets;
+impl OperationalAsset<u32, AccountId, TokenBalance> for OtherAssets {
+    fn module_index() -> u8 {
+        unimplemented!()
+    }
+    /// Get the asset `id` balance of `who`.
+    fn balance(_id: u32, _who: AccountId) -> TokenBalance {
+        unimplemented!()
+    }
+
+    /// Get the total supply of an asset `id`.
+    fn total_supply(_id: u32) -> TokenBalance {
+        unimplemented!()
+    }
+
+    fn inner_transfer(
+        _id: u32,
+        _origin: AccountId,
+        _target: AccountId,
+        _amount: TokenBalance,
+    ) -> DispatchResult {
+        unimplemented!()
+    }
+
+    fn inner_deposit(_id: u32, _origin: AccountId, _amount: TokenBalance) -> DispatchResult {
+        unimplemented!()
+    }
+
+    fn inner_withdraw(_id: u32, _origin: AccountId, _amount: TokenBalance) -> DispatchResult {
+        unimplemented!()
+    }
+}
+
 impl zenlink_protocol::Config for Runtime {
     type Event = Event;
     type XcmExecutor = XcmExecutor<XcmConfig>;
@@ -79,4 +112,5 @@ impl zenlink_protocol::Config for Runtime {
     type ParaId = ParachainInfo;
     type ModuleId = DEXModuleId;
     type TargetChains = SiblingParachains;
+    type OperationalAsset = OtherAssets;
 }

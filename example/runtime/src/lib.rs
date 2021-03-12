@@ -38,7 +38,9 @@ use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 use frame_support::{
-    construct_runtime, parameter_types,
+    construct_runtime,
+    dispatch::DispatchResult,
+    parameter_types,
     traits::Randomness,
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
@@ -49,7 +51,7 @@ use frame_system::limits::{BlockLength, BlockWeights};
 use pallet_transaction_payment_rpc_runtime_api::{FeeDetails, RuntimeDispatchInfo};
 
 mod zenlink;
-use zenlink_protocol::{AssetId, PairInfo, TokenBalance};
+use zenlink_protocol::{AssetId, PairInfo, TokenBalance, ZenlinkMultiAsset};
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -349,7 +351,7 @@ impl_runtime_apis! {
             asset_id: AssetId,
             owner: AccountId
         ) -> TokenBalance {
-            ZenlinkProtocol::asset_balance_of(&asset_id, &owner)
+            ZenlinkProtocol::multi_asset_balance_of(&asset_id, &owner)
         }
 
         fn get_sovereigns_info(
@@ -373,7 +375,7 @@ impl_runtime_apis! {
             supply: TokenBalance,
             path: Vec<AssetId>
         ) -> TokenBalance {
-            ZenlinkProtocol::get_in_price(supply, path)
+            ZenlinkProtocol::desired_in_amount(supply, path)
         }
 
         //sell amount token price
@@ -381,7 +383,7 @@ impl_runtime_apis! {
             supply: TokenBalance,
             path: Vec<AssetId>
         ) -> TokenBalance {
-            ZenlinkProtocol::get_out_price(supply, path)
+            ZenlinkProtocol::supply_out_amount(supply, path)
         }
 
         fn get_estimate_lptoken(

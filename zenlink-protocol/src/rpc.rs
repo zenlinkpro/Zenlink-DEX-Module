@@ -21,6 +21,7 @@ pub struct PairInfo<AccountId, TokenBalance> {
     pub holding_liquidity: TokenBalance,
     pub reserve_0: TokenBalance,
     pub reserve_1: TokenBalance,
+    pub lp_asset_id: AssetId,
 }
 
 impl<T: Config> Module<T> {
@@ -34,8 +35,9 @@ impl<T: Config> Module<T> {
                 account: pair.account.clone(),
                 total_liquidity: pair.total_liquidity,
                 holding_liquidity: TokenBalance::default(),
-                reserve_0: Self::asset_balance_of(&pair.token_0, &pair.account),
-                reserve_1: Self::asset_balance_of(&pair.token_1, &pair.account),
+                reserve_0: Self::multi_asset_balance_of(&pair.token_0, &pair.account),
+                reserve_1: Self::multi_asset_balance_of(&pair.token_1, &pair.account),
+                lp_asset_id: pair.lp_asset_id,
             })
             .collect::<Vec<_>>()
     }
@@ -54,7 +56,7 @@ impl<T: Config> Module<T> {
                 _ => None,
             })
             .map(|(para_id, account)| {
-                let balance = Self::asset_balance_of(asset_id, &account);
+                let balance = Self::multi_asset_balance_of(asset_id, &account);
 
                 (para_id, account, balance)
             })
@@ -66,7 +68,7 @@ impl<T: Config> Module<T> {
             .iter()
             .filter_map(|(token_0, token_1)| Self::get_pair_from_asset_id(token_0, token_1))
             .filter_map(|pair| {
-                let hold = <LiquidityPool<T>>::get((pair.account.clone(), owner));
+                let hold = Self::multi_asset_balance_of(&pair.lp_asset_id, owner);
                 if hold > 0 {
                     Some(PairInfo {
                         token_0: pair.token_0,
@@ -74,8 +76,9 @@ impl<T: Config> Module<T> {
                         account: pair.account.clone(),
                         total_liquidity: pair.total_liquidity,
                         holding_liquidity: hold,
-                        reserve_0: Self::asset_balance_of(&pair.token_0, &pair.account),
-                        reserve_1: Self::asset_balance_of(&pair.token_1, &pair.account),
+                        reserve_0: Self::multi_asset_balance_of(&pair.token_0, &pair.account),
+                        reserve_1: Self::multi_asset_balance_of(&pair.token_1, &pair.account),
+                        lp_asset_id: pair.lp_asset_id,
                     })
                 } else {
                     None
@@ -84,18 +87,17 @@ impl<T: Config> Module<T> {
             .collect::<Vec<_>>()
     }
 
-    //buy amount token price
-    pub fn get_in_price(supply: TokenBalance, path: Vec<AssetId>) -> TokenBalance {
+    pub fn supply_out_amount(supply: TokenBalance, path: Vec<AssetId>) -> TokenBalance {
         Self::get_amount_out_by_path(supply, &path).map_or(TokenBalance::default(), |amounts| {
             *amounts.last().unwrap_or(&TokenBalance::default())
         })
     }
 
-    //sell amount token price
-    pub fn get_out_price(supply: TokenBalance, path: Vec<AssetId>) -> TokenBalance {
-        Self::get_amount_in_by_path(supply, &path).map_or(TokenBalance::default(), |amounts| {
-            *amounts.first().unwrap_or(&TokenBalance::default())
-        })
+    pub fn desired_in_amount(desired_amount: TokenBalance, path: Vec<AssetId>) -> TokenBalance {
+        Self::get_amount_in_by_path(desired_amount, &path)
+            .map_or(TokenBalance::default(), |amounts| {
+                *amounts.first().unwrap_or(&TokenBalance::default())
+            })
     }
 
     pub fn get_estimate_lptoken(
@@ -107,8 +109,8 @@ impl<T: Config> Module<T> {
         amount_1_min: TokenBalance,
     ) -> TokenBalance {
         Self::get_pair_from_asset_id(&token_0, &token_1).map_or(TokenBalance::default(), |pair| {
-            let reserve_0 = Self::asset_balance_of(&token_0, &pair.account);
-            let reserve_1 = Self::asset_balance_of(&token_1, &pair.account);
+            let reserve_0 = Self::multi_asset_balance_of(&token_0, &pair.account);
+            let reserve_1 = Self::multi_asset_balance_of(&token_1, &pair.account);
 
             Self::calculate_added_amount(
                 amount_0_desired,

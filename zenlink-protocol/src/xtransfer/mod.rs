@@ -10,14 +10,16 @@ use sp_std::{
 
 use crate::{
     sp_api_hidden_includes_decl_storage::hidden_include::traits::PalletInfo,
-    AssetId, Config, Convert, DownwardMessageHandler, ExecuteXcm, Get, HrmpMessageHandler,
-    HrmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, Junction, Module, MultiAsset,
-    MultiLocation, NetworkId, Order, OutboundHrmpMessage, ParaId,
+    AssetId, AssetProperty, Config, Convert, DownwardMessageHandler, ExecuteXcm, Get,
+    HrmpMessageHandler, HrmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, Junction,
+    Module, MultiAsset, MultiLocation, NetworkId, OperationalAsset, Order, OutboundHrmpMessage,
+    ParaId,
     RawEvent::{
         HrmpMessageSent, UpwardMessageSent, XcmBadFormat, XcmBadVersion, XcmExecuteFail,
         XcmExecuteSuccess,
     },
-    SendXcm, TokenBalance, UpwardMessageSender, Vec, VersionedXcm, Xcm, XcmError,
+    SendXcm, TokenBalance, UpwardMessageSender, VersionedXcm, Xcm, XcmError,
+    NATIVE_CURRENCY_MODULE_INDEX,
 };
 
 /// Origin for the parachains module.
@@ -44,11 +46,10 @@ impl From<u32> for Origin {
 
 impl<T: Config> Module<T> {
     // Return Zenlink Protocol Pallet index
-    fn index() -> u8 {
+    pub(crate) fn index() -> u8 {
         T::PalletInfo::index::<Self>().map_or(0u8, |index| index as u8)
     }
 
-    // Return true if the parachain id is in the set of the target parachains
     pub(crate) fn is_reachable(para_id: ParaId) -> bool {
         let location =
             MultiLocation::X2(Junction::Parent, Junction::Parachain { id: para_id.into() });
@@ -122,29 +123,44 @@ impl<T: Config> Module<T> {
         para_id: ParaId,
         account: &T::AccountId,
         amount: TokenBalance,
-    ) -> Xcm {
-        match asset_id {
-            AssetId::NativeCurrency => {
-                let location = MultiLocation::X2(
-                    Junction::Parent,
-                    Junction::Parachain { id: T::ParaId::get().into() },
-                );
-
-                Self::make_xcm_lateral_transfer_native(location, para_id, account.clone(), amount)
-            }
-            AssetId::ParaCurrency(id) => {
-                let location = MultiLocation::X2(
-                    Junction::PalletInstance { id: Self::index() },
-                    Junction::GeneralIndex { id: (*id) as u128 },
-                );
-
-                Self::make_xcm_lateral_transfer_foreign(
-                    (*id).into(),
-                    location,
+    ) -> Result<Xcm, XcmError> {
+        let asset_location = MultiLocation::X4(
+            Junction::Parent,
+            Junction::Parachain { id: asset_id.chain_id },
+            Junction::PalletInstance { id: asset_id.module_index },
+            Junction::GeneralIndex { id: asset_id.asset_index as u128 },
+        );
+        if Self::assets_list().contains(asset_id) {
+            match Self::asset_property(asset_id) {
+                AssetProperty::Foreign => Ok(Self::make_xcm_lateral_transfer_foreign(
+                    ParaId::from(asset_id.chain_id),
+                    asset_location,
                     para_id,
                     account.clone(),
                     amount,
-                )
+                )),
+                AssetProperty::Lp(_) => Ok(Self::make_xcm_lateral_transfer_native(
+                    asset_location,
+                    para_id,
+                    account.clone(),
+                    amount,
+                )),
+            }
+        } else {
+            if <T as Config>::ParaId::get() != ParaId::from(asset_id.chain_id) {
+                return Err(XcmError::Undefined);
+            }
+            if NATIVE_CURRENCY_MODULE_INDEX == asset_id.module_index
+                || <T as Config>::OperationalAsset::module_index() == asset_id.module_index
+            {
+                Ok(Self::make_xcm_lateral_transfer_native(
+                    asset_location,
+                    para_id,
+                    account.clone(),
+                    amount,
+                ))
+            } else {
+                Err(XcmError::Undefined)
             }
         }
     }
@@ -190,58 +206,6 @@ impl<T: Config> HrmpMessageHandler for Module<T> {
     }
 }
 
-// TODO: more checks
-fn shift_xcm(index: u8, msg: Xcm) -> Option<Xcm> {
-    match msg {
-        Xcm::ReserveAssetDeposit { assets, effects } => {
-            let assets = assets
-                .iter()
-                .filter_map(|asset| match asset {
-                    // In case 1: Asset'
-                    //
-                    // Asset (on chain A) -> Asset' (on chain B)
-                    MultiAsset::ConcreteFungible {
-                        id: MultiLocation::X2(Junction::Parent, Junction::Parachain { id }),
-                        amount,
-                    } => Some(MultiAsset::ConcreteFungible {
-                        id: MultiLocation::X2(
-                            Junction::PalletInstance { id: index },
-                            Junction::GeneralIndex { id: *id as u128 },
-                        ),
-                        amount: *amount,
-                    }),
-                    // In case 2: Asset''
-                    //
-                    // Asset (on chain A) -> Asset' (on chain B), Asset' (on chain B) -> Asset'' (on chain C)
-                    // In Actually, `Asset' (on chain B) -> Asset'' (on chain C)` is equal to:
-                    // Asset' (on chain B) -> Asset (on chain A) -> Asset'' (on chain C)
-                    MultiAsset::ConcreteFungible {
-                        id:
-                            MultiLocation::X4(
-                                Junction::Parent,
-                                Junction::Parachain { .. },
-                                Junction::PalletInstance { .. },
-                                Junction::GeneralIndex { id },
-                            ),
-                        amount,
-                    } => Some(MultiAsset::ConcreteFungible {
-                        id: MultiLocation::X2(
-                            Junction::PalletInstance { id: index },
-                            Junction::GeneralIndex { id: *id },
-                        ),
-                        amount: *amount,
-                    }),
-                    _ => None,
-                })
-                .collect::<Vec<_>>();
-
-            Some(Xcm::ReserveAssetDeposit { assets, effects })
-        }
-        Xcm::WithdrawAsset { .. } => Some(msg),
-        _ => None,
-    }
-}
-
 impl<T: Config> SendXcm for Module<T> {
     fn send_xcm(dest: MultiLocation, msg: Xcm) -> Result<(), XcmError> {
         let vmsg: VersionedXcm = msg.clone().into();
@@ -250,6 +214,8 @@ impl<T: Config> SendXcm for Module<T> {
             // A message for us. Execute directly.
             None => {
                 let msg = vmsg.try_into().map_err(|_| XcmError::UnhandledXcmVersion)?;
+
+                #[warn(clippy::let_and_return)]
                 let res = T::XcmExecutor::execute_xcm(MultiLocation::Null, msg);
                 sp_std::if_std! { println!("zenlink::<send_xcm>  res = {:?}", res); }
                 res
@@ -279,9 +245,7 @@ impl<T: Config> SendXcm for Module<T> {
             }
             // An HRMP message for a sibling parachain by zenlink
             Some(Junction::Parent) if dest.len() == 2 => {
-                let vmsg: VersionedXcm = shift_xcm(Self::index(), msg)
-                    .ok_or(XcmError::UnhandledXcmMessage)
-                    .map(|m| m.into())?;
+                let vmsg: VersionedXcm = msg.into();
                 match dest.at(1) {
                     Some(Junction::Parachain { id }) => {
                         let data = vmsg.encode();

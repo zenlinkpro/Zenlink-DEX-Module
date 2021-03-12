@@ -2,20 +2,18 @@
 // Licensed under GPL-3.0.
 
 use codec::{Decode, Encode};
-use frame_support::traits::ExistenceRequirement::KeepAlive;
 use sp_core::U256;
 use sp_runtime::{
     traits::{AccountIdConversion, IntegerSquareRoot, One, Zero},
-    DispatchError, DispatchResult, RuntimeDebug, SaturatedConversion,
+    DispatchError, DispatchResult, RuntimeDebug,
 };
-use sp_std::convert::{TryFrom, TryInto};
+use sp_std::convert::TryInto;
 
 use crate::{
     ensure,
-    sp_api_hidden_includes_decl_storage::hidden_include::{
-        traits::Currency, StorageMap, StorageValue,
-    },
-    vec, AssetId, AssetsToPair, Config, Error, Get, LiquidityPool, Module, NextPairId, Pairs,
+    primitives::{AssetProperty, LpProperty, MultiAsset},
+    sp_api_hidden_includes_decl_storage::hidden_include::{StorageMap, StorageValue},
+    vec, AssetId, Assets, AssetsToPair, Config, Error, Get, Module, NextPairId, Pairs,
     TokenBalance, Vec,
 };
 
@@ -31,6 +29,7 @@ pub struct Pair<AccountId, TokenBalance> {
 
     pub account: AccountId,
     pub total_liquidity: TokenBalance,
+    pub lp_asset_id: AssetId,
 }
 
 impl<T: Config> Module<T> {
@@ -44,11 +43,22 @@ impl<T: Config> Module<T> {
         let next_id = pair_id.checked_add(One::one()).ok_or(Error::<T>::Overflow)?;
 
         let account: T::AccountId = <T as Config>::ModuleId::get().into_sub_account(pair_id);
+        sp_std::if_std! { println!("zenlink::<inner_create_pair> {:#?} pair_id {:#?}",account, pair_id );}
         let (token_0, token_1) = Self::sort_asset_id(*token_0, *token_1);
-        let new_pair = Pair { token_0, token_1, account, total_liquidity: Zero::zero() };
+        let lp_asset_index = <Assets>::get().len() as u32;
+        let lp_asset_id = AssetId {
+            chain_id: T::ParaId::get().into(),
+            module_index: Self::index(),
+            asset_index: lp_asset_index,
+        };
+        let new_pair =
+            Pair { token_0, token_1, account, total_liquidity: Zero::zero(), lp_asset_id };
         <AssetsToPair<T>>::insert((token_0, token_1), new_pair);
         <Pairs>::mutate(|list| list.push((token_0, token_1)));
         <NextPairId>::put(next_id);
+
+        let asset_property = AssetProperty::Lp(LpProperty { token_0, token_1 });
+        Self::inner_issue(lp_asset_id, asset_property)?;
         Ok(())
     }
 
@@ -64,8 +74,8 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         let mut pair =
             Self::get_pair_from_asset_id(token_0, token_1).ok_or(Error::<T>::PairNotExists)?;
-        let reserve_0 = Self::asset_balance_of(&token_0, &pair.account);
-        let reserve_1 = Self::asset_balance_of(&token_1, &pair.account);
+        let reserve_0 = Self::multi_asset_balance_of(&token_0, &pair.account);
+        let reserve_1 = Self::multi_asset_balance_of(&token_1, &pair.account);
 
         let (amount_0, amount_1) = Self::calculate_added_amount(
             amount_0_desired,
@@ -76,8 +86,8 @@ impl<T: Config> Module<T> {
             reserve_1,
         )?;
 
-        let balance_token_0 = Self::asset_balance_of(&token_0, &who);
-        let balance_token_1 = Self::asset_balance_of(&token_1, &who);
+        let balance_token_0 = Self::multi_asset_balance_of(&token_0, &who);
+        let balance_token_1 = Self::multi_asset_balance_of(&token_1, &who);
         ensure!(
             balance_token_0 >= amount_0 && balance_token_1 >= amount_1,
             Error::<T>::InsufficientAssetBalance
@@ -90,12 +100,10 @@ impl<T: Config> Module<T> {
         pair.total_liquidity =
             pair.total_liquidity.checked_add(mint_liquidity).ok_or(Error::<T>::Overflow)?;
 
-        Self::asset_transfer(&token_0, &who, &pair.account, amount_0)?;
-        Self::asset_transfer(&token_1, &who, &pair.account, amount_1)?;
+        Self::multi_asset_deposit(&pair.lp_asset_id, who, mint_liquidity)?;
+        Self::multi_asset_transfer(&token_0, &who, &pair.account, amount_0)?;
+        Self::multi_asset_transfer(&token_1, &who, &pair.account, amount_1)?;
 
-        <LiquidityPool<T>>::mutate((pair.clone().account, who), |balance| {
-            *balance = balance.saturating_add(mint_liquidity);
-        });
         <AssetsToPair<T>>::insert((pair.token_0, pair.token_1), pair);
 
         Ok(())
@@ -153,11 +161,11 @@ impl<T: Config> Module<T> {
     ) -> DispatchResult {
         let pair =
             Self::get_pair_from_asset_id(token_0, token_1).ok_or(Error::<T>::PairNotExists)?;
-        let liquidity = <LiquidityPool<T>>::get((pair.account.clone(), who));
+        let liquidity = Self::multi_asset_balance_of(&pair.lp_asset_id, who);
         ensure!(liquidity >= remove_liquidity, Error::<T>::InsufficientLiquidity);
 
-        let reserve_0 = Self::asset_balance_of(&token_0, &pair.account);
-        let reserve_1 = Self::asset_balance_of(&token_1, &pair.account);
+        let reserve_0 = Self::multi_asset_balance_of(&token_0, &pair.account);
+        let reserve_1 = Self::multi_asset_balance_of(&token_1, &pair.account);
 
         let amount_0 =
             Self::calculate_share_amount(remove_liquidity, pair.total_liquidity, reserve_0);
@@ -169,12 +177,10 @@ impl<T: Config> Module<T> {
             Error::<T>::InsufficientTargetAmount
         );
 
-        Self::asset_transfer(&token_0, &pair.account, &to, amount_0)?;
-        Self::asset_transfer(&token_1, &pair.account, &to, amount_1)?;
+        Self::multi_asset_transfer(&token_0, &pair.account, &to, amount_0)?;
+        Self::multi_asset_transfer(&token_1, &pair.account, &to, amount_1)?;
 
-        <LiquidityPool<T>>::mutate((pair.account, who), |balance| {
-            *balance = (*balance).saturating_sub(remove_liquidity);
-        });
+        Self::multi_asset_withdraw(&pair.lp_asset_id, who, remove_liquidity)?;
 
         <AssetsToPair<T>>::mutate((pair.token_0, pair.token_1), |option_pair| {
             if let Some(pair) = option_pair {
@@ -198,7 +204,7 @@ impl<T: Config> Module<T> {
         let pair =
             Self::get_pair_from_asset_id(&path[0], &path[1]).ok_or(Error::<T>::PairNotExists)?;
 
-        Self::asset_transfer(&path[0], &who, &pair.account, amount_in)?;
+        Self::multi_asset_transfer(&path[0], &who, &pair.account, amount_in)?;
         Self::swap(&amounts, &path, &to)?;
 
         Ok(())
@@ -217,7 +223,7 @@ impl<T: Config> Module<T> {
         let pair =
             Self::get_pair_from_asset_id(&path[0], &path[1]).ok_or(Error::<T>::PairNotExists)?;
 
-        Self::asset_transfer(&path[0], &who, &pair.account, amounts[0])?;
+        Self::multi_asset_transfer(&path[0], &who, &pair.account, amounts[0])?;
         Self::swap(&amounts, &path, &to)?;
 
         Ok(())
@@ -234,8 +240,8 @@ impl<T: Config> Module<T> {
 
         for i in 0..len {
             if let Some(pair) = Self::get_pair_from_asset_id(&path[i], &path[i + 1]) {
-                let reserve_0 = Self::asset_balance_of(&path[i], &pair.account);
-                let reserve_1 = Self::asset_balance_of(&path[i + 1], &pair.account);
+                let reserve_0 = Self::multi_asset_balance_of(&path[i], &pair.account);
+                let reserve_1 = Self::multi_asset_balance_of(&path[i + 1], &pair.account);
                 ensure!(
                     reserve_1 > Zero::zero() && reserve_0 > Zero::zero(),
                     Error::<T>::InvalidPath
@@ -263,8 +269,8 @@ impl<T: Config> Module<T> {
 
         while i > 0 {
             if let Some(pair) = Self::get_pair_from_asset_id(&path[i], &path[i - 1]) {
-                let reserve_0 = Self::asset_balance_of(&path[i], &pair.account);
-                let reserve_1 = Self::asset_balance_of(&path[i - 1], &pair.account);
+                let reserve_0 = Self::multi_asset_balance_of(&path[i], &pair.account);
+                let reserve_1 = Self::multi_asset_balance_of(&path[i - 1], &pair.account);
                 ensure!(
                     reserve_1 > Zero::zero() && reserve_0 > Zero::zero(),
                     Error::<T>::InvalidPath
@@ -372,18 +378,18 @@ impl<T: Config> Module<T> {
         amount_1: TokenBalance,
         to: &T::AccountId,
     ) -> DispatchResult {
-        let reserve_0 = Self::asset_balance_of(&pair.token_0, &pair.account);
-        let reserve_1 = Self::asset_balance_of(&pair.token_1, &pair.account);
+        let reserve_0 = Self::multi_asset_balance_of(&pair.token_0, &pair.account);
+        let reserve_1 = Self::multi_asset_balance_of(&pair.token_1, &pair.account);
         ensure!(
             amount_0 <= reserve_0 && amount_1 <= reserve_1,
             Error::<T>::InsufficientPairReserve
         );
 
         if amount_0 > Zero::zero() {
-            Self::asset_transfer(&pair.token_0, &pair.account, to, amount_0)?;
+            Self::multi_asset_transfer(&pair.token_0, &pair.account, to, amount_0)?;
         }
         if amount_1 > Zero::zero() {
-            Self::asset_transfer(&pair.token_1, &pair.account, to, amount_1)?;
+            Self::multi_asset_transfer(&pair.token_1, &pair.account, to, amount_1)?;
         }
 
         Ok(())
@@ -395,32 +401,5 @@ impl<T: Config> Module<T> {
     ) -> Option<Pair<T::AccountId, TokenBalance>> {
         Self::tokens_to_pair((token_0, token_1))
             .or_else(|| Self::tokens_to_pair((token_1, token_0)))
-    }
-
-    fn asset_transfer(
-        token: &AssetId,
-        from: &T::AccountId,
-        to: &T::AccountId,
-        amount: TokenBalance,
-    ) -> DispatchResult {
-        match token {
-            AssetId::NativeCurrency => {
-                let amount = <<<T as Config>::NativeCurrency as Currency<
-                    <T as frame_system::Config>::AccountId,
-                >>::Balance as TryFrom<u128>>::try_from(amount)
-                .map_err(|_| Error::<T>::Overflow)?;
-                <T as Config>::NativeCurrency::transfer(&from, &to, amount, KeepAlive)
-            }
-            AssetId::ParaCurrency(_) => Self::inner_transfer(*token, &from, &to, amount),
-        }
-    }
-
-    pub fn asset_balance_of(token: &AssetId, owner: &T::AccountId) -> TokenBalance {
-        match token {
-            AssetId::NativeCurrency => {
-                <T as Config>::NativeCurrency::free_balance(&owner).saturated_into::<TokenBalance>()
-            }
-            AssetId::ParaCurrency(_) => Self::balance_of(*token, &owner),
-        }
     }
 }

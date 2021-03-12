@@ -168,6 +168,7 @@ where
                         holding_liquidity: pair.holding_liquidity.into(),
                         reserve_0: pair.reserve_0.into(),
                         reserve_1: pair.reserve_1.into(),
+                        lp_asset_id: pair.lp_asset_id,
                     })
                     .collect::<Vec<_>>()
             })
@@ -194,6 +195,7 @@ where
                         holding_liquidity: pair.holding_liquidity.into(),
                         reserve_0: pair.reserve_0.into(),
                         reserve_1: pair.reserve_1.into(),
+                        lp_asset_id: pair.lp_asset_id,
                     })
                     .collect::<Vec<_>>()
             })
@@ -225,6 +227,7 @@ where
                         holding_liquidity: pair.holding_liquidity.into(),
                         reserve_0: pair.reserve_0.into(),
                         reserve_1: pair.reserve_1.into(),
+                        lp_asset_id: pair.lp_asset_id,
                     })
             })
             .map_err(runtime_error_into_rpc_err)

@@ -26,7 +26,10 @@ use sp_runtime::{
 use sp_std::{prelude::Vec, vec};
 
 pub use crate::{
-    primitives::{AssetId, MultiAsset as ZenlinkMultiAsset, PairId, TokenBalance},
+    primitives::{
+        AssetId, AssetProperty, MultiAsset as ZenlinkMultiAsset, OperationalAsset, PairId,
+        TokenBalance, NATIVE_CURRENCY_MODULE_INDEX,
+    },
     rpc::PairInfo,
     swap::Pair,
     xcm_support::{ParaChainWhiteList, Transactor},
@@ -76,6 +79,8 @@ pub trait Config: frame_system::Config {
     type AccountId32Converter: Convert<Self::AccountId, [u8; 32]>;
     /// Get this parachain Id
     type ParaId: Get<ParaId>;
+    /// This chain other assets
+    type OperationalAsset: OperationalAsset<u32, Self::AccountId, TokenBalance>;
 }
 
 decl_storage! {
@@ -86,6 +91,8 @@ decl_storage! {
         /// TWOX-NOTE: `AssetId` is trusted, so this is safe.
         TotalSupply: map hasher(twox_64_concat) AssetId => TokenBalance;
 
+        AssetsProperty get(fn asset_property): map hasher(blake2_128_concat) AssetId => AssetProperty;
+
         /// The assets list
         Assets: Vec<AssetId>;
 
@@ -94,8 +101,6 @@ decl_storage! {
         Pairs: Vec<(AssetId, AssetId)>;
 
         NextPairId get(fn next_pair_id): PairId;
-
-        LiquidityPool get(fn get_liquidity): map hasher(blake2_128_concat) (T::AccountId, T::AccountId) =>TokenBalance;
     }
 }
 
@@ -112,6 +117,8 @@ decl_event! {
         Burned(AssetId, AccountId, TokenBalance),
         /// Some assets were minted. \[asset_id, owner, amount\]
         Minted(AssetId, AccountId, TokenBalance),
+        /// Some assets were Issued. \[asset_id, \]
+        Issued(AssetId),
 
         /// Xtransfer
 
@@ -149,8 +156,12 @@ decl_error! {
         InsufficientAssetBalance,
         /// Asset has not been created.
         AssetNotExists,
+        /// Asset has already exist.
+        AssetAlreadyExist,
         /// AssetId is native currency
         NotParaCurrency,
+        /// AssetId is not in zenlink module
+        NotZenlinkAsset,
 
         /// Location given was invalid or unsupported.
         AccountIdBadLocation,
@@ -212,11 +223,10 @@ decl_module! {
             target: <T::Lookup as StaticLookup>::Source,
             #[compact] amount: TokenBalance
         ) -> DispatchResult {
-            ensure!(asset_id.is_para_currency(), Error::<T>::NotParaCurrency);
             let origin = ensure_signed(origin)?;
             let target = T::Lookup::lookup(target)?;
 
-            Self::inner_transfer(asset_id, &origin, &target, amount)?;
+            Self::multi_asset_transfer(&asset_id, &origin, &target, amount)?;
 
             Ok(())
         }
@@ -243,21 +253,17 @@ decl_module! {
             let who = ensure_signed(origin)?;
             ensure!(para_id != T::ParaId::get(), Error::<T>::DeniedTransferToSelf);
             ensure!(Self::is_reachable(para_id), Error::<T>::DeniedReachTargetChain);
-            ensure!(Self::asset_balance_of(&asset_id, &account) >= amount, Error::<T>::InsufficientAssetBalance);
+            ensure!(Self::multi_asset_balance_of(&asset_id, &account) >= amount, Error::<T>::InsufficientAssetBalance);
+            let xcm = Self::make_xcm_transfer_to_parachain(&asset_id, para_id, &account, amount)
+                .map_err(|_| Error::<T>::NotZenlinkAsset)?;
+
             let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
                 .map_err(|_| Error::<T>::AccountIdBadLocation)?;
 
-            let xcm = Self::make_xcm_transfer_to_parachain(&asset_id, para_id, &account, amount);
-
             T::XcmExecutor::execute_xcm(xcm_origin, xcm)
                 .map_err(|err| {
-                    match err {
-                        XcmError::CannotReachDestination => Error::<T>::MaybeHrmpChannelIsClosed,
-                        _ => {
-                            log::debug!("zenlink::<transfer_to_parachain>: err = {:?}", err);
-                            Error::<T>::ExecutionFailed
-                        }
-                    }
+                    log::debug!("zenlink::<transfer_to_parachain>: err = {:?}", err);
+                    Error::<T>::ExecutionFailed
                 })?;
 
             Self::deposit_event(
@@ -279,7 +285,7 @@ decl_module! {
         pub fn create_pair(
             origin,
             token_0: AssetId,
-            token_1: AssetId,
+            token_1: AssetId
          ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
