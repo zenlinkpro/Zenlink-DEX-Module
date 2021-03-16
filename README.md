@@ -18,7 +18,6 @@ It should at least work until the following commits
 
 ## Example
 The following shows how to deploy the ZenLink Dex Module using Rococo as an example.
-The current stable version of ZenLink Dex Module is based on Cumulus rococo-v1@48558 a2bf666eba6be5b3a3b0d9ce9459bc4a714.
 
 ### Clone cumulus code
 
