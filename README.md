@@ -363,10 +363,29 @@ Switch to 'Settings' -> 'Developer', input the above json, then save.
 
 ![Setting Type](./images/setting.png)
 
-### Add liquidity
-There is a trading pair on Parachain300. Call the following method.
-![Add Liquidity](./images/add_liquidity.png)
+### Cross chain transfer
+   In this example, the Balances module index equal 2 and it just has one asset.
+   So the AssetId of native currency is (200,2,0). 
+   It means the first asset of the second module on parachain 200.
+   Now we transfer it to parachain 300.
 
+   ![Cross_transfer](./images/cross_chain_transfer.png)
+   We can see the event in parachain 300.
+   It means that the zenlink protocol first issued an asset, and then minted 1,000,000.
+
+   ![Cross_transfer](./images/cross_transfer_event.png)
+
+   We can see the result in zenlink protocol storage.
+
+   ![Cross_transfer](./images/cross_transfer_result.png)
+
+### Create Pair
+   Now we have two assets in parachain 300. 
+   So we can create a pair.
+   ![Create_Pair](./images/create_pair.png)
+
+### Add liquidity
+   ![Create_Pair](./images/add_liquidity.png)
 
 ### Swap
-![Swap](./images/swap.png)
+   ![Swap](./images/swap.png)
