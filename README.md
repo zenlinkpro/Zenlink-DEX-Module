@@ -26,7 +26,7 @@ The current stable version of ZenLink Dex Module is based on Cumulus rococo-v1@4
 git clone https://github.com/paritytech/cumulus.git
 cd cumulus
 git checkout rococo-v1
-git checkout 48558a2bf666eba6be5b3a3b0d9ce9459bc4a714
+git checkout 24b1ee6bd1d96f255889f167e59ef9c9399a6305
 ```
 
 ### Clone Zenlink DEX Module code
