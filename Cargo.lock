@@ -4640,7 +4640,7 @@ dependencies = [
 
 [[package]]
 name = "zenlink-protocol"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -4661,7 +4661,7 @@ dependencies = [
 
 [[package]]
 name = "zenlink-protocol-rpc"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -4678,7 +4678,7 @@ dependencies = [
 
 [[package]]
 name = "zenlink-protocol-runtime-api"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "parity-scale-codec",
  "serde_json",

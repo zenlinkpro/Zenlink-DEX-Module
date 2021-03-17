@@ -7,7 +7,7 @@
 //! withdrawals and deposits to assets via XCMP message execution.
 #![allow(unused_variables)]
 
-use frame_support::traits::{Currency, Get};
+use frame_support::traits::Get;
 use sp_std::{marker::PhantomData, prelude::Vec};
 
 use crate::{
@@ -21,25 +21,23 @@ impl<ParachainList: Get<Vec<MultiLocation>>> FilterAssetLocation
     for ParaChainWhiteList<ParachainList>
 {
     fn filter_asset_location(_asset: &MultiAsset, origin: &MultiLocation) -> bool {
-        log::debug!("filter_asset_location {:?}", origin);
+        log::info!("filter_asset_location {:?}", origin);
         sp_std::if_std! {println!("zenlink::<filter_asset_location> {:?}", origin)}
 
         ParachainList::get().contains(origin)
     }
 }
 
-pub struct Transactor<NativeCurrency, ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>(
-    PhantomData<(NativeCurrency, ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId)>,
+pub struct Transactor<ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>(
+    PhantomData<(ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId)>,
 );
 
 impl<
-        NativeCurrency: Currency<AccountId>,
         ZenlinkAssets: ZenlinkMultiAsset<AccountId, TokenBalance>,
         AccountIdConverter: LocationConversion<AccountId>,
         AccountId: sp_std::fmt::Debug,
         ParaChainId: Get<ParaId>,
-    > TransactAsset
-    for Transactor<NativeCurrency, ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>
+    > TransactAsset for Transactor<ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>
 {
     fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
         sp_std::if_std! { println!("zenlink::<deposit_asset> asset = {:?}, location = {:?}", asset, location); }
@@ -91,19 +89,11 @@ fn multilocation_to_asset(location: &MultiLocation) -> Option<AssetId> {
             Junction::Parachain { id: chain_id },
             Junction::PalletInstance { id: pallet_index },
             Junction::GeneralIndex { id: asset_index },
-        ) => {
-            sp_std::if_std! { println!("zenlink::<multilocation_to_asset> chain_id = {:?}, pallet_index = {:#?}, asset_index = {:#?}",
-            chain_id, pallet_index, asset_index); }
-
-            Some(AssetId {
-                chain_id: *chain_id,
-                module_index: *pallet_index,
-                asset_index: (*asset_index) as u32,
-            })
-        }
-        _ => {
-            sp_std::if_std! { println!("zenlink::<multilocation_to_asset> None")}
-            None
-        }
+        ) => Some(AssetId {
+            chain_id: *chain_id,
+            module_index: *pallet_index,
+            asset_index: (*asset_index) as u32,
+        }),
+        _ => None,
     }
 }

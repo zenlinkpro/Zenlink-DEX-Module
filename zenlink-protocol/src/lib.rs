@@ -4,43 +4,25 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod assets;
-mod primitives;
-mod rpc;
-mod swap;
-mod xcm_support;
-mod xtransfer;
-
-use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
-    ensure,
-    traits::{Currency, Get},
-    transactional,
-};
-use frame_system::ensure_signed;
-use sp_runtime::{
-    traits::{Convert, StaticLookup},
-    ModuleId,
-};
-use sp_std::{prelude::Vec, vec};
-
-pub use crate::{
-    primitives::{
-        AssetId, AssetProperty, MultiAsset as ZenlinkMultiAsset, OperationalAsset, PairId,
-        TokenBalance, NATIVE_CURRENCY_MODULE_INDEX,
-    },
-    rpc::PairInfo,
-    swap::Pair,
-    xcm_support::{ParaChainWhiteList, Transactor},
-    xtransfer::Origin,
-};
 pub use cumulus_primitives_core::{
     relay_chain::Balance as RelayChainBalance, DownwardMessageHandler, HrmpMessageHandler,
     HrmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, OutboundHrmpMessage, ParaId,
     UpwardMessage, UpwardMessageSender,
 };
+use frame_support::{
+    decl_error, decl_event, decl_module, decl_storage,
+    dispatch::DispatchResult,
+    ensure,
+    traits::{Box, Get},
+    transactional,
+};
+use frame_system::ensure_signed;
 pub use polkadot_parachain::primitives::Sibling;
+use sp_runtime::{
+    traits::{Convert, StaticLookup},
+    ModuleId,
+};
+use sp_std::{prelude::Vec, vec};
 pub use xcm::{
     v0::{
         Error as XcmError, ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order,
@@ -58,11 +40,27 @@ pub use xcm_executor::{
     Config as XcmCfg, XcmExecutor,
 };
 
+pub use crate::{
+    primitives::{
+        AssetId, AssetProperty, MultiAsset as ZenlinkMultiAsset, OperationalAsset, PairId,
+        TokenBalance,
+    },
+    rpc::PairInfo,
+    swap::Pair,
+    xcm_support::{ParaChainWhiteList, Transactor},
+    xtransfer::Origin,
+};
+
+mod assets;
+mod primitives;
+mod rpc;
+mod swap;
+mod xcm_support;
+mod xtransfer;
+
 pub trait Config: frame_system::Config {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-    /// This chain native currency.
-    type NativeCurrency: Currency<Self::AccountId>;
     /// Something to execute an XCM message.
     type XcmExecutor: ExecuteXcm;
     /// Something to send an upward message.
@@ -79,8 +77,10 @@ pub trait Config: frame_system::Config {
     type AccountId32Converter: Convert<Self::AccountId, [u8; 32]>;
     /// Get this parachain Id
     type ParaId: Get<ParaId>;
-    /// This chain other assets
-    type OperationalAsset: OperationalAsset<u32, Self::AccountId, TokenBalance>;
+    /// Get the registry of asset modules
+    type AssetModuleRegistry: Get<
+        Vec<(u8, Box<dyn OperationalAsset<u32, Self::AccountId, TokenBalance>>)>,
+    >;
 }
 
 decl_storage! {
@@ -91,7 +91,7 @@ decl_storage! {
         /// TWOX-NOTE: `AssetId` is trusted, so this is safe.
         TotalSupply: map hasher(twox_64_concat) AssetId => TokenBalance;
 
-        AssetsProperty get(fn asset_property): map hasher(blake2_128_concat) AssetId => AssetProperty;
+        AssetsMetadata get(fn asset_property): map hasher(blake2_128_concat) AssetId => AssetProperty;
 
         /// The assets list
         Assets: Vec<AssetId>;
@@ -253,16 +253,17 @@ decl_module! {
             let who = ensure_signed(origin)?;
             ensure!(para_id != T::ParaId::get(), Error::<T>::DeniedTransferToSelf);
             ensure!(Self::is_reachable(para_id), Error::<T>::DeniedReachTargetChain);
-            ensure!(Self::multi_asset_balance_of(&asset_id, &account) >= amount, Error::<T>::InsufficientAssetBalance);
+            ensure!(Self::multi_asset_balance_of(&asset_id, &who) >= amount, Error::<T>::InsufficientAssetBalance);
             let xcm = Self::make_xcm_transfer_to_parachain(&asset_id, para_id, &account, amount)
                 .map_err(|_| Error::<T>::NotZenlinkAsset)?;
 
             let xcm_origin = T::AccountIdConverter::try_into_location(who.clone())
                 .map_err(|_| Error::<T>::AccountIdBadLocation)?;
 
+            #[allow(unused_variables)]
             T::XcmExecutor::execute_xcm(xcm_origin, xcm)
                 .map_err(|err| {
-                    log::debug!("zenlink::<transfer_to_parachain>: err = {:?}", err);
+                    sp_std::if_std! { println!("zenlink::<transfer_to_parachain>: err = {:?}", err); }
                     Error::<T>::ExecutionFailed
                 })?;
 

@@ -12,14 +12,12 @@ use crate::{
     sp_api_hidden_includes_decl_storage::hidden_include::traits::PalletInfo,
     AssetId, AssetProperty, Config, Convert, DownwardMessageHandler, ExecuteXcm, Get,
     HrmpMessageHandler, HrmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, Junction,
-    Module, MultiAsset, MultiLocation, NetworkId, OperationalAsset, Order, OutboundHrmpMessage,
-    ParaId,
+    Module, MultiAsset, MultiLocation, NetworkId, Order, OutboundHrmpMessage, ParaId,
     RawEvent::{
         HrmpMessageSent, UpwardMessageSent, XcmBadFormat, XcmBadVersion, XcmExecuteFail,
         XcmExecuteSuccess,
     },
     SendXcm, TokenBalance, UpwardMessageSender, VersionedXcm, Xcm, XcmError,
-    NATIVE_CURRENCY_MODULE_INDEX,
 };
 
 /// Origin for the parachains module.
@@ -147,21 +145,20 @@ impl<T: Config> Module<T> {
                 )),
             }
         } else {
-            if <T as Config>::ParaId::get() != ParaId::from(asset_id.chain_id) {
-                return Err(XcmError::Undefined);
-            }
-            if NATIVE_CURRENCY_MODULE_INDEX == asset_id.module_index
-                || <T as Config>::OperationalAsset::module_index() == asset_id.module_index
-            {
-                Ok(Self::make_xcm_lateral_transfer_native(
-                    asset_location,
-                    para_id,
-                    account.clone(),
-                    amount,
-                ))
-            } else {
-                Err(XcmError::Undefined)
-            }
+            T::AssetModuleRegistry::get()
+                .iter()
+                .find(|(index, _)| {
+                    *index == asset_id.module_index
+                        && <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id)
+                })
+                .map_or(Err(XcmError::Undefined), |(_, _)| {
+                    Ok(Self::make_xcm_lateral_transfer_native(
+                        asset_location,
+                        para_id,
+                        account.clone(),
+                        amount,
+                    ))
+                })
         }
     }
 }
@@ -169,13 +166,13 @@ impl<T: Config> Module<T> {
 impl<T: Config> DownwardMessageHandler for Module<T> {
     fn handle_downward_message(msg: InboundDownwardMessage) {
         let hash = msg.using_encoded(T::Hashing::hash);
-        log::debug!("Processing Downward XCM: hash = {:?}", &hash);
+        log::info!("Processing Downward XCM: hash = {:?}", &hash);
         match VersionedXcm::decode(&mut &msg.msg[..]).map(Xcm::try_from) {
             Ok(Ok(xcm)) => {
                 match T::XcmExecutor::execute_xcm(Junction::Parent.into(), xcm.clone()) {
                     Ok(..) => Self::deposit_event(XcmExecuteSuccess(hash)),
                     Err(_e @ XcmError::UnhandledXcmMessage) => {
-                        log::debug!("Receive Downward XCM: xcm = {:?}", xcm);
+                        log::info!("Receive Downward XCM: xcm = {:?}", xcm);
                     }
                     Err(e) => Self::deposit_event(XcmExecuteFail(hash, e)),
                 };
@@ -189,7 +186,7 @@ impl<T: Config> DownwardMessageHandler for Module<T> {
 impl<T: Config> HrmpMessageHandler for Module<T> {
     fn handle_hrmp_message(sender: ParaId, msg: InboundHrmpMessage) {
         let hash = T::Hashing::hash(&msg.data);
-        log::debug!("Processing HRMP XCM: {:?}", &hash);
+        log::info!("Processing HRMP XCM: {:?}", &hash);
         match VersionedXcm::decode(&mut &msg.data[..]).map(Xcm::try_from) {
             Ok(Ok(xcm)) => {
                 sp_std::if_std! { println!("zenlink::<handle_hrmp_message> xcm {:?}", xcm); }

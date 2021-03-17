@@ -2,18 +2,13 @@
 // Licensed under GPL-3.0.
 
 use cumulus_primitives_core::ParaId;
-use frame_support::{
-    sp_runtime::traits::Zero,
-    traits::{Currency, ExistenceRequirement, ExistenceRequirement::KeepAlive, WithdrawReasons},
-};
-use sp_runtime::{sp_std::convert::TryFrom, SaturatedConversion};
+use frame_support::sp_runtime::traits::Zero;
 
 use crate::{
     ensure,
-    primitives::{AssetId, MultiAsset, NATIVE_CURRENCY_MODULE_INDEX},
+    primitives::{AssetId, MultiAsset},
     sp_api_hidden_includes_decl_storage::hidden_include::{traits::Get, StorageMap, StorageValue},
-    AssetProperty, Assets, AssetsProperty, Balances, Config, DispatchResult, Error, Module,
-    OperationalAsset,
+    AssetProperty, Assets, AssetsMetadata, Balances, Config, DispatchResult, Error, Module,
     RawEvent::{Burned, Issued, Minted, Transferred},
     TokenBalance, TotalSupply, Vec,
 };
@@ -50,7 +45,7 @@ impl<T: Config> Module<T> {
     pub(crate) fn inner_issue(id: AssetId, property: AssetProperty) -> DispatchResult {
         ensure!(!<Assets>::get().contains(&id), Error::<T>::AssetAlreadyExist);
         <Assets>::mutate(|list| list.push(id));
-        <AssetsProperty>::insert(id, property);
+        <AssetsMetadata>::insert(id, property);
         Self::deposit_event(Issued(id));
         Ok(())
     }
@@ -119,28 +114,28 @@ impl<T: Config> MultiAsset<T::AccountId, TokenBalance> for Module<T> {
     fn multi_asset_total_supply(asset_id: &AssetId) -> TokenBalance {
         if Self::assets_list().contains(asset_id) {
             Self::total_supply(*asset_id)
-        } else if <T as Config>::ParaId::get() != ParaId::from(asset_id.chain_id) {
-            Zero::zero()
-        } else if asset_id.module_index == NATIVE_CURRENCY_MODULE_INDEX {
-            <T as Config>::NativeCurrency::total_issuance().saturated_into::<TokenBalance>()
-        } else if asset_id.module_index == <T as Config>::OperationalAsset::module_index() {
-            <T as Config>::OperationalAsset::total_supply(asset_id.asset_index)
         } else {
-            Zero::zero()
+            T::AssetModuleRegistry::get()
+                .iter()
+                .find(|(index, _)| {
+                    *index == asset_id.module_index
+                        && <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id)
+                })
+                .map_or(Zero::zero(), |(_, t)| t.total_supply(asset_id.asset_index))
         }
     }
 
     fn multi_asset_balance_of(asset_id: &AssetId, who: &T::AccountId) -> TokenBalance {
         if Self::assets_list().contains(asset_id) {
             Self::balance_of(*asset_id, who)
-        } else if <T as Config>::ParaId::get() != ParaId::from(asset_id.chain_id) {
-            Zero::zero()
-        } else if NATIVE_CURRENCY_MODULE_INDEX == asset_id.module_index {
-            <T as Config>::NativeCurrency::free_balance(&who).saturated_into::<TokenBalance>()
-        } else if <T as Config>::OperationalAsset::module_index() == asset_id.module_index {
-            <T as Config>::OperationalAsset::balance(asset_id.asset_index, (*who).clone())
         } else {
-            Zero::zero()
+            T::AssetModuleRegistry::get()
+                .iter()
+                .find(|(index, _)| {
+                    *index == asset_id.module_index
+                        && <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id)
+                })
+                .map_or(Zero::zero(), |(_, t)| t.balance(asset_id.asset_index, who.clone()))
         }
     }
 
@@ -153,26 +148,15 @@ impl<T: Config> MultiAsset<T::AccountId, TokenBalance> for Module<T> {
         if Self::assets_list().contains(asset_id) {
             Self::inner_transfer(*asset_id, &from, &to, amount)
         } else {
-            ensure!(
-                <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id),
-                Error::<T>::AssetNotExists
-            );
-            if NATIVE_CURRENCY_MODULE_INDEX == asset_id.module_index {
-                let amount = <<<T as Config>::NativeCurrency as Currency<
-                    <T as frame_system::Config>::AccountId,
-                >>::Balance as TryFrom<u128>>::try_from(amount)
-                .map_err(|_| Error::<T>::Overflow)?;
-                <T as Config>::NativeCurrency::transfer(&from, &to, amount, KeepAlive)
-            } else if <T as Config>::OperationalAsset::module_index() == asset_id.module_index {
-                <T as Config>::OperationalAsset::inner_transfer(
-                    asset_id.asset_index,
-                    (*from).clone(),
-                    (*to).clone(),
-                    amount,
-                )
-            } else {
-                Err((Error::<T>::AssetNotExists).into())
-            }
+            T::AssetModuleRegistry::get()
+                .iter()
+                .find(|(index, _)| {
+                    *index == asset_id.module_index
+                        && <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id)
+                })
+                .map_or(Err((Error::<T>::AssetNotExists).into()), |(_, t)| {
+                    t.inner_transfer(asset_id.asset_index, from.clone(), to.clone(), amount)
+                })
         }
     }
 
@@ -184,33 +168,15 @@ impl<T: Config> MultiAsset<T::AccountId, TokenBalance> for Module<T> {
         if Self::assets_list().contains(asset_id) {
             Self::inner_burn(*asset_id, &who, amount)
         } else {
-            ensure!(
-                <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id),
-                Error::<T>::AssetNotExists
-            );
-            if NATIVE_CURRENCY_MODULE_INDEX == asset_id.module_index {
-                sp_std::if_std! { println!("zenlink::<multi_asset_withdraw>"); }
-                let amount = <<<T as Config>::NativeCurrency as Currency<
-                    <T as frame_system::Config>::AccountId,
-                >>::Balance as TryFrom<u128>>::try_from(amount)
-                .map_err(|_| Error::<T>::Overflow)?;
-                <T as Config>::NativeCurrency::withdraw(
-                    &who,
-                    amount,
-                    WithdrawReasons::TRANSFER,
-                    ExistenceRequirement::AllowDeath,
-                )
-                .map_or_else(Err, |_| Ok(()))
-            } else if <T as Config>::OperationalAsset::module_index() == asset_id.module_index {
-                sp_std::if_std! { println!("zenlink::<multi_asset_withdraw> withdraw op_asset model _id "); }
-                <T as Config>::OperationalAsset::inner_withdraw(
-                    asset_id.asset_index,
-                    (*who).clone(),
-                    amount,
-                )
-            } else {
-                Err((Error::<T>::AssetNotExists).into())
-            }
+            T::AssetModuleRegistry::get()
+                .iter()
+                .find(|(index, _)| {
+                    *index == asset_id.module_index
+                        && <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id)
+                })
+                .map_or(Err((Error::<T>::AssetNotExists).into()), |(_, t)| {
+                    t.inner_withdraw(asset_id.asset_index, who.clone(), amount)
+                })
         }
     }
 
@@ -222,26 +188,15 @@ impl<T: Config> MultiAsset<T::AccountId, TokenBalance> for Module<T> {
         if Self::assets_list().contains(asset_id) {
             Self::inner_mint(*asset_id, &who, amount)
         } else if <T as Config>::ParaId::get() != ParaId::from(asset_id.chain_id) {
-            sp_std::if_std! { println!("zenlink::<multi_asset_deposit> deposit in zenlink module {:#?}", asset_id); }
             Self::inner_issue(*asset_id, AssetProperty::Foreign)?;
             Self::inner_mint(*asset_id, &who, amount)
-        } else if asset_id.module_index == NATIVE_CURRENCY_MODULE_INDEX {
-            sp_std::if_std! { println!("zenlink::<multi_asset_deposit> deposit native model_id {:#?}", NATIVE_CURRENCY_MODULE_INDEX); }
-            let amount = <<<T as Config>::NativeCurrency as Currency<
-                <T as frame_system::Config>::AccountId,
-            >>::Balance as TryFrom<u128>>::try_from(amount)
-            .map_err(|_| Error::<T>::Overflow)?;
-            <T as Config>::NativeCurrency::deposit_creating(&who, amount);
-            Ok(())
-        } else if asset_id.module_index == <T as Config>::OperationalAsset::module_index() {
-            sp_std::if_std! { println!("zenlink::<multi_asset_deposit> deposit op_asset{:#?}", asset_id); }
-            <T as Config>::OperationalAsset::inner_deposit(
-                asset_id.asset_index,
-                (*who).clone(),
-                amount,
-            )
         } else {
-            Err((Error::<T>::AssetNotExists).into())
+            T::AssetModuleRegistry::get()
+                .iter()
+                .find(|(index, _)| *index == asset_id.module_index)
+                .map_or(Err((Error::<T>::AssetNotExists).into()), |(_, t)| {
+                    t.inner_deposit(asset_id.asset_index, who.clone(), amount)
+                })
         }
     }
 }

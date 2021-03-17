@@ -7,14 +7,12 @@ use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    DispatchResult,
 };
 
 use crate as pallet_zenlink;
 use crate::{
     Config, Convert, ExecuteXcm, HrmpMessageSender, LocationConversion, Module, ModuleId,
-    MultiLocation, OperationalAsset, OutboundHrmpMessage, UpwardMessage, UpwardMessageSender, Xcm,
-    XcmResult,
+    MultiLocation, OutboundHrmpMessage, UpwardMessage, UpwardMessageSender, Xcm, XcmResult,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -78,34 +76,6 @@ impl pallet_balances::Config for Test {
 
 pub struct TestSender;
 
-pub struct TestAssets;
-
-impl OperationalAsset<u32, u128, u128> for TestAssets {
-    fn module_index() -> u8 {
-        unimplemented!()
-    }
-
-    fn balance(_id: u32, _who: u128) -> u128 {
-        unimplemented!()
-    }
-
-    fn total_supply(_id: u32) -> u128 {
-        unimplemented!()
-    }
-
-    fn inner_transfer(_id: u32, _origin: u128, _target: u128, _amount: u128) -> DispatchResult {
-        unimplemented!()
-    }
-
-    fn inner_deposit(_id: u32, _origin: u128, _amount: u128) -> DispatchResult {
-        unimplemented!()
-    }
-
-    fn inner_withdraw(_id: u32, _origin: u128, _amount: u128) -> DispatchResult {
-        unimplemented!()
-    }
-}
-
 impl UpwardMessageSender for TestSender {
     fn send_upward_message(_msg: UpwardMessage) -> Result<(), ()> {
         unimplemented!()
@@ -144,7 +114,6 @@ impl LocationConversion<<Test as frame_system::Config>::AccountId> for Converter
 
 impl Config for Test {
     type Event = Event;
-    type NativeCurrency = pallet_balances::Module<Test>;
     type XcmExecutor = TestSender;
     type UpwardMessageSender = TestSender;
     type HrmpMessageSender = TestSender;
@@ -153,7 +122,7 @@ impl Config for Test {
     type ModuleId = DEXModuleId;
     type ParaId = ();
     type TargetChains = ();
-    type OperationalAsset = TestAssets;
+    type AssetModuleRegistry = ();
 }
 
 pub type DexModule = Module<Test>;

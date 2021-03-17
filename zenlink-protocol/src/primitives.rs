@@ -12,10 +12,6 @@ pub type TokenBalance = u128;
 /// The pair id of the zenlink dex.
 pub type PairId = u32;
 
-// The index represent native currency module index in runtime.
-// We can only modify this value during the first deployment.
-pub const NATIVE_CURRENCY_MODULE_INDEX: u8 = 2;
-
 /// AssetId use to locate assets in framed base chain.
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Default))]
@@ -75,21 +71,27 @@ pub trait MultiAsset<AccountId, TokenBalance> {
 }
 
 pub trait OperationalAsset<AssetId, AccountId, TokenBalance> {
-    fn module_index() -> u8;
     /// Get the asset `id` balance of `who`.
-    fn balance(id: AssetId, who: AccountId) -> TokenBalance;
+    fn balance(&self, id: AssetId, who: AccountId) -> TokenBalance;
 
     /// Get the total supply of an asset `id`.
-    fn total_supply(id: AssetId) -> TokenBalance;
+    fn total_supply(&self, id: AssetId) -> TokenBalance;
 
     fn inner_transfer(
+        &self,
         id: AssetId,
         origin: AccountId,
         target: AccountId,
         amount: TokenBalance,
     ) -> DispatchResult;
 
-    fn inner_deposit(id: AssetId, origin: AccountId, amount: TokenBalance) -> DispatchResult;
+    fn inner_deposit(&self, id: AssetId, origin: AccountId, amount: TokenBalance)
+        -> DispatchResult;
 
-    fn inner_withdraw(id: AssetId, origin: AccountId, amount: TokenBalance) -> DispatchResult;
+    fn inner_withdraw(
+        &self,
+        id: AssetId,
+        origin: AccountId,
+        amount: TokenBalance,
+    ) -> DispatchResult;
 }

@@ -11,10 +11,9 @@ use sp_runtime::{
 
 use crate as pallet_zenlink;
 use crate::{
-    Config, HrmpMessageSender, Module, ModuleId, OperationalAsset, OutboundHrmpMessage,
-    UpwardMessage, UpwardMessageSender,
+    Config, HrmpMessageSender, Module, ModuleId, OutboundHrmpMessage, UpwardMessage,
+    UpwardMessageSender,
 };
-use frame_support::dispatch::DispatchResult;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -71,33 +70,6 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
     type MaxLocks = ();
 }
-pub struct TestAssets;
-
-impl OperationalAsset<u32, u64, u128> for TestAssets {
-    fn module_index() -> u8 {
-        unimplemented!()
-    }
-
-    fn balance(_id: u32, _who: u64) -> u128 {
-        unimplemented!()
-    }
-
-    fn total_supply(_id: u32) -> u128 {
-        unimplemented!()
-    }
-
-    fn inner_transfer(_id: u32, _origin: u64, _target: u64, _amount: u128) -> DispatchResult {
-        unimplemented!()
-    }
-
-    fn inner_deposit(_id: u32, _origin: u64, _amount: u128) -> DispatchResult {
-        unimplemented!()
-    }
-
-    fn inner_withdraw(_id: u32, _origin: u64, _amount: u128) -> DispatchResult {
-        unimplemented!()
-    }
-}
 
 pub struct TestSender;
 
@@ -116,7 +88,6 @@ impl HrmpMessageSender for TestSender {
 
 impl Config for Test {
     type Event = Event;
-    type NativeCurrency = pallet_balances::Module<Test>;
     type XcmExecutor = ();
     type UpwardMessageSender = TestSender;
     type HrmpMessageSender = TestSender;
@@ -125,7 +96,7 @@ impl Config for Test {
     type ModuleId = TestModuleId;
     type ParaId = ();
     type TargetChains = ();
-    type OperationalAsset = TestAssets;
+    type AssetModuleRegistry = ();
 }
 
 pub type Assets = Module<Test>;

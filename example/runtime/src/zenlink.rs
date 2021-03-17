@@ -2,7 +2,10 @@ use super::{
     parameter_types, vec, AccountId, Balances, Call, Convert, DispatchResult, Event, ModuleId,
     Origin, ParachainInfo, ParachainSystem, Runtime, Vec, ZenlinkProtocol,
 };
-
+use frame_support::traits::{
+    Box, Currency, ExistenceRequirement, ExistenceRequirement::KeepAlive, WithdrawReasons,
+};
+use sp_runtime::SaturatedConversion;
 use zenlink_protocol::{
     AccountId32Aliases, Junction, LocationInverter, MultiLocation, NetworkId, OperationalAsset,
     Origin as ZenlinkOrigin, ParaChainWhiteList, ParentIsDefault, RelayChainAsNative, Sibling,
@@ -46,7 +49,7 @@ type LocationConverter = (
 );
 
 pub type LocalAssetTransactor =
-    Transactor<Balances, ZenlinkProtocol, LocationConverter, AccountId, ParachainInfo>;
+    Transactor<ZenlinkProtocol, LocationConverter, AccountId, ParachainInfo>;
 
 type LocalOriginConverter = (
     SovereignSignedViaLocation<LocationConverter, Origin>,
@@ -68,37 +71,50 @@ impl XcmCfg for XcmConfig {
     type LocationInverter = LocationInverter<Ancestry>;
 }
 
-pub struct OtherAssets;
-impl OperationalAsset<u32, AccountId, TokenBalance> for OtherAssets {
-    fn module_index() -> u8 {
-        unimplemented!()
-    }
-    /// Get the asset `id` balance of `who`.
-    fn balance(_id: u32, _who: AccountId) -> TokenBalance {
-        unimplemented!()
+/// A proxy struct implement `OperationalAsset`. It control `Balance` module
+struct BalancesProxy {}
+
+impl OperationalAsset<u32, AccountId, TokenBalance> for BalancesProxy {
+    fn balance(&self, _id: u32, who: AccountId) -> u128 {
+        Balances::free_balance(&who).saturated_into::<TokenBalance>()
     }
 
-    /// Get the total supply of an asset `id`.
-    fn total_supply(_id: u32) -> TokenBalance {
-        unimplemented!()
+    fn total_supply(&self, _id: u32) -> u128 {
+        Balances::total_issuance().saturated_into::<TokenBalance>()
     }
 
     fn inner_transfer(
+        &self,
         _id: u32,
-        _origin: AccountId,
-        _target: AccountId,
-        _amount: TokenBalance,
+        origin: AccountId,
+        target: AccountId,
+        amount: u128,
     ) -> DispatchResult {
-        unimplemented!()
+        <Balances as Currency<AccountId>>::transfer(&origin, &target, amount, KeepAlive)
     }
 
-    fn inner_deposit(_id: u32, _origin: AccountId, _amount: TokenBalance) -> DispatchResult {
-        unimplemented!()
+    fn inner_deposit(&self, _id: u32, origin: AccountId, amount: u128) -> DispatchResult {
+        let _ = <Balances as Currency<AccountId>>::deposit_creating(&origin, amount);
+        Ok(())
     }
 
-    fn inner_withdraw(_id: u32, _origin: AccountId, _amount: TokenBalance) -> DispatchResult {
-        unimplemented!()
+    fn inner_withdraw(&self, _id: u32, origin: AccountId, amount: u128) -> DispatchResult {
+        <Balances as Currency<AccountId>>::withdraw(
+            &origin,
+            amount,
+            WithdrawReasons::TRANSFER,
+            ExistenceRequirement::AllowDeath,
+        )
+            .map_or_else(Err, |_| Ok(()))
     }
+}
+
+parameter_types! {
+    /// Zenlink protocol use the proxy in the registry to control assets module.
+    /// The first in the tuple represent the module index.
+    pub AssetModuleRegistry : Vec<(u8, Box<dyn OperationalAsset<u32, AccountId, TokenBalance>>)> = vec![
+        (2u8, Box::new(BalancesProxy{}))
+    ];
 }
 
 impl zenlink_protocol::Config for Runtime {
@@ -106,11 +122,10 @@ impl zenlink_protocol::Config for Runtime {
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type UpwardMessageSender = ParachainSystem;
     type HrmpMessageSender = ParachainSystem;
-    type NativeCurrency = Balances;
     type AccountIdConverter = LocationConverter;
     type AccountId32Converter = AccountId32Converter;
     type ParaId = ParachainInfo;
     type ModuleId = DEXModuleId;
     type TargetChains = SiblingParachains;
-    type OperationalAsset = OtherAssets;
+    type AssetModuleRegistry = AssetModuleRegistry;
 }

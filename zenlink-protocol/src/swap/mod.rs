@@ -43,7 +43,6 @@ impl<T: Config> Module<T> {
         let next_id = pair_id.checked_add(One::one()).ok_or(Error::<T>::Overflow)?;
 
         let account: T::AccountId = <T as Config>::ModuleId::get().into_sub_account(pair_id);
-        sp_std::if_std! { println!("zenlink::<inner_create_pair> {:#?} pair_id {:#?}",account, pair_id );}
         let (token_0, token_1) = Self::sort_asset_id(*token_0, *token_1);
         let lp_asset_index = <Assets>::get().len() as u32;
         let lp_asset_id = AssetId {
