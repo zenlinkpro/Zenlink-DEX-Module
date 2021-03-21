@@ -17,7 +17,7 @@ use crate::{
         HrmpMessageSent, UpwardMessageSent, XcmBadFormat, XcmBadVersion, XcmExecuteFail,
         XcmExecuteSuccess,
     },
-    SendXcm, TokenBalance, UpwardMessageSender, VersionedXcm, Xcm, XcmError,
+    SendXcm, TokenBalance, UpwardMessageSender, VersionedXcm, Xcm, XcmError, LOG_TARGET,
 };
 
 /// Origin for the parachains module.
@@ -51,6 +51,7 @@ impl<T: Config> Module<T> {
     pub(crate) fn is_reachable(para_id: ParaId) -> bool {
         let location =
             MultiLocation::X2(Junction::Parent, Junction::Parachain { id: para_id.into() });
+
         T::TargetChains::get().contains(&location)
     }
 
@@ -151,14 +152,17 @@ impl<T: Config> Module<T> {
                     *index == asset_id.module_index
                         && <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id)
                 })
-                .map_or(Err(XcmError::Undefined), |(_, _)| {
-                    Ok(Self::make_xcm_lateral_transfer_native(
-                        asset_location,
-                        para_id,
-                        account.clone(),
-                        amount,
-                    ))
-                })
+                .map_or(
+                    Err(XcmError::FailedToTransactAsset("No match asset by the asset id")),
+                    |(_, _)| {
+                        Ok(Self::make_xcm_lateral_transfer_native(
+                            asset_location,
+                            para_id,
+                            account.clone(),
+                            amount,
+                        ))
+                    },
+                )
         }
     }
 }
@@ -166,13 +170,13 @@ impl<T: Config> Module<T> {
 impl<T: Config> DownwardMessageHandler for Module<T> {
     fn handle_downward_message(msg: InboundDownwardMessage) {
         let hash = msg.using_encoded(T::Hashing::hash);
-        log::info!("Processing Downward XCM: hash = {:?}", &hash);
+        log::info!(target: LOG_TARGET, "Processing Downward XCM: hash = {:?}", &hash);
         match VersionedXcm::decode(&mut &msg.msg[..]).map(Xcm::try_from) {
             Ok(Ok(xcm)) => {
                 match T::XcmExecutor::execute_xcm(Junction::Parent.into(), xcm.clone()) {
                     Ok(..) => Self::deposit_event(XcmExecuteSuccess(hash)),
                     Err(_e @ XcmError::UnhandledXcmMessage) => {
-                        log::info!("Receive Downward XCM: xcm = {:?}", xcm);
+                        log::info!(target: LOG_TARGET, "handle_dmp_message: xcm = {:?}", xcm);
                     }
                     Err(e) => Self::deposit_event(XcmExecuteFail(hash, e)),
                 };
@@ -186,12 +190,14 @@ impl<T: Config> DownwardMessageHandler for Module<T> {
 impl<T: Config> HrmpMessageHandler for Module<T> {
     fn handle_hrmp_message(sender: ParaId, msg: InboundHrmpMessage) {
         let hash = T::Hashing::hash(&msg.data);
-        log::info!("Processing HRMP XCM: {:?}", &hash);
+        log::info!(target: LOG_TARGET, "Processing HRMP XCM: {:?}", &hash);
         match VersionedXcm::decode(&mut &msg.data[..]).map(Xcm::try_from) {
             Ok(Ok(xcm)) => {
-                sp_std::if_std! { println!("zenlink::<handle_hrmp_message> xcm {:?}", xcm); }
+                log::info!(target: LOG_TARGET, "handle_hrmp_message: xcm = {:?}", xcm);
+
                 let origin =
                     MultiLocation::X2(Junction::Parent, Junction::Parachain { id: sender.into() });
+
                 match T::XcmExecutor::execute_xcm(origin, xcm) {
                     Ok(..) => Self::deposit_event(XcmExecuteSuccess(hash)),
                     Err(e) => Self::deposit_event(XcmExecuteFail(hash, e)),
@@ -206,7 +212,8 @@ impl<T: Config> HrmpMessageHandler for Module<T> {
 impl<T: Config> SendXcm for Module<T> {
     fn send_xcm(dest: MultiLocation, msg: Xcm) -> Result<(), XcmError> {
         let vmsg: VersionedXcm = msg.clone().into();
-        sp_std::if_std! { println!("zenlink::<send_xcm> msg = {:?}, dest = {:?}", vmsg, dest); }
+        log::info!(target: LOG_TARGET, "send_xcm: msg = {:?}, dest = {:?}", vmsg, dest);
+
         match dest.first() {
             // A message for us. Execute directly.
             None => {
@@ -214,17 +221,23 @@ impl<T: Config> SendXcm for Module<T> {
 
                 #[warn(clippy::let_and_return)]
                 let res = T::XcmExecutor::execute_xcm(MultiLocation::Null, msg);
-                sp_std::if_std! { println!("zenlink::<send_xcm>  res = {:?}", res); }
+
+                log::debug!(target: LOG_TARGET, "send_xcm(for us): executed result = {:?}", res);
+
                 res
             }
             // An upward message for the relay chain.
             Some(Junction::Parent) if dest.len() == 1 => {
                 let data = vmsg.encode();
                 let hash = T::Hashing::hash(&data);
+
                 T::UpwardMessageSender::send_upward_message(data)
-                    .map_err(|_| XcmError::Undefined)?;
+                    .map_err(|_| XcmError::CannotReachDestination)?;
+
                 Self::deposit_event(UpwardMessageSent(hash));
-                sp_std::if_std! { println!("zenlink::<send_xcm> upward success"); }
+
+                log::debug!(target: LOG_TARGET, "send_xcm(ump): success");
+
                 Ok(())
             }
             // An HRMP message for a sibling parachain.
@@ -232,12 +245,14 @@ impl<T: Config> SendXcm for Module<T> {
                 let data = vmsg.encode();
                 let hash = T::Hashing::hash(&data);
                 let message = OutboundHrmpMessage { recipient: (*id).into(), data };
-                sp_std::if_std! { println!("zenlink::<send_xcm> X1 hrmp message = {:?}", message); }
-                // TODO: Better error here
+
                 T::HrmpMessageSender::send_hrmp_message(message)
                     .map_err(|_| XcmError::CannotReachDestination)?;
+
                 Self::deposit_event(HrmpMessageSent(hash));
-                sp_std::if_std! { println!("zenlink::<send_xcm> X1 hrmp success"); }
+
+                log::debug!(target: LOG_TARGET, "send_xcm(x1 hrmp): success");
+
                 Ok(())
             }
             // An HRMP message for a sibling parachain by zenlink
@@ -249,23 +264,25 @@ impl<T: Config> SendXcm for Module<T> {
                         let hash = T::Hashing::hash(&data);
                         let message = OutboundHrmpMessage { recipient: (*id).into(), data };
 
-                        sp_std::if_std! { println!("zenlink::<send_xcm> X2 hrmp message = {:?}, data detail = {:?}", message, vmsg); }
-                        // TODO: Better error here
                         T::HrmpMessageSender::send_hrmp_message(message)
                             .map_err(|_| XcmError::CannotReachDestination)?;
+
                         Self::deposit_event(HrmpMessageSent(hash));
-                        sp_std::if_std! { println!("zenlink::<send_xcm> X2 hrmp success"); }
+
+                        log::debug!(target: LOG_TARGET, "send_xcm(x2 hrmp): success");
+
                         Ok(())
                     }
                     _ => {
-                        sp_std::if_std! { println!("zenlink::<send_xcm> X2 UnhandledXcmMessage"); }
+                        log::debug!(target: LOG_TARGET, "send_xcm(x2 hrmp): unhandled");
+
                         Err(XcmError::UnhandledXcmMessage)
                     }
                 }
             }
             _ => {
-                /* TODO: Handle other cases, like downward message */
-                sp_std::if_std! { println!("zenlink::<send_xcm> UnhandledXcmMessage"); }
+                log::debug!(target: LOG_TARGET, "send_xcm(dmp or other): unhandled");
+
                 Err(XcmError::UnhandledXcmMessage)
             }
         }

@@ -58,6 +58,8 @@ mod swap;
 mod xcm_support;
 mod xtransfer;
 
+const LOG_TARGET: &str = "zenlink_protocol";
+
 pub trait Config: frame_system::Config {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
@@ -263,7 +265,11 @@ decl_module! {
             #[allow(unused_variables)]
             T::XcmExecutor::execute_xcm(xcm_origin, xcm)
                 .map_err(|err| {
-                    sp_std::if_std! { println!("zenlink::<transfer_to_parachain>: err = {:?}", err); }
+                    log::error!{
+                        target: LOG_TARGET,
+                        "transfer_to_parachain: xcm execution failded, err = {:?}",
+                        err
+                    }
                     Error::<T>::ExecutionFailed
                 })?;
 

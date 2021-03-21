@@ -22,6 +22,8 @@ parameter_types! {
     }.into();
 
     pub SiblingParachains: Vec<MultiLocation> = vec![
+        // Pla local and live
+        MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 30 }),
         // Sherpax live
         MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 59 }),
         // Bifrost local and live
@@ -72,7 +74,7 @@ impl XcmCfg for XcmConfig {
 }
 
 /// A proxy struct implement `OperationalAsset`. It control `Balance` module
-struct BalancesProxy {}
+struct BalancesProxy;
 
 impl OperationalAsset<u32, AccountId, TokenBalance> for BalancesProxy {
     fn balance(&self, _id: u32, who: AccountId) -> u128 {
@@ -94,7 +96,8 @@ impl OperationalAsset<u32, AccountId, TokenBalance> for BalancesProxy {
     }
 
     fn inner_deposit(&self, _id: u32, origin: AccountId, amount: u128) -> DispatchResult {
-        let _ = <Balances as Currency<AccountId>>::deposit_creating(&origin, amount);
+        <Balances as Currency<AccountId>>::deposit_creating(&origin, amount);
+
         Ok(())
     }
 
@@ -104,8 +107,9 @@ impl OperationalAsset<u32, AccountId, TokenBalance> for BalancesProxy {
             amount,
             WithdrawReasons::TRANSFER,
             ExistenceRequirement::AllowDeath,
-        )
-            .map_or_else(Err, |_| Ok(()))
+        )?;
+
+        Ok(())
     }
 }
 
@@ -113,7 +117,7 @@ parameter_types! {
     /// Zenlink protocol use the proxy in the registry to control assets module.
     /// The first in the tuple represent the module index.
     pub AssetModuleRegistry : Vec<(u8, Box<dyn OperationalAsset<u32, AccountId, TokenBalance>>)> = vec![
-        (2u8, Box::new(BalancesProxy{}))
+        (2u8, Box::new(BalancesProxy))
     ];
 }
 

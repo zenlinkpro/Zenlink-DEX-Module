@@ -12,8 +12,32 @@ use sp_std::{marker::PhantomData, prelude::Vec};
 
 use crate::{
     AssetId, FilterAssetLocation, Junction, LocationConversion, MultiAsset, MultiLocation, ParaId,
-    TokenBalance, TransactAsset, XcmError, XcmResult, ZenlinkMultiAsset,
+    TokenBalance, TransactAsset, XcmError, XcmResult, ZenlinkMultiAsset, LOG_TARGET,
 };
+
+/// Asset transaction errors.
+enum Error {
+    /// `MultiLocation` to `AccountId` Conversion failed.
+    AccountIdConversionFailed,
+    /// Zenlink only use X4 format xcm
+    XcmNotX4Format,
+    /// Zenlink only use MultiAsset::ConcreteFungible
+    XcmNotConcreteFungible,
+}
+
+impl From<Error> for XcmError {
+    fn from(e: Error) -> Self {
+        match e {
+            Error::AccountIdConversionFailed => {
+                XcmError::FailedToTransactAsset("AccountIdConversionFailed")
+            }
+            Error::XcmNotX4Format => XcmError::FailedToTransactAsset("XcmNotX4Format"),
+            Error::XcmNotConcreteFungible => {
+                XcmError::FailedToTransactAsset("XcmNotConcreteFungible")
+            }
+        }
+    }
+}
 
 pub struct ParaChainWhiteList<ParachainList>(PhantomData<ParachainList>);
 
@@ -21,8 +45,7 @@ impl<ParachainList: Get<Vec<MultiLocation>>> FilterAssetLocation
     for ParaChainWhiteList<ParachainList>
 {
     fn filter_asset_location(_asset: &MultiAsset, origin: &MultiLocation) -> bool {
-        log::info!("filter_asset_location {:?}", origin);
-        sp_std::if_std! {println!("zenlink::<filter_asset_location> {:?}", origin)}
+        log::info!(target: LOG_TARGET, "filter_asset_location: origin = {:?}", origin);
 
         ParachainList::get().contains(origin)
     }
@@ -40,22 +63,28 @@ impl<
     > TransactAsset for Transactor<ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>
 {
     fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
-        sp_std::if_std! { println!("zenlink::<deposit_asset> asset = {:?}, location = {:?}", asset, location); }
-        let who = AccountIdConverter::from_location(location).ok_or(())?;
+        log::info!(
+            target: LOG_TARGET,
+            "deposit_asset: asset = {:?}, location = {:?}",
+            asset,
+            location,
+        );
+
+        let who = AccountIdConverter::from_location(location)
+            .ok_or_else(|| XcmError::from(Error::AccountIdConversionFailed))?;
 
         match asset {
             MultiAsset::ConcreteFungible { id, amount } => {
                 if let Some(asset_id) = multilocation_to_asset(id) {
                     ZenlinkAssets::multi_asset_deposit(&asset_id, &who, *amount)
-                        .or(Err(XcmError::Undefined))
+                        .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+
+                    Ok(())
                 } else {
-                    Err(XcmError::Undefined)
+                    Err(XcmError::from(Error::XcmNotX4Format))
                 }
             }
-            _ => {
-                sp_std::if_std! { println!("zenlink::<deposit_asset> Undefined: asset = {:?}", asset); }
-                Err(XcmError::Undefined)
-            }
+            _ => Err(XcmError::from(Error::XcmNotConcreteFungible)),
         }
     }
 
@@ -63,21 +92,28 @@ impl<
         asset: &MultiAsset,
         location: &MultiLocation,
     ) -> Result<MultiAsset, XcmError> {
-        sp_std::if_std! { println!("zenlink::<withdraw_asset> asset = {:?}, location = {:?}", asset, location); }
-        let who = AccountIdConverter::from_location(location).ok_or(())?;
+        log::info!(
+            target: LOG_TARGET,
+            "withdraw_asset: asset = {:?}, location = {:?}",
+            asset,
+            location,
+        );
+
+        let who = AccountIdConverter::from_location(location)
+            .ok_or_else(|| XcmError::from(Error::AccountIdConversionFailed))?;
+
         match asset {
             MultiAsset::ConcreteFungible { id, amount } => {
                 if let Some(asset_id) = multilocation_to_asset(id) {
                     ZenlinkAssets::multi_asset_withdraw(&asset_id, &who, *amount)
-                        .map_or(Err(XcmError::EscalationOfPrivilege), |_| Ok(asset.clone()))
+                        .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+
+                    Ok(asset.clone())
                 } else {
-                    Err(XcmError::Undefined)
+                    Err(XcmError::from(Error::XcmNotX4Format))
                 }
             }
-            _ => {
-                sp_std::if_std! { println!("zenlink::<deposit> Undefined asset = {:?}", asset); }
-                Err(XcmError::Undefined)
-            }
+            _ => Err(XcmError::from(Error::XcmNotConcreteFungible)),
         }
     }
 }
