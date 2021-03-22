@@ -316,10 +316,6 @@ Transaction type
 
 ```
 {
-  "Address": "AccountId",
-  "LookupSource": "AccountId",
-  "RefCount": "u32",
-  "AccountInfo": "AccountInfoWithRefCount",
   "PairId": "u32",
   "Pair": {
     "token_0": "AssetId",
