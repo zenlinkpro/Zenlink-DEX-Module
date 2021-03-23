@@ -4,7 +4,7 @@
 
 - `zenlinkProtocol_getAllAssets`:
 
-  获取当前链上的Parachain资产列表
+  查询Zenlink Module中的所有资产ID。通常有映射的资产和LP token
 
     ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
@@ -15,22 +15,47 @@
          "params": [null]
   }'  
     ```
+  
+  **Response:**
+  
+  ```json
+  {
+      "jsonrpc": "2.0",
+      "result": [
+          {
+              "asset_index": 0,
+              "chain_id": 200,
+              "module_index": 8
+          },
+          {
+              "asset_index": 1,
+              "chain_id": 300,
+              "module_index": 9
+          }
+      ],
+      "id": 1
+  }
+  ```
+
 - `zenlinkProtocol_getBalance`:
 
-  获取指定Parachain资产ID和账户ID的余额
+  查询资产余额
 
-    ```bash
+  - params[0]: AssetId。包括了本链的资产和映射的资产
+  - params[1]: 查询账户
+    
+  ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
   '{
-        "jsonrpc":"2.0",
-        "id":1,
-        "method":"zenlinkProtocol_getBalance",
-        "params": [{"ParaCurrency": 200}, "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"]
-  }'  
-    ```
+     "jsonrpc":"2.0",
+     "id":1,
+     "method":"zenlinkProtocol_getBalance",
+     "params": [{"chain_id": 200,"module_index": 2, "asset_index": 0 }, "5H9dcB3Z4NYrpiDLYXghUZoJWdPWaFoPimBwuuncK9hBaBWA"]
+   }'  
+  ```
 - `zenlinkProtocol_getAllPairs`：
 
-  获取当前链上所有的交易对列表
+  查询所有的交易对
 
     ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
@@ -41,53 +66,237 @@
         "params": [null]
   }'  
     ```
+  
+  **Response:**
+  - account:交易对的账户
+  - holdingLiquidity: 此账户持有的lptoken量
+  - reserve0: 交易池中token0的数量
+  - reserve1: 交易池中token1的数量
+  - token0 & token1: 组成交易对的两种资产
+  - totalLiquidity：lptoken 总量
+  - lpAssetId: 交易中的LP token的 AssetId
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "result": [
+        {
+            "account": "5EYCAe5kj35jpW98CjJD3uDVvYH3fzm9qeT43mzL6AaStHqH",
+            "holdingLiquidity": "0x0",
+            "lpAssetId": {
+                "asset_index": 1,
+                "chain_id": 300,
+                "module_index": 9
+            },
+            "reserve0": "0x3d4",
+            "reserve1": "0x3d4",
+            "token0": {
+                "asset_index": 0,
+                "chain_id": 200,
+                "module_index": 8
+            },
+            "token1": {
+                "asset_index": 0,
+                "chain_id": 300,
+                "module_index": 2
+            },
+            "totalLiquidity": "0x3d4"
+        }
+    ],
+    "id": 1
+  }
+  ```
+
 - `zenlinkProtocol_getOwnerPairs`：
 
-  获取和指定账户ID相关的交易对列表
-
-    ```bash
+  查询某个账户拥有的交易对
+  
+  - params: 查询账户
+  
+  ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
   '{
         "jsonrpc":"2.0",
         "id":1,
         "method":"zenlinkProtocol_getOwnerPairs",
         "params": ["5ExnkKkHG1xfgoCLjQ2DTHBkRxdoUrsnCsVorWKPsESrtpmd", null]
-  }'  
-    ```
+  }'
+  ```
+  
+  **Reponse:**
+  
+  - account:交易对的账户
+  - holdingLiquidity: 此账户持有的lptoken量
+  - reserve0: 交易池中token0的数量
+  - reserve1: 交易池中token1的数量
+  - token0 & token1: 组成交易对的两种资产
+  - totalLiquidity：lptoken 总量
+  - lpAssetId: 交易中的LP token的 AssetId
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "result": [
+      {
+        "account": "5EYCAe5kj35jpW98CjJD3uDVvYH3fzm9qeT43mzL6AaStHqH",
+        "holdingLiquidity": "0x3d4",
+        "lpAssetId": {
+          "asset_index": 1,
+          "chain_id": 300,
+          "module_index": 9
+        },
+        "reserve0": "0x3d4",
+        "reserve1": "0x3d4",
+        "token0": {
+          "asset_index": 0,
+          "chain_id": 200,
+          "module_index": 8
+        },
+        "token1": {
+          "asset_index": 0,
+          "chain_id": 300,
+          "module_index": 2
+        },
+        "totalLiquidity": "0x3d4"
+      }
+    ],
+    "id": 1
+  }
+  ```
+  
 - `zenlinkProtocol_getPairByAssetId`：
 
   获取指定资产ID的交易对信息
-    ```bash
+  
+  - params: (200,8,0)(300,2,0)和组成交易对
+  
+  ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
   '{
         "jsonrpc":"2.0",
         "id":1,
         "method":"zenlinkProtocol_getPairByAssetId",
-        "params": [{"ParaCurrency": 200}, "NativeCurrency"]
-  }'  
-    ```    
-- `zenlinkProtocol_getAmountInPrice`： Path中的第一个元素代表持有的资产， 最后一个元素代表要兑换的目标资产指定要支付的持有资产数量， 获取能兑换的目标资产数量.
+        "params": [{"chain_id": 200,"module_index": 8, "asset_index": 0 }, 
+                   {"chain_id": 300,"module_index": 2, "asset_index": 0 }]
+  }'
+  ```
 
-    ```bash
+  **Response**
+    - account:交易对的账户
+    - holdingLiquidity:持有的LPtoken。实际上，由于lp token全部由交易者持有，这里通常为0.
+    - reserve0: 交易池中token0的数量
+    - reserve1: 交易池中token1的数量
+    - token0 & token1: 组成交易对的两种资产
+    - totalLiquidity：lptoken总量
+    - lpAssetId: 交易中的LP token的 AssetId
+    
+  ```json
+  {
+        "jsonrpc": "2.0",
+        "result": {
+            "account": "5EYCAe5kj35jpW98CjJD3uDVvYH3fzm9qeT43mzL6AaStHqH",
+            "holdingLiquidity": "0x0",
+            "lpAssetId": {
+                "asset_index": 1,
+                "chain_id": 300,
+                "module_index": 9
+            },
+            "reserve0": "0x3d4",
+            "reserve1": "0x3d4",
+            "token0": {
+                "asset_index": 0,
+                "chain_id": 200,
+                "module_index": 8
+            },
+            "token1": {
+                "asset_index": 0,
+                "chain_id": 300,
+                "module_index": 2
+            },
+            "totalLiquidity": "0x3d4"
+        },
+        "id": 1
+  }
+  ```
+  
+- `zenlinkProtocol_getAmountInPrice`： 
+  
+  查询买入汇率（固定交易对右边）
+  
+  - params[0]: "100": 买入的量
+  - params[1]: 兑换路径。
+  
+  ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
   '{
-        "jsonrpc":"2.0",
-        "id":1,
-        "method":"zenlinkProtocol_getAmountInPrice",
-        "params": [1000, [{"ParaCurrency": 200}, "NativeCurrency"], null]
-  }'  
+       "jsonrpc": "2.0",
+       "id": 0,
+       "method": "zenlinkProtocol_getAmountInPrice",
+       "params": [100,[{"chain_id": 200,"module_index": 8, "asset_index": 0 }, 
+                       {"chain_id": 300,"module_index": 2, "asset_index": 0 } ], null]
+   }'  
     ```
-- `zenlinkProtocol_getAmountOutPrice`： Path中的第一个元素代表持有的资产， 最后一个元素代表要兑换的目标资产指定要兑换的目标资产数量， 获取要支付的持有资产数量.
-
-    ```bash
+  
+  **Response:**
+  - result: 99226799： 表示的是用100000000个（200,8,0）兑换出99226799个(300,2,0)。
+    
+  ```json
+  {
+        "jsonrpc": "2.0",
+        "result": "0x2f8a597",
+        "id": 0
+  }
+  ```
+  
+- `zenlinkProtocol_getAmountOutPrice`：
+  
+  查询卖出汇率（固定交易对左边）
+  
+  - params[0]: "100000000": 卖出的量
+  - params[1]: 交易路径。
+  
+  ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
   '{
-        "jsonrpc":"2.0",
-        "id":1,
-        "method":"zenlinkProtocol_getAmountOutPrice",
-        "params": [1000, ["NativeCurrency", {"ParaCurrency": 200}], null]
-  }'  
+       "jsonrpc": "2.0",
+       "id": 0,
+       "method": "zenlinkProtocol_getAmountOutPrice",
+       "params": [100,[{"chain_id": 200,"module_index": 8, "asset_index": 0 }, 
+                       {"chain_id": 300,"module_index": 2, "asset_index": 0 } ], null]
+   }'  
+  ```
+
+    **Response:**
+    ```json
+    {
+        "jsonrpc": "2.0",
+        "result": "0x2f87",
+        "id": 0
+    }
     ```
+    
+- `zenlinkProtocol_getEstimateLptoken`:
+
+  ```bash
+  curl -H "Content-Type: application/json" http://localhost:11111 -d \
+  '{
+       "jsonrpc":"2.0",
+       "id":1,
+       "method":"zenlinkProtocol_getEstimateLptoken",
+       "params": [{"chain_id": 200,"module_index": 8, "asset_index": 0 }, 
+                  {"chain_id": 300,"module_index": 2, "asset_index": 0 }, 
+                  1000000000000000,  100000000, 0, 0 ]
+   }'  
+  ```
+  
+  **Response:**
+ ```json
+    {
+        "jsonrpc": "2.0",
+        "result": "0x5f5e100",
+        "id": 1
+    }
+  ```
 
 #### 2. rpc calls
 
@@ -206,7 +415,42 @@
         }
       ],
       "type": "string"
-    }
+    },
+    "getEstimateLptoken":{
+            "description": "zenlinkProtocol getEstimateLptoken",
+            "params": [
+        {
+          "name": "token_0",
+          "type": "AssetId"
+        },
+        {
+          "name": "token_1",
+          "type": "AssetId"
+        },
+                {
+          "name": "amount_0_desired",
+          "type": "TokenBalance"
+        },
+                {
+          "name": "amount_1_desired",
+          "type": "TokenBalance"
+        },
+                {
+          "name": "amount_0_min",
+          "type": "TokenBalance"
+        },
+                {
+          "name": "amount_1_min",
+          "type": "TokenBalance"
+        },
+        {
+          "name": "at",
+          "type": "Hash",
+          "isOptional": true
+        }
+      ],
+      "type": "string"
+        }
   }
 }
 ```
@@ -215,17 +459,13 @@
 
 ```json
 {
-  "Address": "AccountId",
-  "LookupSource": "AccountId",
-  "RefCount": "u32",
-  "Keys": "(AccountId,AccountId,AccountId,AccountId,AccountId,AccountId)",
-  "AccountInfo": "AccountInfoWithRefCount",
   "PairId": "u32",
   "Pair": {
     "token_0": "AssetId",
     "token_1": "AssetId",
     "account": "AccountId",
-    "total_liquidity": "TokenBalance"
+    "total_liquidity": "TokenBalance",
+    "lp_asset_id": "AssetId"
   },
   "PairInfo": {
     "token_0": "AssetId",
@@ -234,382 +474,25 @@
     "total_liquidity": "TokenBalance",
     "holding_liquidity": "TokenBalance",
     "reserve_0": "TokenBalance",
-    "reserve_1": "TokenBalance"
+    "reserve_1": "TokenBalance",
+    "lp_asset_id": "AssetId"
   },
   "AssetId": {
+    "chain_id": "u32",
+    "module_index": "u8",
+    "asset_index": "u32"
+  },
+  "TokenId": "u32",
+  "AssetProperty":{
     "_enum": {
-      "NativeCurrency": null,
-      "ParaCurrency": "u32"
-    }
+        "FOREIGN": null,
+        "LP": "LpProperty"
+      }
   },
-  "Id": "u32",
-  "TokenBalance": "u128",
-  "OriginKind": {
-    "_enum": {
-      "Native": null,
-      "SovereignAccount": null,
-      "Superuser": null
-    }
+  "LpProperty": {
+    "token_0": "AssetId",
+    "token_1": "AssetId"
   },
-  "NetworkId": {
-    "_enum": {
-      "Any": null,
-      "Named": "Vec<u8>",
-      "Polkadot": null,
-      "Kusama": null
-    }
-  },
-  "MultiLocation": {
-    "_enum": {
-      "Null": null,
-      "X1": "Junction",
-      "X2": "(Junction, Junction)",
-      "X3": "(Junction, Junction, Junction)",
-      "X4": "(Junction, Junction, Junction, Junction)"
-    }
-  },
-  "AccountId32Junction": {
-    "network": "NetworkId",
-    "id": "AccountId"
-  },
-  "AccountIndex64Junction": {
-    "network": "NetworkId",
-    "index": "Compact<u64>"
-  },
-  "AccountKey20Junction": {
-    "network": "NetworkId",
-    "index": "[u8; 20]"
-  },
-  "Junction": {
-    "_enum": {
-      "Parent": null,
-      "Parachain": "Compact<u32>",
-      "AccountId32": "AccountId32Junction",
-      "AccountIndex64": "AccountIndex64Junction",
-      "AccountKey20": "AccountKey20Junction",
-      "PalletInstance": "u8",
-      "GeneralIndex": "Compact<u128>",
-      "GeneralKey": "Vec<u8>",
-      "OnlyChild": null
-    }
-  },
-  "VersionedMultiLocation": {
-    "_enum": {
-      "V0": "MultiLocation"
-    }
-  },
-  "AssetInstance": {
-    "_enum": {
-      "Undefined": null,
-      "Index8": "u8",
-      "Index16": "Compact<u16>",
-      "Index32": "Compact<u32>",
-      "Index64": "Compact<u64>",
-      "Index128": "Compact<u128>",
-      "Array4": "[u8; 4]",
-      "Array8": "[u8; 8]",
-      "Array16": "[u8; 16]",
-      "Array32": "[u8; 32]",
-      "Blob": "Vec<u8>"
-    }
-  },
-  "AbstractFungible": {
-    "id": "Vec<u8>",
-    "instance": "Compact<u128>"
-  },
-  "AbstractNonFungible": {
-    "class": "Vec<u8>",
-    "instance": "AssetInstance"
-  },
-  "ConcreteFungible": {
-    "id": "MultiLocation",
-    "amount": "Compact<u128>"
-  },
-  "ConcreteNonFungible": {
-    "class": "MultiLocation",
-    "instance": "AssetInstance"
-  },
-  "MultiAsset": {
-    "_enum": {
-      "None": null,
-      "All": null,
-      "AllFungible": null,
-      "AllNonFungible": null,
-      "AllAbstractFungible": "Vec<u8>",
-      "AllAbstractNonFungible": "Vec<u8>",
-      "AllConcreteFungible": "MultiLocation",
-      "AllConcreteNonFungible": "MultiLocation",
-      "AbstractFungible": "AbstractFungible",
-      "AbstractNonFungible": "AbstractNonFungible",
-      "ConcreteFungible": "ConcreteFungible",
-      "ConcreteNonFungible": "ConcreteNonFungible"
-    }
-  },
-  "VersionedMultiAsset": {
-    "_enum": {
-      "V0": "MultiAsset"
-    }
-  },
-  "DepositAsset": {
-    "assets": "Vec<MultiAsset>",
-    "dest": "MultiLocation"
-  },
-  "DepositReserveAsset": {
-    "assets": "Vec<MultiAsset>",
-    "dest": "MultiLocation",
-    "effects": "Vec<Order>"
-  },
-  "ExchangeAsset": {
-    "give": "Vec<MultiAsset>",
-    "receive": "Vec<MultiAsset>"
-  },
-  "InitiateReserveWithdraw": {
-    "assets": "Vec<MultiAsset>",
-    "reserve": "MultiLocation",
-    "effects": "Vec<Order>"
-  },
-  "InitiateTeleport": {
-    "assets": "Vec<MultiAsset>",
-    "dest": "MultiLocation",
-    "effects": "Vec<Order>"
-  },
-  "QueryHolding": {
-    "query_id": "Compact<u64>",
-    "dest": "MultiLocation",
-    "assets": "Vec<MultiAsset>"
-  },
-  "Order": {
-    "_enum": {
-      "Null": null,
-      "DepositAsset": "DepositAsset",
-      "DepositReserveAsset": "DepositReserveAsset",
-      "ExchangeAsset": "ExchangeAsset",
-      "InitiateReserveWithdraw": "InitiateReserveWithdraw",
-      "InitiateTeleport": "InitiateTeleport",
-      "QueryHolding": "QueryHolding"
-    }
-  },
-  "WithdrawAsset": {
-    "assets": "Vec<MultiAsset>",
-    "effects": "Vec<Order>"
-  },
-  "ReserveAssetDeposit": {
-    "assets": "Vec<MultiAsset>",
-    "effects": "Vec<Order>"
-  },
-  "TeleportAsset": {
-    "assets": "Vec<MultiAsset>",
-    "effects": "Vec<Order>"
-  },
-  "Balances": {
-    "query_id": "Compact<u64>",
-    "assets": "Vec<MultiAsset>"
-  },
-  "Transact": {
-    "origin_type": "OriginKind",
-    "call": "Vec<u8>"
-  },
-  "RelayTo": {
-    "dest": "MultiLocation",
-    "inner": "VersionedXcm"
-  },
-  "RelayedFrom": {
-    "superorigin": "MultiLocation",
-    "inner": "VersionedXcm"
-  },
-  "Xcm": {
-    "_enum": {
-      "WithdrawAsset": "WithdrawAsset",
-      "ReserveAssetDeposit": "ReserveAssetDeposit",
-      "TeleportAsset": "TeleportAsset",
-      "Balances": "Balances",
-      "Transact": "Transact",
-      "RelayTo": "RelayTo",
-      "RelayedFrom": "RelayedFrom"
-    }
-  },
-  "VersionedXcm": {
-    "_enum": {
-      "V0": "Xcm"
-    }
-  },
-  "XcmError": {
-    "_enum": [
-      "Undefined",
-      "Unimplemented",
-      "UnhandledXcmVersion",
-      "UnhandledXcmMessage",
-      "UnhandledEffect",
-      "EscalationOfPrivilege",
-      "UntrustedReserveLocation",
-      "UntrustedTeleportLocation",
-      "DestinationBufferOverflow",
-      "CannotReachDestination",
-      "MultiLocationFull",
-      "FailedToDecode",
-      "BadOrigin"
-    ]
-  },
-  "XcmResult": {
-    "_enum": {
-      "Ok": "()",
-      "Err": "XcmError"
-    }
-  },
-  "HrmpChannelId": {
-    "sender": "u32",
-    "receiver": "u32"
-  },
-  "AvailabilityBitfield": "BitVec",
-  "SignedAvailabilityBitfield": {
-    "payload": "BitVec",
-    "validator_index": "u32",
-    "signature": "Signature"
-  },
-  "SignedAvailabilityBitfields": "Vec<SignedAvailabilityBitfield>",
-  "ValidatorSignature": "Signature",
-  "HeadData": "Vec<u8>",
-  "CandidateDescriptor": {
-    "paraId": "u32",
-    "relayParent": "Hash",
-    "collator": "Hash",
-    "persistedValidationDataHash": "Hash",
-    "povHash": "Hash",
-    "erasureRoot": "Hash",
-    "signature": "Signature"
-  },
-  "CandidateReceipt": {
-    "descriptor": "CandidateDescriptor",
-    "commitments_hash": "Hash"
-  },
-  "UpwardMessage": "Vec<u8>",
-  "OutboundHrmpMessage": {
-    "recipient": "u32",
-    "data": "Vec<u8>"
-  },
-  "ValidationCode": "Vec<u8>",
-  "CandidateCommitments": {
-    "upward_messages": "Vec<UpwardMessage>",
-    "horizontal_messages": "Vec<OutboundHrmpMessage>",
-    "new_validation_code": "Option<ValidationCode>",
-    "head_data": "HeadData",
-    "processed_downward_messages": "u32",
-    "hrmp_watermark": "BlockNumber"
-  },
-  "CommittedCandidateReceipt": {
-    "descriptor": "CandidateDescriptor",
-    "commitments": "CandidateCommitments"
-  },
-  "ValidityAttestation": {
-    "_enum": {
-      "DummyOffsetBy1": "Raw",
-      "Implicit": "ValidatorSignature",
-      "Explicit": "ValidatorSignature"
-    }
-  },
-  "BackedCandidate": {
-    "candidate": "CommittedCandidateReceipt",
-    "validity_votes": "Vec<ValidityAttestation>",
-    "validator_indices": "BitVec"
-  },
-  "CandidatePendingAvailablility": {
-    "core": "u32",
-    "descriptor": "CandidateDescriptor",
-    "availability_votes": "BitVec",
-    "relay_parent_number": "BlockNumber",
-    "backed_in_number": "BlockNumber"
-  },
-  "BufferedSessionChange": {
-    "apply_at": "BlockNumber",
-    "validators": "Vec<ValidatorId>",
-    "queued": "Vec<ValidatorId>",
-    "session_index": "SessionIndex"
-  },
-  "HostConfiguration": {
-    "max_code_size": "u32",
-    "max_head_data_size": "u32",
-    "max_upward_queue_count": "u32",
-    "max_upward_queue_size": "u32",
-    "max_upward_message_size": "u32",
-    "max_upward_message_num_per_candidate": "u32",
-    "hrmp_max_message_num_per_candidate": "u32",
-    "validation_upgrade_frequency": "u32",
-    "validation_upgrade_delay": "u32",
-    "max_pov_size": "u32",
-    "max_downward_message_size": "u32",
-    "preferred_dispatchable_upward_messages_step_weight": "Weight",
-    "hrmp_max_parachain_outbound_channels": "u32",
-    "hrmp_max_parathread_outbound_channels": "u32",
-    "hrmp_open_request_ttl": "u32",
-    "hrmp_sender_deposit": "Balance",
-    "hrmp_recipient_deposit": "Balance",
-    "hrmp_channel_max_capacity": "u32",
-    "hrmp_channel_max_total_size": "u32",
-    "hrmp_max_parachain_inbound_channels": "u32",
-    "hrmp_max_parathread_inbound_channels": "u32",
-    "hrmp_channel_max_message_size": "u32",
-    "acceptance_period": "u32",
-    "parathread_cores": "u32",
-    "parathread_retries": "u32",
-    "group_rotation_frequency": "u32",
-    "chain_availability_period": "u32",
-    "thread_availability_period": "u32",
-    "scheduling_lookahead": "u32",
-    "max_validators_per_core": "Option<u32>",
-    "dispute_period": "u32",
-    "no_show_slots": "u32",
-    "n_delay_tranches": "u32",
-    "zeroth_delay_tranche_width": "u32",
-    "needed_approvals": "u32",
-    "relay_vrf_modulo_samples": "u32"
-  },
-  "InboundDownwardMessage": {
-    "sent_at": "u32",
-    "msg": "Vec<u8>"
-  },
-  "InboundHrmpMessage": {
-    "sent_at": "u32",
-    "data": "Vec<u8>"
-  },
-  "MessageIngestionType": {
-    "dmp": "Vec<InboundDownwardMessage>",
-    "hrmp": "BTreeMap<u32, Vec<InboundHrmpMessage>>"
-  },
-  "HrmpChannel": {
-    "max_capacity": "u32",
-    "max_total_size": "u32",
-    "max_message_size": "u32",
-    "msg_count": "u32",
-    "total_size": "u32",
-    "mqc_head": "Option<Hash>",
-    "sender_deposit": "Balance",
-    "recipient_deposit": "Balance"
-  },
-  "PersistedValidationData": {
-    "parent_head": "HeadData",
-    "block_number": "BlockNumber",
-    "relay_storage_root": "Hash",
-    "hrmp_mqc_heads": "Vec<(Id, Hash)>",
-    "dmq_mqc_head": "Hash",
-    "max_pov_size": "u32"
-  },
-  "TransientValidationData": {
-    "max_code_size": "u32",
-    "max_head_data_size": "u32",
-    "balance": "Balance",
-    "code_upgrade_allowed": "Option<BlockNumber>",
-    "dmq_length": "u32"
-  },
-  "ValidationData": {
-    "persisted": "PersistedValidationData",
-    "transient": "TransientValidationData"
-  },
-  "StorageProof": {
-    "trie_nodes": "Vec<Vec<u8>>"
-  },
-  "ValidationDataType": {
-    "validation_data": "ValidationData",
-    "relay_chain_state": "StorageProof"
-  }
+  "TokenBalance": "u128"
 }
 ```
