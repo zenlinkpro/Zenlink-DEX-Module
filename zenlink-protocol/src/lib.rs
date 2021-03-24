@@ -330,7 +330,7 @@ decl_module! {
             #[compact] deadline: T::BlockNumber,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let now = frame_system::Module::<T>::block_number();
+            let now = frame_system::Pallet::<T>::block_number();
             ensure!(deadline > now, Error::<T>::Deadline);
 
             Self::inner_add_liquidity(&who, &token_0, &token_1, amount_0_desired, amount_1_desired, amount_0_min, amount_1_min)?;
@@ -367,7 +367,7 @@ decl_module! {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let to = T::Lookup::lookup(to)?;
-            let now = frame_system::Module::<T>::block_number();
+            let now = frame_system::Pallet::<T>::block_number();
             ensure!(deadline > now, Error::<T>::Deadline);
 
             Self::inner_remove_liquidity(&who, &token_0, &token_1, liquidity, amount_token_0_min, amount_token_1_min, &to)?;
@@ -398,7 +398,7 @@ decl_module! {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let to = T::Lookup::lookup(to)?;
-            let now = frame_system::Module::<T>::block_number();
+            let now = frame_system::Pallet::<T>::block_number();
             ensure!(deadline > now, Error::<T>::Deadline);
 
             Self::inner_swap_exact_tokens_for_tokens(&who, amount_in, amount_out_min, &path, &to)?;
@@ -429,7 +429,7 @@ decl_module! {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let to = T::Lookup::lookup(to)?;
-            let now = frame_system::Module::<T>::block_number();
+            let now = frame_system::Pallet::<T>::block_number();
             ensure!(deadline > now, Error::<T>::Deadline);
 
             Self::inner_swap_tokens_for_exact_tokens(&who, amount_out, amount_in_max, &path, &to)?;

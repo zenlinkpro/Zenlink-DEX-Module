@@ -95,12 +95,14 @@ impl OperationalAsset<u32, AccountId, TokenBalance> for BalancesProxy {
         <Balances as Currency<AccountId>>::transfer(&origin, &target, amount, KeepAlive)
     }
 
+    #[allow(unused_must_use)]
     fn inner_deposit(&self, _id: u32, origin: AccountId, amount: u128) -> DispatchResult {
         <Balances as Currency<AccountId>>::deposit_creating(&origin, amount);
 
         Ok(())
     }
 
+    #[allow(unused_must_use)]
     fn inner_withdraw(&self, _id: u32, origin: AccountId, amount: u128) -> DispatchResult {
         <Balances as Currency<AccountId>>::withdraw(
             &origin,
