@@ -6,7 +6,7 @@ It should at least work until the following commits
 
 -   rustc 1.52.0-nightly (d1206f950 2021-02-15)
 -   polkadot.js.org (apps v0.85.2-7)
--   Polkadot rococo-v1 @ `2a0cbd042bad70a39ed87d74fec09ad909300db3`
+-   Polkadot rococo-v1 @ `34e8d5061434c039f0e13c8319dedf54dbb4bc81`
 -   Cumulus rococo-v1 @ `90b1e1804897193b3911f49b45de51532e305733`
 -   Substrate rococo-v1  @ `1404f2af4cbe90d35b4c8a1405a9452feb789adc`
 
