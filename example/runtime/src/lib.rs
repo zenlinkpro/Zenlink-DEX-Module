@@ -24,7 +24,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    traits::{BlakeTwo256, Block as BlockT, Convert, IdentityLookup},
+    traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Convert},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, ModuleId, Perbill,
 };
@@ -104,7 +104,7 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 
 parameter_types! {
-     pub const SS58Prefix: u8 = 42;
+    pub const SS58Prefix: u8 = 42;
     pub const BlockHashCount: BlockNumber = 250;
     pub const Version: RuntimeVersion = VERSION;
     pub RuntimeBlockLength: BlockLength =
@@ -136,7 +136,7 @@ impl frame_system::Config for Runtime {
     /// The aggregated dispatch type that is available for extrinsics.
     type Call = Call;
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
-    type Lookup = IdentityLookup<AccountId>;
+    type Lookup = AccountIdLookup<AccountId, ()>;
     /// The index type for storing how many extrinsics an account has signed.
     type Index = Index;
     /// The index type for blocks.
@@ -166,6 +166,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = RuntimeBlockWeights;
     type BlockLength = RuntimeBlockLength;
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ParachainSystem;
 }
 
 parameter_types! {
@@ -215,7 +216,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     type OnValidationData = ();
     type SelfParaId = ParachainInfo;
     type DownwardMessageHandlers = ZenlinkProtocol;
-    type HrmpMessageHandlers = ZenlinkProtocol;
+    type XcmpMessageHandlers = ZenlinkProtocol;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -239,7 +240,7 @@ construct_runtime! {
 }
 
 /// The address format for describing accounts.
-pub type Address = AccountId;
+pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 /// Block type as expected by this runtime.
@@ -370,7 +371,6 @@ impl_runtime_apis! {
             ZenlinkProtocol::get_owner_pairs(&owner)
         }
 
-        //buy amount token price
         fn get_amount_in_price(
             supply: TokenBalance,
             path: Vec<AssetId>
@@ -378,7 +378,6 @@ impl_runtime_apis! {
             ZenlinkProtocol::desired_in_amount(supply, path)
         }
 
-        //sell amount token price
         fn get_amount_out_price(
             supply: TokenBalance,
             path: Vec<AssetId>

@@ -5,10 +5,10 @@
 It should at least work until the following commits
 
 -   rustc 1.52.0-nightly (d1206f950 2021-02-15)
--   polkadot.js.org (apps v0.85.2-7)
--   Polkadot rococo-v1 @ `34e8d5061434c039f0e13c8319dedf54dbb4bc81`
--   Cumulus rococo-v1 @ `90b1e1804897193b3911f49b45de51532e305733`
--   Substrate rococo-v1  @ `1404f2af4cbe90d35b4c8a1405a9452feb789adc`
+-   polkadot.js.org (apps v0.86.3-28)
+-   Polkadot rococo-v1 @ `f0d5c3d578689109aecb2660a98432e7cd10f53d`
+-   Cumulus rococo-v1 @ `b9b9cbdbcce378d4e7ce724339fd92ffb759090f`
+-   Substrate rococo-v1  @ `127f108ad23a5d5b809b655a9aa6f05153a81cfe`
 
 
 ## Precondition

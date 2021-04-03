@@ -22,7 +22,7 @@ parameter_types! {
     }.into();
 
     pub SiblingParachains: Vec<MultiLocation> = vec![
-        // Pla local and live
+        // Phala local and live
         MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 30 }),
         // Sherpax live
         MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 59 }),
@@ -38,6 +38,7 @@ parameter_types! {
 }
 
 pub struct AccountId32Converter;
+
 impl Convert<AccountId, [u8; 32]> for AccountId32Converter {
     fn convert(account_id: AccountId) -> [u8; 32] {
         account_id.into()
@@ -127,7 +128,7 @@ impl zenlink_protocol::Config for Runtime {
     type Event = Event;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type UpwardMessageSender = ParachainSystem;
-    type HrmpMessageSender = ParachainSystem;
+    type XcmpMessageSender = ParachainSystem;
     type AccountIdConverter = LocationConverter;
     type AccountId32Converter = AccountId32Converter;
     type ParaId = ParachainInfo;

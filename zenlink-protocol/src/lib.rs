@@ -5,9 +5,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use cumulus_primitives_core::{
-    relay_chain::Balance as RelayChainBalance, DownwardMessageHandler, HrmpMessageHandler,
-    HrmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, OutboundHrmpMessage, ParaId,
-    UpwardMessage, UpwardMessageSender,
+    relay_chain::Balance as RelayChainBalance, DownwardMessageHandler, XcmpMessageHandler,
+    XcmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, OutboundHrmpMessage, ParaId,
+    UpwardMessage, UpwardMessageSender, relay_chain, ServiceQuality,
 };
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
@@ -68,7 +68,7 @@ pub trait Config: frame_system::Config {
     /// Something to send an upward message.
     type UpwardMessageSender: UpwardMessageSender;
     /// Something to send an HRMP message.
-    type HrmpMessageSender: HrmpMessageSender;
+    type XcmpMessageSender: XcmpMessageSender;
     /// The set of parachains which the xcm can reach
     type TargetChains: Get<Vec<MultiLocation>>;
     /// The Zenlink Protocol Module Id

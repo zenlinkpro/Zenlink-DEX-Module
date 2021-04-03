@@ -5,19 +5,20 @@ use codec::{Decode, Encode};
 use sp_runtime::traits::Hash;
 use sp_std::{
     convert::{TryFrom, TryInto},
-    vec,
+    vec, prelude::Vec,
 };
 
 use crate::{
     sp_api_hidden_includes_decl_storage::hidden_include::traits::PalletInfo,
     AssetId, AssetProperty, Config, Convert, DownwardMessageHandler, ExecuteXcm, Get,
-    HrmpMessageHandler, HrmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, Junction,
-    Module, MultiAsset, MultiLocation, NetworkId, Order, OutboundHrmpMessage, ParaId,
+    XcmpMessageHandler, XcmpMessageSender, InboundDownwardMessage, Junction,
+    Module, MultiAsset, MultiLocation, NetworkId, Order, ParaId,
     RawEvent::{
         HrmpMessageSent, UpwardMessageSent, XcmBadFormat, XcmBadVersion, XcmExecuteFail,
         XcmExecuteSuccess,
     },
     SendXcm, TokenBalance, UpwardMessageSender, VersionedXcm, Xcm, XcmError, LOG_TARGET,
+    relay_chain, ServiceQuality,
 };
 
 /// Origin for the parachains module.
@@ -187,13 +188,13 @@ impl<T: Config> DownwardMessageHandler for Module<T> {
     }
 }
 
-impl<T: Config> HrmpMessageHandler for Module<T> {
-    fn handle_hrmp_message(sender: ParaId, msg: InboundHrmpMessage) {
-        let hash = T::Hashing::hash(&msg.data);
+impl<T: Config> XcmpMessageHandler for Module<T> {
+    fn handle_xcm_message(sender: ParaId, _sent_at: relay_chain::BlockNumber, xcm: VersionedXcm) {
+        let hash = xcm.using_encoded(T::Hashing::hash);
         log::info!(target: LOG_TARGET, "Processing HRMP XCM: {:?}", &hash);
-        match VersionedXcm::decode(&mut &msg.data[..]).map(Xcm::try_from) {
-            Ok(Ok(xcm)) => {
-                log::info!(target: LOG_TARGET, "handle_hrmp_message: xcm = {:?}", xcm);
+        match Xcm::try_from(xcm) {
+            Ok(xcm) => {
+                log::info!(target: LOG_TARGET, "handle_xcm_message: xcm = {:?}", xcm);
 
                 let origin =
                     MultiLocation::X2(Junction::Parent, Junction::Parachain { id: sender.into() });
@@ -203,9 +204,12 @@ impl<T: Config> HrmpMessageHandler for Module<T> {
                     Err(e) => Self::deposit_event(XcmExecuteFail(hash, e)),
                 };
             }
-            Ok(Err(..)) => Self::deposit_event(XcmBadVersion(hash)),
-            Err(..) => Self::deposit_event(XcmBadFormat(hash)),
-        }
+            Err(..) => Self::deposit_event(XcmBadVersion(hash)),
+        };
+    }
+
+    fn handle_blob_message(_sender: ParaId, _sent_at: relay_chain::BlockNumber, _blob: Vec<u8>) {
+        debug_assert!(false, "Blob messages not handled.")
     }
 }
 
@@ -242,11 +246,8 @@ impl<T: Config> SendXcm for Module<T> {
             }
             // An HRMP message for a sibling parachain.
             Some(Junction::Parachain { id }) => {
-                let data = vmsg.encode();
-                let hash = T::Hashing::hash(&data);
-                let message = OutboundHrmpMessage { recipient: (*id).into(), data };
-
-                T::HrmpMessageSender::send_hrmp_message(message)
+                let hash = T::Hashing::hash_of(&vmsg);
+                T::XcmpMessageSender::send_xcm_message((*id).into(), vmsg, ServiceQuality::Ordered)
                     .map_err(|_| XcmError::CannotReachDestination)?;
 
                 Self::deposit_event(HrmpMessageSent(hash));
@@ -260,11 +261,9 @@ impl<T: Config> SendXcm for Module<T> {
                 let vmsg: VersionedXcm = msg.into();
                 match dest.at(1) {
                     Some(Junction::Parachain { id }) => {
-                        let data = vmsg.encode();
-                        let hash = T::Hashing::hash(&data);
-                        let message = OutboundHrmpMessage { recipient: (*id).into(), data };
+                        let hash = T::Hashing::hash_of(&vmsg);
 
-                        T::HrmpMessageSender::send_hrmp_message(message)
+                        T::XcmpMessageSender::send_xcm_message((*id).into(), vmsg, ServiceQuality::Ordered)
                             .map_err(|_| XcmError::CannotReachDestination)?;
 
                         Self::deposit_event(HrmpMessageSent(hash));
