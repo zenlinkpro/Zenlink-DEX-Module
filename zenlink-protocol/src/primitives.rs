@@ -4,7 +4,11 @@
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::{DispatchResult, RuntimeDebug};
+use sp_runtime::RuntimeDebug;
+
+pub const NATIVE_CURRENCY: u8 = 0u8;
+pub const INNER_ASSET: u8 = 1u8;
+pub const OTHER_ASSET: u8 = 2u8;
 
 /// The balance of zenlink asset
 pub type TokenBalance = u128;
@@ -43,55 +47,4 @@ impl Default for AssetProperty {
 pub struct LpProperty {
     pub token_0: AssetId,
     pub token_1: AssetId,
-}
-
-pub trait MultiAsset<AccountId, TokenBalance> {
-    fn multi_asset_total_supply(asset_id: &AssetId) -> TokenBalance;
-
-    fn multi_asset_balance_of(asset_id: &AssetId, who: &AccountId) -> TokenBalance;
-
-    fn multi_asset_transfer(
-        asset_id: &AssetId,
-        from: &AccountId,
-        to: &AccountId,
-        amount: TokenBalance,
-    ) -> DispatchResult;
-
-    fn multi_asset_withdraw(
-        asset_id: &AssetId,
-        who: &AccountId,
-        amount: TokenBalance,
-    ) -> DispatchResult;
-
-    fn multi_asset_deposit(
-        asset_id: &AssetId,
-        who: &AccountId,
-        amount: TokenBalance,
-    ) -> DispatchResult;
-}
-
-pub trait OperationalAsset<AssetId, AccountId, TokenBalance> {
-    /// Get the asset `id` balance of `who`.
-    fn balance(&self, id: AssetId, who: AccountId) -> TokenBalance;
-
-    /// Get the total supply of an asset `id`.
-    fn total_supply(&self, id: AssetId) -> TokenBalance;
-
-    fn inner_transfer(
-        &self,
-        id: AssetId,
-        origin: AccountId,
-        target: AccountId,
-        amount: TokenBalance,
-    ) -> DispatchResult;
-
-    fn inner_deposit(&self, id: AssetId, origin: AccountId, amount: TokenBalance)
-        -> DispatchResult;
-
-    fn inner_withdraw(
-        &self,
-        id: AssetId,
-        origin: AccountId,
-        amount: TokenBalance,
-    ) -> DispatchResult;
 }

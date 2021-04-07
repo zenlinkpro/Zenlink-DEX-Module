@@ -11,8 +11,8 @@ use sp_runtime::{
 
 use crate as pallet_zenlink;
 use crate::{
-    Config, Convert, ExecuteXcm, HrmpMessageSender, LocationConversion, Module, ModuleId,
-    MultiLocation, OutboundHrmpMessage, UpwardMessage, UpwardMessageSender, Xcm, XcmResult,
+    Config, Convert, ExecuteXcm, LocationConversion, Module, ModuleId, MultiLocation,
+    NativeCurrencyAdaptor, Xcm, XcmResult,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -24,9 +24,9 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>} = 0,
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 8,
-        Zenlink: pallet_zenlink::{Module, Origin, Call, Storage, Event<T>} = 9,
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 8,
+        Zenlink: pallet_zenlink::{Pallet, Call, Storage, Event<T>} = 9,
     }
 );
 
@@ -58,6 +58,7 @@ impl frame_system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
 }
 
 parameter_types! {
@@ -69,27 +70,14 @@ impl pallet_balances::Config for Test {
     type DustRemoval = ();
     type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
-    type AccountStore = frame_system::Module<Test>;
+    type AccountStore = frame_system::Pallet<Test>;
     type WeightInfo = ();
     type MaxLocks = ();
 }
 
-pub struct TestSender;
+pub struct TestExecutor;
 
-impl UpwardMessageSender for TestSender {
-    fn send_upward_message(_msg: UpwardMessage) -> Result<(), ()> {
-        unimplemented!()
-    }
-}
-
-impl HrmpMessageSender for TestSender {
-    /// Send the given HRMP message.
-    fn send_hrmp_message(_msg: OutboundHrmpMessage) -> Result<(), ()> {
-        unimplemented!()
-    }
-}
-
-impl ExecuteXcm for TestSender {
+impl ExecuteXcm for TestExecutor {
     fn execute_xcm(_origin: MultiLocation, _msg: Xcm) -> XcmResult {
         Ok(())
     }
@@ -114,15 +102,14 @@ impl LocationConversion<<Test as frame_system::Config>::AccountId> for Converter
 
 impl Config for Test {
     type Event = Event;
-    type XcmExecutor = TestSender;
-    type UpwardMessageSender = TestSender;
-    type HrmpMessageSender = TestSender;
+    type XcmExecutor = TestExecutor;
     type AccountIdConverter = Converter;
     type AccountId32Converter = Converter;
     type ModuleId = DEXModuleId;
     type ParaId = ();
     type TargetChains = ();
-    type AssetModuleRegistry = ();
+    type NativeCurrency = NativeCurrencyAdaptor<Test, Balances>;
+    type OtherAssets = ();
 }
 
 pub type DexModule = Module<Test>;

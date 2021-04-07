@@ -3,9 +3,7 @@
 
 use frame_support::{assert_noop, assert_ok};
 
-use crate::primitives::{AssetProperty, MultiAsset};
-
-use super::{mock::*, AssetId, Error};
+use super::{mock::*, AssetId, AssetProperty, Error, MultiAssetHandler};
 
 pub const ASSET_MODULE_INDEX: u8 = 9;
 

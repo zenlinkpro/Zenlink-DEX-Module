@@ -1,16 +1,13 @@
 // Copyright 2020-2021 Zenlink
 // Licensed under GPL-3.0.
 
-use cumulus_primitives_core::ParaId;
-use frame_support::sp_runtime::traits::Zero;
-
 use crate::{
     ensure,
-    primitives::{AssetId, MultiAsset},
     sp_api_hidden_includes_decl_storage::hidden_include::{traits::Get, StorageMap, StorageValue},
-    AssetProperty, Assets, AssetsMetadata, Balances, Config, DispatchResult, Error, Module,
+    AssetHandler, AssetId, AssetProperty, Assets, AssetsMetadata, Balances, Config, DispatchError,
+    DispatchResult, Error, Module, MultiAssetHandler,
     RawEvent::{Burned, Issued, Minted, Transferred},
-    TokenBalance, TotalSupply, Vec,
+    TokenBalance, TotalSupply, Vec, INNER_ASSET,
 };
 
 #[cfg(test)]
@@ -18,7 +15,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-// The main implementation block for the module.
+// TODO: refactor storage
+
+// The Zenlink Protocol inner asset which store other chain assets and liquidity tokens
 impl<T: Config> Module<T> {
     /// public mutable functions
 
@@ -109,34 +108,90 @@ impl<T: Config> Module<T> {
     }
 }
 
+// The AssetHandler implementation for Zenlink Protocol inner asset
+impl<T: Config> AssetHandler<T::AccountId> for Module<T> {
+    fn a_parachain_id() -> u32 {
+        <T as Config>::ParaId::get().into()
+    }
+
+    fn a_module_index() -> u8 {
+        INNER_ASSET
+    }
+
+    fn a_is_manageable(asset_id: AssetId) -> bool {
+        Self::assets_list().contains(&asset_id)
+    }
+
+    fn a_balance_of(asset_id: AssetId, who: T::AccountId) -> TokenBalance {
+        Self::balance_of(asset_id, &who)
+    }
+
+    fn a_total_supply(asset_id: AssetId) -> TokenBalance {
+        Self::total_supply(asset_id)
+    }
+
+    fn a_transfer(
+        asset_id: AssetId,
+        origin: T::AccountId,
+        target: T::AccountId,
+        amount: TokenBalance,
+    ) -> Result<TokenBalance, DispatchError> {
+        Self::inner_transfer(asset_id, &origin, &target, amount)?;
+
+        Ok(amount)
+    }
+
+    fn a_deposit(asset_id: AssetId, origin: T::AccountId, amount: TokenBalance) -> DispatchResult {
+        Self::inner_mint(asset_id, &origin, amount)
+    }
+
+    fn a_withdraw(
+        asset_id: AssetId,
+        origin: T::AccountId,
+        amount: TokenBalance,
+    ) -> Result<TokenBalance, DispatchError> {
+        Self::inner_burn(asset_id, &origin, amount)?;
+
+        Ok(amount)
+    }
+}
+
 // Zenlink module control the other asset module. It only has this one entrance.
-impl<T: Config> MultiAsset<T::AccountId, TokenBalance> for Module<T> {
+impl<T: Config> MultiAssetHandler<T::AccountId> for Module<T> {
     fn multi_asset_total_supply(asset_id: &AssetId) -> TokenBalance {
-        if Self::assets_list().contains(asset_id) {
-            Self::total_supply(*asset_id)
-        } else {
-            T::AssetModuleRegistry::get()
-                .iter()
-                .find(|(index, _)| {
-                    *index == asset_id.module_index
-                        && <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id)
-                })
-                .map_or(Zero::zero(), |(_, t)| t.total_supply(asset_id.asset_index))
+        let aid = *asset_id;
+
+        if Self::a_is_manageable(aid) {
+            return Self::a_total_supply(aid);
         }
+
+        if T::NativeCurrency::a_is_manageable(aid) {
+            return T::NativeCurrency::a_total_supply(aid);
+        }
+
+        if T::OtherAssets::a_is_manageable(aid) {
+            return T::OtherAssets::a_total_supply(aid);
+        }
+
+        Default::default()
     }
 
     fn multi_asset_balance_of(asset_id: &AssetId, who: &T::AccountId) -> TokenBalance {
-        if Self::assets_list().contains(asset_id) {
-            Self::balance_of(*asset_id, who)
-        } else {
-            T::AssetModuleRegistry::get()
-                .iter()
-                .find(|(index, _)| {
-                    *index == asset_id.module_index
-                        && <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id)
-                })
-                .map_or(Zero::zero(), |(_, t)| t.balance(asset_id.asset_index, who.clone()))
+        let aid = *asset_id;
+
+        if Self::a_is_manageable(aid) {
+            return Self::a_balance_of(aid, who.clone());
         }
+
+        if T::NativeCurrency::a_is_manageable(aid) {
+            return T::NativeCurrency::a_balance_of(*asset_id, who.clone());
+        }
+
+        if T::OtherAssets::a_is_manageable(aid) {
+            return T::OtherAssets::a_balance_of(*asset_id, who.clone());
+        }
+
+        Default::default()
     }
 
     fn multi_asset_transfer(
@@ -145,58 +200,79 @@ impl<T: Config> MultiAsset<T::AccountId, TokenBalance> for Module<T> {
         to: &T::AccountId,
         amount: TokenBalance,
     ) -> DispatchResult {
-        if Self::assets_list().contains(asset_id) {
-            Self::inner_transfer(*asset_id, &from, &to, amount)
-        } else {
-            T::AssetModuleRegistry::get()
-                .iter()
-                .find(|(index, _)| {
-                    *index == asset_id.module_index
-                        && <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id)
-                })
-                .map_or(Err((Error::<T>::AssetNotExists).into()), |(_, t)| {
-                    t.inner_transfer(asset_id.asset_index, from.clone(), to.clone(), amount)
-                })
+        let aid = *asset_id;
+
+        if Self::a_is_manageable(aid) {
+            Self::a_transfer(aid, from.clone(), to.clone(), amount)?;
+            return Ok(());
         }
+
+        if T::NativeCurrency::a_is_manageable(aid) {
+            T::NativeCurrency::a_transfer(aid, from.clone(), to.clone(), amount)?;
+            return Ok(());
+        }
+
+        if T::OtherAssets::a_is_manageable(aid) {
+            T::OtherAssets::a_transfer(aid, from.clone(), to.clone(), amount)?;
+            return Ok(());
+        }
+
+        Err(Error::<T>::AssetNotExists.into())
     }
 
     fn multi_asset_withdraw(
         asset_id: &AssetId,
         who: &T::AccountId,
         amount: TokenBalance,
-    ) -> DispatchResult {
-        if Self::assets_list().contains(asset_id) {
-            Self::inner_burn(*asset_id, &who, amount)
-        } else {
-            T::AssetModuleRegistry::get()
-                .iter()
-                .find(|(index, _)| {
-                    *index == asset_id.module_index
-                        && <T as Config>::ParaId::get() == ParaId::from(asset_id.chain_id)
-                })
-                .map_or(Err((Error::<T>::AssetNotExists).into()), |(_, t)| {
-                    t.inner_withdraw(asset_id.asset_index, who.clone(), amount)
-                })
+    ) -> Result<TokenBalance, DispatchError> {
+        let aid = *asset_id;
+
+        if Self::a_is_manageable(aid) {
+            Self::a_withdraw(aid, who.clone(), amount)?;
+            return Ok(amount);
         }
+
+        if T::NativeCurrency::a_is_manageable(*asset_id) {
+            T::NativeCurrency::a_withdraw(aid, who.clone(), amount)?;
+            return Ok(amount);
+        }
+
+        if T::OtherAssets::a_is_manageable(*asset_id) {
+            T::OtherAssets::a_withdraw(aid, who.clone(), amount)?;
+            return Ok(amount);
+        }
+
+        Err(Error::<T>::AssetNotExists.into())
     }
 
     fn multi_asset_deposit(
         asset_id: &AssetId,
         who: &T::AccountId,
         amount: TokenBalance,
-    ) -> DispatchResult {
-        if Self::assets_list().contains(asset_id) {
-            Self::inner_mint(*asset_id, &who, amount)
-        } else if <T as Config>::ParaId::get() != ParaId::from(asset_id.chain_id) {
-            Self::inner_issue(*asset_id, AssetProperty::Foreign)?;
-            Self::inner_mint(*asset_id, &who, amount)
-        } else {
-            T::AssetModuleRegistry::get()
-                .iter()
-                .find(|(index, _)| *index == asset_id.module_index)
-                .map_or(Err((Error::<T>::AssetNotExists).into()), |(_, t)| {
-                    t.inner_deposit(asset_id.asset_index, who.clone(), amount)
-                })
+    ) -> Result<TokenBalance, DispatchError> {
+        let aid = *asset_id;
+
+        if Self::a_is_manageable(aid) {
+            Self::a_deposit(aid, who.clone(), amount)?;
+            return Ok(amount);
         }
+
+        if Self::a_parachain_id() != asset_id.chain_id {
+            Self::inner_issue(aid, AssetProperty::Foreign)?;
+            Self::a_deposit(aid, who.clone(), amount)?;
+            return Ok(amount);
+        }
+
+        if T::NativeCurrency::a_is_manageable(aid) {
+            T::NativeCurrency::a_deposit(aid, who.clone(), amount)?;
+            return Ok(amount);
+        }
+
+        if T::OtherAssets::a_is_manageable(aid) {
+            T::OtherAssets::a_deposit(aid, who.clone(), amount)?;
+            return Ok(amount);
+        }
+
+        Err(Error::<T>::AssetNotExists.into())
     }
 }

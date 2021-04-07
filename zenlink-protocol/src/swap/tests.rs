@@ -5,9 +5,7 @@ use frame_support::{assert_noop, assert_ok};
 
 pub const ASSET_MODULE_INDEX: u8 = 8;
 
-use crate::primitives::MultiAsset;
-
-use super::{mock::*, AssetId, AssetProperty, Error};
+use super::{mock::*, AssetId, AssetProperty, Error, MultiAssetHandler};
 
 const DOT_ASSET_ID: AssetId =
     AssetId { chain_id: 300, module_index: ASSET_MODULE_INDEX, asset_index: 0 };

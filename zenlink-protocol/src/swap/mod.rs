@@ -11,10 +11,10 @@ use sp_std::convert::TryInto;
 
 use crate::{
     ensure,
-    primitives::{AssetProperty, LpProperty, MultiAsset},
+    primitives::{AssetProperty, LpProperty},
     sp_api_hidden_includes_decl_storage::hidden_include::{StorageMap, StorageValue},
-    vec, AssetId, Assets, AssetsToPair, Config, Error, Get, Module, NextPairId, Pairs,
-    TokenBalance, Vec,
+    vec, AssetId, Assets, AssetsToPair, Config, Error, Get, Module, MultiAssetHandler, NextPairId,
+    Pairs, TokenBalance, Vec, INNER_ASSET,
 };
 
 #[cfg(test)]
@@ -47,7 +47,7 @@ impl<T: Config> Module<T> {
         let lp_asset_index = <Assets>::get().len() as u32;
         let lp_asset_id = AssetId {
             chain_id: T::ParaId::get().into(),
-            module_index: Self::index(),
+            module_index: INNER_ASSET,
             asset_index: lp_asset_index,
         };
         let new_pair =

@@ -5,84 +5,77 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use cumulus_primitives_core::{
-    relay_chain::Balance as RelayChainBalance, DownwardMessageHandler, XcmpMessageHandler,
-    XcmpMessageSender, InboundDownwardMessage, InboundHrmpMessage, OutboundHrmpMessage, ParaId,
-    UpwardMessage, UpwardMessageSender, relay_chain, ServiceQuality,
+    relay_chain, relay_chain::Balance as RelayChainBalance, DownwardMessageHandler,
+    InboundDownwardMessage, ParaId, ServiceQuality, UpwardMessage, UpwardMessageSender,
+    XcmpMessageHandler, XcmpMessageSender,
 };
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
-    dispatch::DispatchResult,
+    dispatch::{DispatchError, DispatchResult},
     ensure,
-    traits::{Box, Get},
+    traits::Get,
     transactional,
 };
 use frame_system::ensure_signed;
-pub use polkadot_parachain::primitives::Sibling;
+
 use sp_runtime::{
     traits::{Convert, StaticLookup},
     ModuleId,
 };
-use sp_std::{prelude::Vec, vec};
-pub use xcm::{
-    v0::{
-        Error as XcmError, ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order,
-        Result as XcmResult, SendXcm, Xcm,
-    },
-    VersionedXcm,
+use sp_std::{convert::TryInto, prelude::Vec, vec};
+
+pub use xcm::v0::{
+    Error as XcmError, ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order,
+    Result as XcmResult, Xcm,
 };
-pub use xcm_builder::{
-    AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative,
-    SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-    SovereignSignedViaLocation,
-};
+
 pub use xcm_executor::{
     traits::{FilterAssetLocation, LocationConversion, TransactAsset},
-    Config as XcmCfg, XcmExecutor,
+    XcmExecutor,
 };
 
 pub use crate::{
     primitives::{
-        AssetId, AssetProperty, MultiAsset as ZenlinkMultiAsset, OperationalAsset, PairId,
-        TokenBalance,
+        AssetId, AssetProperty, PairId, TokenBalance, INNER_ASSET, NATIVE_CURRENCY, OTHER_ASSET,
     },
     rpc::PairInfo,
     swap::Pair,
-    xcm_support::{ParaChainWhiteList, Transactor},
-    xtransfer::Origin,
+    traits::{AssetHandler, MultiAssetHandler, NativeCurrencyAdaptor},
+    transactor::{ParaChainWhiteList, TransactorAdaptor},
 };
 
 mod assets;
 mod primitives;
 mod rpc;
 mod swap;
-mod xcm_support;
-mod xtransfer;
+mod traits;
+mod transactor;
 
 const LOG_TARGET: &str = "zenlink_protocol";
+
+pub fn make_x2_location(para_id: u32) -> MultiLocation {
+    MultiLocation::X2(Junction::Parent, Junction::Parachain { id: para_id })
+}
 
 pub trait Config: frame_system::Config {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     /// Something to execute an XCM message.
     type XcmExecutor: ExecuteXcm;
-    /// Something to send an upward message.
-    type UpwardMessageSender: UpwardMessageSender;
-    /// Something to send an HRMP message.
-    type XcmpMessageSender: XcmpMessageSender;
-    /// The set of parachains which the xcm can reach
-    type TargetChains: Get<Vec<MultiLocation>>;
-    /// The Zenlink Protocol Module Id
+    /// The set of parachains which the xcm can reach.
+    type TargetChains: Get<Vec<(MultiLocation, u128)>>;
+    /// The Zenlink Protocol Module Id.
     type ModuleId: Get<ModuleId>;
-    /// Convert AccountId to MultiLocation
+    /// Convert AccountId to MultiLocation.
     type AccountIdConverter: LocationConversion<Self::AccountId>;
-    /// Convert AccountId to [u8; 32]
+    /// Convert AccountId to [u8; 32].
     type AccountId32Converter: Convert<Self::AccountId, [u8; 32]>;
-    /// Get this parachain Id
+    /// Get this parachain Id.
     type ParaId: Get<ParaId>;
-    /// Get the registry of asset modules
-    type AssetModuleRegistry: Get<
-        Vec<(u8, Box<dyn OperationalAsset<u32, Self::AccountId, TokenBalance>>)>,
-    >;
+    /// This chain native currency.
+    type NativeCurrency: AssetHandler<Self::AccountId>;
+    /// This chain other assets.
+    type OtherAssets: AssetHandler<Self::AccountId>;
 }
 
 decl_storage! {
@@ -108,8 +101,7 @@ decl_storage! {
 
 decl_event! {
     pub enum Event<T> where
-        <T as frame_system::Config>::AccountId,
-        <T as frame_system::Config>::Hash
+        <T as frame_system::Config>::AccountId
     {
         /// Assets
 
@@ -121,23 +113,8 @@ decl_event! {
         Minted(AssetId, AccountId, TokenBalance),
         /// Some assets were Issued. \[asset_id, \]
         Issued(AssetId),
-
-        /// Xtransfer
-
         /// Transferred to parachain. \[asset_id, src, para_id, dest, amount\]
         TransferredToParachain(AssetId, AccountId, ParaId, AccountId, TokenBalance),
-        /// Some XCM was executed ok. \[xcm_hash\]
-        XcmExecuteSuccess(Hash),
-        /// Some XCM failed. \[xcm_hash, xcm_error\]
-        XcmExecuteFail(Hash, XcmError),
-        /// Bad XCM version used. \[xcm_hash\]
-        XcmBadVersion(Hash),
-        /// Bad XCM format used. \[xcm_hash\]
-        XcmBadFormat(Hash),
-        /// An upward message was sent to the relay chain. \[xcm_hash\]
-        UpwardMessageSent(Hash),
-        /// An HRMP message was sent to a sibling parachainchain. \[xcm_hash\]
-        HrmpMessageSent(Hash),
 
         /// Swap
 
@@ -160,21 +137,21 @@ decl_error! {
         AssetNotExists,
         /// Asset has already exist.
         AssetAlreadyExist,
-        /// AssetId is native currency
-        NotParaCurrency,
         /// AssetId is not in zenlink module
         NotZenlinkAsset,
+        /// Amount to Balance conversion failed
+        AmountToBalanceConversionFailed,
 
         /// Location given was invalid or unsupported.
         AccountIdBadLocation,
         /// The target chain is not in whitelist.
         DeniedReachTargetChain,
-        /// XCM can not reach target chain, probably because of the hrmp channel is closed.
-        MaybeHrmpChannelIsClosed,
         /// XCM execution failed
         ExecutionFailed,
         /// Transfer to self by XCM message
         DeniedTransferToSelf,
+        /// Value too low to create account due to existential deposit
+        ExistentialDeposit,
 
         /// Trading pair can't be created.
         DeniedCreatePair,
@@ -182,8 +159,6 @@ decl_error! {
         PairAlreadyExists,
         /// Trading pair does not exist.
         PairNotExists,
-        /// Swap in local parachain by XCM message
-        DeniedSwapInLocal,
         /// Liquidity is not enough.
         InsufficientLiquidity,
         /// Trading pair does have enough asset.
@@ -194,8 +169,6 @@ decl_error! {
         ExcessiveSoldAmount,
         /// Can't find pair though trading path.
         InvalidPath,
-        /// Ensure correct parameter in cross chain add liquidity.
-        DeniedAddLiquidityToParachain,
         /// Incorrect asset amount range.
         IncorrectAssetAmountRange,
         /// Overflow.
@@ -239,10 +212,11 @@ decl_module! {
         ///
         /// # Arguments
         ///
-        /// * `asset_id`: Global identifier for a zenlink asset
-        /// * `para_id`: Destination parachain
-        /// * `account`: Destination account
-        /// * `amount`: Amount to transfer
+        /// - `asset_id`: Global identifier for a zenlink asset
+        /// - `para_id`: Destination parachain
+        /// - `account`: Destination account
+        /// - `amount`: Amount to transfer
+        /// - `force_transfer`: Ignore check destination parachain and minimum balance
         #[weight = 10]
         #[transactional]
         pub fn transfer_to_parachain(
@@ -250,12 +224,15 @@ decl_module! {
             asset_id: AssetId,
             para_id: ParaId,
             account: T::AccountId,
-            #[compact] amount: TokenBalance
+            #[compact] amount: TokenBalance,
+            force_transfer: bool
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(para_id != T::ParaId::get(), Error::<T>::DeniedTransferToSelf);
-            ensure!(Self::is_reachable(para_id), Error::<T>::DeniedReachTargetChain);
+            ensure!(force_transfer || Self::is_reachable(para_id), Error::<T>::DeniedReachTargetChain);
+            ensure!(force_transfer || Self::must_more_than_minimum(para_id, amount), Error::<T>::ExistentialDeposit);
             ensure!(Self::multi_asset_balance_of(&asset_id, &who) >= amount, Error::<T>::InsufficientAssetBalance);
+
             let xcm = Self::make_xcm_transfer_to_parachain(&asset_id, para_id, &account, amount)
                 .map_err(|_| Error::<T>::NotZenlinkAsset)?;
 
@@ -286,8 +263,8 @@ decl_module! {
         ///
         /// # Arguments
         ///
-        /// * `token_0`: Token that make up Pair
-        /// * `token_1`: Token that make up Pair
+        /// - `token_0`: Token that make up Pair
+        /// - `token_1`: Token that make up Pair
         #[weight = 10]
         pub fn create_pair(
             origin,
@@ -309,13 +286,13 @@ decl_module! {
         ///
         /// # Arguments
         ///
-        /// * `token_0`: Token that make up pair
-        /// * `token_1`: Token that make up pair
-        /// * `amount_0_desired`: Maximum amount of token_0 added to the pair
-        /// * `amount_1_desired`: Maximum amount of token_1 added to the pair
-        /// * `amount_0_min`: Minimum amount of token_0 added to the pair
-        /// * `amount_1_min`: Minimum amount of token_1 added to the pair
-        /// * `deadline`: Height of the cutoff block of this transaction
+        /// - `token_0`: Token that make up pair
+        /// - `token_1`: Token that make up pair
+        /// - `amount_0_desired`: Maximum amount of token_0 added to the pair
+        /// - `amount_1_desired`: Maximum amount of token_1 added to the pair
+        /// - `amount_0_min`: Minimum amount of token_0 added to the pair
+        /// - `amount_1_min`: Minimum amount of token_1 added to the pair
+        /// - `deadline`: Height of the cutoff block of this transaction
         #[weight = 0]
         #[transactional]
         #[allow(clippy::too_many_arguments)]
@@ -346,12 +323,12 @@ decl_module! {
         ///
         /// # Arguments
         ///
-        /// * `token_0`: Token that make up pair
-        /// * `token_1`: Token that make up pair
-        /// * `amount_token_0_min`: Minimum amount of token_0 to exact
-        /// * `amount_token_1_min`: Minimum amount of token_1 to exact
-        /// * `to`: Account that accepts withdrawal of assets
-        /// * `deadline`: Height of the cutoff block of this transaction
+        /// - `token_0`: Token that make up pair
+        /// - `token_1`: Token that make up pair
+        /// - `amount_token_0_min`: Minimum amount of token_0 to exact
+        /// - `amount_token_1_min`: Minimum amount of token_1 to exact
+        /// - `to`: Account that accepts withdrawal of assets
+        /// - `deadline`: Height of the cutoff block of this transaction
         #[weight = 0]
         #[transactional]
         #[allow(clippy::too_many_arguments)]
@@ -381,11 +358,11 @@ decl_module! {
         ///
         /// # Arguments
         ///
-        /// * `amount_in`: Amount asset will be sold
-        /// * `amount_out_min`: Minimum amount of target asset
-        /// * `path`: path can convert to pairs.
-        /// * `to`: Account that receive the target asset
-        /// * `deadline`: Height of the cutoff block of this transaction
+        /// - `amount_in`: Amount asset will be sold
+        /// - `amount_out_min`: Minimum amount of target asset
+        /// - `path`: path can convert to pairs.
+        /// - `to`: Account that receive the target asset
+        /// - `deadline`: Height of the cutoff block of this transaction
         #[weight = 0]
         #[transactional]
         pub fn swap_exact_tokens_for_tokens(
@@ -412,11 +389,11 @@ decl_module! {
         ///
         /// # Arguments
         ///
-        /// * `amount_out`: Amount asset will be bought
-        /// * `amount_in_max`: Maximum amount of sold asset
-        /// * `path`: path can convert to pairs.
-        /// * `to`: Account that receive the target asset
-        /// * `deadline`: Height of the cutoff block of this transaction
+        /// - `amount_out`: Amount asset will be bought
+        /// - `amount_in_max`: Maximum amount of sold asset
+        /// - `path`: path can convert to pairs.
+        /// - `to`: Account that receive the target asset
+        /// - `deadline`: Height of the cutoff block of this transaction
         #[weight = 0]
         #[transactional]
         pub fn swap_tokens_for_exact_tokens(
@@ -438,5 +415,127 @@ decl_module! {
 
             Ok(())
         }
+    }
+}
+
+impl<T: Config> Module<T> {
+    pub(crate) fn is_reachable(para_id: ParaId) -> bool {
+        T::TargetChains::get()
+            .iter()
+            .map(|(location, _)| location)
+            .any(|l| *l == make_x2_location(para_id.into()))
+    }
+
+    pub(crate) fn must_more_than_minimum(para_id: ParaId, amount: TokenBalance) -> bool {
+        T::TargetChains::get()
+            .iter()
+            .find(|(l, _)| *l == make_x2_location(para_id.into()))
+            .map(|&(_, minimum_balance)| amount >= minimum_balance)
+            .unwrap_or(false)
+    }
+
+    // Make the deposit asset order
+    fn make_deposit_asset_order(account: T::AccountId) -> Order {
+        Order::DepositAsset {
+            assets: vec![MultiAsset::All],
+            dest: MultiLocation::X1(Junction::AccountId32 {
+                network: NetworkId::Any,
+                id: T::AccountId32Converter::convert(account),
+            }),
+        }
+    }
+
+    // Transfer zenlink assets which are native to this parachain
+    pub(crate) fn make_xcm_lateral_transfer_native(
+        location: MultiLocation,
+        para_id: ParaId,
+        account: T::AccountId,
+        amount: TokenBalance,
+    ) -> Xcm {
+        Xcm::WithdrawAsset {
+            assets: vec![MultiAsset::ConcreteFungible { id: location, amount }],
+            effects: vec![Order::DepositReserveAsset {
+                assets: vec![MultiAsset::All],
+                dest: make_x2_location(para_id.into()),
+                effects: vec![Self::make_deposit_asset_order(account)],
+            }],
+        }
+    }
+    // Transfer zenlink assets which are foreign to this parachain
+    pub(crate) fn make_xcm_lateral_transfer_foreign(
+        reserve_chain: ParaId,
+        location: MultiLocation,
+        para_id: ParaId,
+        account: T::AccountId,
+        amount: TokenBalance,
+    ) -> Xcm {
+        Xcm::WithdrawAsset {
+            assets: vec![MultiAsset::ConcreteFungible { id: location, amount }],
+            effects: vec![Order::InitiateReserveWithdraw {
+                assets: vec![MultiAsset::All],
+                reserve: make_x2_location(reserve_chain.into()),
+                effects: vec![if para_id == reserve_chain {
+                    Self::make_deposit_asset_order(account)
+                } else {
+                    Order::DepositReserveAsset {
+                        assets: vec![MultiAsset::All],
+                        dest: make_x2_location(para_id.into()),
+                        effects: vec![Self::make_deposit_asset_order(account)],
+                    }
+                }],
+            }],
+        }
+    }
+
+    pub(crate) fn make_xcm_transfer_to_parachain(
+        asset_id: &AssetId,
+        para_id: ParaId,
+        account: &T::AccountId,
+        amount: TokenBalance,
+    ) -> Result<Xcm, XcmError> {
+        let asset_location = MultiLocation::X4(
+            Junction::Parent,
+            Junction::Parachain { id: asset_id.chain_id },
+            Junction::PalletInstance { id: asset_id.module_index },
+            Junction::GeneralIndex { id: asset_id.asset_index as u128 },
+        );
+
+        let check_foreign = |id| {
+            if Self::a_is_manageable(id) {
+                match Self::asset_property(id) {
+                    AssetProperty::Foreign => return Ok(true),
+                    AssetProperty::Lp(_) => return Ok(false),
+                }
+            }
+
+            if T::NativeCurrency::a_is_manageable(id) {
+                return Ok(false);
+            }
+
+            if T::OtherAssets::a_is_manageable(id) {
+                return Ok(false);
+            }
+
+            Err(XcmError::FailedToTransactAsset("Invalid AssetId"))
+        };
+
+        check_foreign(*asset_id).map(|is_foreign| {
+            if is_foreign {
+                Ok(Self::make_xcm_lateral_transfer_foreign(
+                    ParaId::from(asset_id.chain_id),
+                    asset_location,
+                    para_id,
+                    account.clone(),
+                    amount,
+                ))
+            } else {
+                Ok(Self::make_xcm_lateral_transfer_native(
+                    asset_location,
+                    para_id,
+                    account.clone(),
+                    amount,
+                ))
+            }
+        })?
     }
 }

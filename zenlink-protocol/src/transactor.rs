@@ -11,8 +11,8 @@ use frame_support::traits::Get;
 use sp_std::{marker::PhantomData, prelude::Vec};
 
 use crate::{
-    AssetId, FilterAssetLocation, Junction, LocationConversion, MultiAsset, MultiLocation, ParaId,
-    TokenBalance, TransactAsset, XcmError, XcmResult, ZenlinkMultiAsset, LOG_TARGET,
+    AssetId, FilterAssetLocation, Junction, LocationConversion, MultiAsset, MultiAssetHandler,
+    MultiLocation, ParaId, TransactAsset, XcmError, XcmResult, LOG_TARGET,
 };
 
 /// Asset transaction errors.
@@ -21,7 +21,7 @@ enum Error {
     AccountIdConversionFailed,
     /// Zenlink only use X4 format xcm
     XcmNotX4Format,
-    /// Zenlink only use MultiAsset::ConcreteFungible
+    /// Zenlink only use MultiAssetHandler::ConcreteFungible
     XcmNotConcreteFungible,
 }
 
@@ -41,26 +41,30 @@ impl From<Error> for XcmError {
 
 pub struct ParaChainWhiteList<ParachainList>(PhantomData<ParachainList>);
 
-impl<ParachainList: Get<Vec<MultiLocation>>> FilterAssetLocation
+impl<ParachainList: Get<Vec<(MultiLocation, u128)>>> FilterAssetLocation
     for ParaChainWhiteList<ParachainList>
 {
     fn filter_asset_location(_asset: &MultiAsset, origin: &MultiLocation) -> bool {
         log::info!(target: LOG_TARGET, "filter_asset_location: origin = {:?}", origin);
 
-        ParachainList::get().contains(origin)
+        ParachainList::get()
+            .iter()
+            .map(|(location, _)| location)
+            .any(|l| *l == *origin)
     }
 }
 
-pub struct Transactor<ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>(
+pub struct TransactorAdaptor<ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>(
     PhantomData<(ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId)>,
 );
 
 impl<
-        ZenlinkAssets: ZenlinkMultiAsset<AccountId, TokenBalance>,
+        ZenlinkAssets: MultiAssetHandler<AccountId>,
         AccountIdConverter: LocationConversion<AccountId>,
         AccountId: sp_std::fmt::Debug,
         ParaChainId: Get<ParaId>,
-    > TransactAsset for Transactor<ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>
+    > TransactAsset
+    for TransactorAdaptor<ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>
 {
     fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
         log::info!(
