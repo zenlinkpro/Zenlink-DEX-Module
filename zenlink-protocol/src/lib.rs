@@ -152,6 +152,8 @@ decl_error! {
         DeniedTransferToSelf,
         /// Value too low to create account due to existential deposit
         ExistentialDeposit,
+        /// Invalid Asset Id.
+        InvalidAssetId,
 
         /// Trading pair can't be created.
         DeniedCreatePair,
@@ -228,9 +230,10 @@ decl_module! {
             force_transfer: bool
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(asset_id.is_valid(), Error::<T>::InvalidAssetId);
             ensure!(para_id != T::ParaId::get(), Error::<T>::DeniedTransferToSelf);
             ensure!(force_transfer || Self::is_reachable(para_id), Error::<T>::DeniedReachTargetChain);
-            ensure!(force_transfer || Self::must_more_than_minimum(para_id, amount), Error::<T>::ExistentialDeposit);
+            ensure!(force_transfer || Self::must_more_than_minimum(asset_id, para_id, amount), Error::<T>::ExistentialDeposit);
             ensure!(Self::multi_asset_balance_of(&asset_id, &who) >= amount, Error::<T>::InsufficientAssetBalance);
 
             let xcm = Self::make_xcm_transfer_to_parachain(&asset_id, para_id, &account, amount)
@@ -426,7 +429,17 @@ impl<T: Config> Module<T> {
             .any(|l| *l == make_x2_location(para_id.into()))
     }
 
-    pub(crate) fn must_more_than_minimum(para_id: ParaId, amount: TokenBalance) -> bool {
+    // Check the native currency must be more than ExistentialDeposit,
+    // other assets always return true
+    pub(crate) fn must_more_than_minimum(
+        asset_id: AssetId,
+        para_id: ParaId,
+        amount: TokenBalance,
+    ) -> bool {
+        if asset_id.module_index != NATIVE_CURRENCY {
+            return true;
+        }
+
         T::TargetChains::get()
             .iter()
             .find(|(l, _)| *l == make_x2_location(para_id.into()))

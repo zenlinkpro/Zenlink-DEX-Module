@@ -16,6 +16,7 @@ pub type TokenBalance = u128;
 /// The pair id of the zenlink dex.
 pub type PairId = u32;
 
+// TODO: refactor AssetId
 /// AssetId use to locate assets in framed base chain.
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Default))]
@@ -23,6 +24,17 @@ pub struct AssetId {
     pub chain_id: u32,
     pub module_index: u8,
     pub asset_index: u32,
+}
+
+impl AssetId {
+    pub fn is_valid(&self) -> bool {
+        match self.module_index {
+            NATIVE_CURRENCY => matches!(self.asset_index, 0u32),
+            INNER_ASSET => true,
+            OTHER_ASSET => true,
+            _ => false,
+        }
+    }
 }
 
 /// Zenlink module has tow kinds of assets
