@@ -2,7 +2,7 @@
 // Licensed under GPL-3.0.
 
 //! Test utilities
-use frame_support::parameter_types;
+use frame_support::{parameter_types, PalletId};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -10,8 +10,9 @@ use sp_runtime::{
 };
 
 use crate as pallet_zenlink;
-use crate::{
-    Config, ExecuteXcm, Module, ModuleId, MultiLocation, NativeCurrencyAdaptor, Xcm, XcmResult,
+pub use crate::{
+    Config, MultiAssetsHandler, Pallet, ParaId, ZenlinkMultiAssets, LIQUIDITY, LOCAL, NATIVE,
+    RESERVED,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -30,9 +31,11 @@ frame_support::construct_runtime!(
 );
 
 parameter_types! {
-    pub const BlockHashCount: u64 = 250;
     pub const ExistentialDeposit: u64 = 1;
-    pub const TestModuleId: ModuleId = ModuleId(*b"zenlink1");
+
+    pub const BlockHashCount: u64 = 250;
+    pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+    pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 }
 
 impl frame_system::Config for Test {
@@ -43,7 +46,7 @@ impl frame_system::Config for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = u128;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = Event;
@@ -71,37 +74,28 @@ impl pallet_balances::Config for Test {
     type MaxLocks = ();
 }
 
-pub struct TestExecutor;
-
-impl ExecuteXcm for TestExecutor {
-    fn execute_xcm(_origin: MultiLocation, _msg: Xcm) -> XcmResult {
-        Ok(())
-    }
-}
-
 impl Config for Test {
     type Event = Event;
-    type XcmExecutor = ();
-    type AccountIdConverter = ();
-    type AccountId32Converter = ();
-    type ModuleId = TestModuleId;
-    type ParaId = ();
+    type GetExchangeFee = GetExchangeFee;
+    type MultiAssetsHandler = ZenlinkMultiAssets<Zenlink, Balances>;
+    type PalletId = ZenlinkPalletId;
     type TargetChains = ();
-    type NativeCurrency = NativeCurrencyAdaptor<Test, Balances>;
-    type OtherAssets = ();
+    type SelfParaId = ();
+    type XcmExecutor = ();
+    type Conversion = ();
 }
 
-pub type Assets = Module<Test>;
-pub(crate) const CURRENCY_AMOUNT: u128 = 1000;
+pub type DexPallet = Pallet<Test>;
+
 pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
     pallet_balances::GenesisConfig::<Test> {
         balances: vec![
-            (1, CURRENCY_AMOUNT),
-            (2, CURRENCY_AMOUNT),
-            (3, CURRENCY_AMOUNT),
-            (4, CURRENCY_AMOUNT),
-            (5, CURRENCY_AMOUNT),
+            (1, 34028236692093846346337460743176821145),
+            (2, 10),
+            (3, 10),
+            (4, 10),
+            (5, 10),
         ],
     }
     .assimilate_storage(&mut t)

@@ -14,7 +14,7 @@ use sp_rpc::number::NumberOrHex;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
-use zenlink_protocol::{AssetId, PairInfo, TokenBalance};
+use zenlink_protocol::{AssetBalance, AssetId, PairInfo};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 #[rpc]
@@ -51,15 +51,15 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
     #[rpc(name = "zenlinkProtocol_getPairByAssetId")]
     fn get_pair_by_asset_id(
         &self,
-        token_0: AssetId,
-        token_1: AssetId,
+        asset_0: AssetId,
+        asset_1: AssetId,
         at: Option<BlockHash>,
     ) -> Result<Option<PairInfo<AccountId, NumberOrHex>>>;
 
     #[rpc(name = "zenlinkProtocol_getAmountInPrice")]
     fn get_amount_in_price(
         &self,
-        supply: TokenBalance,
+        supply: AssetBalance,
         path: Vec<AssetId>,
         at: Option<BlockHash>,
     ) -> Result<NumberOrHex>;
@@ -67,7 +67,7 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
     #[rpc(name = "zenlinkProtocol_getAmountOutPrice")]
     fn get_amount_out_price(
         &self,
-        supply: TokenBalance,
+        supply: AssetBalance,
         path: Vec<AssetId>,
         at: Option<BlockHash>,
     ) -> Result<NumberOrHex>;
@@ -75,12 +75,12 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
     #[rpc(name = "zenlinkProtocol_getEstimateLptoken")]
     fn get_estimate_lptoken(
         &self,
-        token_0: AssetId,
-        token_1: AssetId,
-        amount_0_desired: TokenBalance,
-        amount_1_desired: TokenBalance,
-        amount_0_min: TokenBalance,
-        amount_1_min: TokenBalance,
+        asset_0: AssetId,
+        asset_1: AssetId,
+        amount_0_desired: AssetBalance,
+        amount_1_desired: AssetBalance,
+        amount_0_min: AssetBalance,
+        amount_1_min: AssetBalance,
         at: Option<BlockHash>,
     ) -> Result<NumberOrHex>;
 }
@@ -125,7 +125,7 @@ where
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
         api.get_balance(&at, asset_id, account)
-            .map(|token_balance| token_balance.into())
+            .map(|asset_balance| asset_balance.into())
             .map_err(runtime_error_into_rpc_err)
     }
 
@@ -141,8 +141,8 @@ where
             .map(|infos| {
                 infos
                     .into_iter()
-                    .map(|(para_id, account, token_balance)| {
-                        (para_id, account, token_balance.into())
+                    .map(|(para_id, account, asset_balance)| {
+                        (para_id, account, asset_balance.into())
                     })
                     .collect::<Vec<_>>()
             })
@@ -161,8 +161,8 @@ where
                 pairs
                     .into_iter()
                     .map(|pair| PairInfo {
-                        token_0: pair.token_0,
-                        token_1: pair.token_1,
+                        asset_0: pair.asset_0,
+                        asset_1: pair.asset_1,
                         account: pair.account,
                         total_liquidity: pair.total_liquidity.into(),
                         holding_liquidity: pair.holding_liquidity.into(),
@@ -188,8 +188,8 @@ where
                 pairs
                     .into_iter()
                     .map(|pair| PairInfo {
-                        token_0: pair.token_0,
-                        token_1: pair.token_1,
+                        asset_0: pair.asset_0,
+                        asset_1: pair.asset_1,
                         account: pair.account,
                         total_liquidity: pair.total_liquidity.into(),
                         holding_liquidity: pair.holding_liquidity.into(),
@@ -204,8 +204,8 @@ where
 
     fn get_pair_by_asset_id(
         &self,
-        token_0: AssetId,
-        token_1: AssetId,
+        asset_0: AssetId,
+        asset_1: AssetId,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<Option<PairInfo<AccountId, NumberOrHex>>> {
         let api = self.client.runtime_api();
@@ -216,12 +216,12 @@ where
                 pairs
                     .into_iter()
                     .find(|pair| {
-                        (pair.token_0 == token_0 && pair.token_1 == token_1)
-                            || (pair.token_0 == token_1 && pair.token_1 == token_0)
+                        (pair.asset_0 == asset_0 && pair.asset_1 == asset_1)
+                            || (pair.asset_0 == asset_1 && pair.asset_1 == asset_0)
                     })
                     .map(|pair| PairInfo {
-                        token_0: pair.token_0,
-                        token_1: pair.token_1,
+                        asset_0: pair.asset_0,
+                        asset_1: pair.asset_1,
                         account: pair.account,
                         total_liquidity: pair.total_liquidity.into(),
                         holding_liquidity: pair.holding_liquidity.into(),
@@ -233,10 +233,10 @@ where
             .map_err(runtime_error_into_rpc_err)
     }
 
-    //buy amount token price
+    //buy amount asset price
     fn get_amount_in_price(
         &self,
-        supply: TokenBalance,
+        supply: AssetBalance,
         path: Vec<AssetId>,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<NumberOrHex> {
@@ -248,10 +248,10 @@ where
             .map_err(runtime_error_into_rpc_err)
     }
 
-    //sell amount token price
+    //sell amount asset price
     fn get_amount_out_price(
         &self,
-        supply: TokenBalance,
+        supply: AssetBalance,
         path: Vec<AssetId>,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<NumberOrHex> {
@@ -265,12 +265,12 @@ where
 
     fn get_estimate_lptoken(
         &self,
-        token_0: AssetId,
-        token_1: AssetId,
-        amount_0_desired: TokenBalance,
-        amount_1_desired: TokenBalance,
-        amount_0_min: TokenBalance,
-        amount_1_min: TokenBalance,
+        asset_0: AssetId,
+        asset_1: AssetId,
+        amount_0_desired: AssetBalance,
+        amount_1_desired: AssetBalance,
+        amount_0_min: AssetBalance,
+        amount_1_min: AssetBalance,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<NumberOrHex> {
         let api = self.client.runtime_api();
@@ -278,8 +278,8 @@ where
 
         api.get_estimate_lptoken(
             &at,
-            token_0,
-            token_1,
+            asset_0,
+            asset_1,
             amount_0_desired,
             amount_1_desired,
             amount_0_min,

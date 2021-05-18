@@ -1,43 +1,45 @@
-# zenlink-protocol-rpc
+# zenlink-protocol-rpc(v0.4.0)
 
 #### 1. introduction (参数和返回值类型参见下文)
 
-- `zenlinkProtocol_getAllAssets`:
+- 1.`zenlinkProtocol_getAllAssets`:
 
   查询Zenlink Module中的所有资产ID。通常有映射的资产和LP token
+  - {"chain_id":200,"asset_type":0,"asset_index":0}: ParaId=200, Native Currency
+  - {"chain_id":200,"asset_type":1,"asset_index":0}: ParaId=300, Liquidity Asset
 
-    ```bash
+  ```
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
-  '{
-         "jsonrpc":"2.0",
-         "id":1,
-         "method":"zenlinkProtocol_getAllAssets",
-         "params": [null]
-  }'  
-    ```
+    '{
+      "jsonrpc":"2.0",
+      "id":1,
+      "method":"zenlinkProtocol_getAllAssets",
+      "params": [null]
+    }'
+  ```
   
   **Response:**
   
   ```json
   {
-      "jsonrpc": "2.0",
-      "result": [
-          {
-              "asset_index": 0,
-              "chain_id": 200,
-              "module_index": 8
-          },
-          {
-              "asset_index": 1,
-              "chain_id": 300,
-              "module_index": 9
-          }
-      ],
-      "id": 1
+    "jsonrpc": "2.0",
+    "result": [
+      {
+        "asset_index": 0,
+        "asset_type": 0,
+        "chain_id": 200
+      },
+      {
+        "asset_index": 0,
+        "asset_type": 1,
+        "chain_id": 300
+      }
+    ],
+    "id": 1
   }
   ```
-
-- `zenlinkProtocol_getBalance`:
+   
+- 2.`zenlinkProtocol_getBalance`:
 
   查询资产余额
 
@@ -50,10 +52,56 @@
      "jsonrpc":"2.0",
      "id":1,
      "method":"zenlinkProtocol_getBalance",
-     "params": [{"chain_id": 200,"module_index": 2, "asset_index": 0 }, "5H9dcB3Z4NYrpiDLYXghUZoJWdPWaFoPimBwuuncK9hBaBWA"]
+     "params": [{"chain_id": 200,"asset_type": 0, "asset_index": 0 }, "5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL"]
    }'  
   ```
-- `zenlinkProtocol_getAllPairs`：
+  
+  **Response:**
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "result": "0x3fffffffffc1ed7f40",
+    "id": 1
+  }
+  ```
+  
+- 3.`zenlinkProtocol_getSovereignsInfo`：
+  查询跨链转出资产的原始信息,
+  返回Vec<(paraid, sovereign_account, balance)>
+  
+  ```bash
+    curl -H "Content-Type: application/json" http://localhost:11111 -d \
+    '{
+       "jsonrpc":"2.0",
+       "id":1,
+       "method":"zenlinkProtocol_getSovereignsInfo",
+       "params": [{"chain_id": 200,"asset_type": 0, "asset_index":0}]
+     }'  
+    ```
+  
+  **Response:**
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "result": [
+      [
+        200,
+        "5Eg2fntGQpyQv5X5d8N5qxG4sX5UBMLG77xEBPjZ9DTxxtt7",
+        "0x0"
+      ],
+      [
+        300,
+        "5Eg2fnsj9u3qQZcwEtTDxFqWFHsUcYqupaS8MtEPoeHKAXA4",
+        "0x0"
+      ]
+    ],
+    "id": 1
+  }
+  ```
+  
+- 4.`zenlinkProtocol_getAllPairs`：
 
   查询所有的交易对
 
@@ -71,8 +119,8 @@
   - account:交易对的账户
   - holdingLiquidity: 此账户持有的lptoken量
   - reserve0: 交易池中token0的数量
-  - reserve1: 交易池中token1的数量
-  - token0 & token1: 组成交易对的两种资产
+  - reserve1: 交易池中asset1的数量
+  - asset0 & asset1: 组成交易对的两种资产
   - totalLiquidity：lptoken 总量
   - lpAssetId: 交易中的LP token的 AssetId
   
@@ -80,34 +128,34 @@
   {
     "jsonrpc": "2.0",
     "result": [
-        {
-            "account": "5EYCAe5kj35jpW98CjJD3uDVvYH3fzm9qeT43mzL6AaStHqH",
-            "holdingLiquidity": "0x0",
-            "lpAssetId": {
-                "asset_index": 1,
-                "chain_id": 300,
-                "module_index": 9
-            },
-            "reserve0": "0x3d4",
-            "reserve1": "0x3d4",
-            "token0": {
-                "asset_index": 0,
-                "chain_id": 200,
-                "module_index": 8
-            },
-            "token1": {
-                "asset_index": 0,
-                "chain_id": 300,
-                "module_index": 2
-            },
-            "totalLiquidity": "0x3d4"
-        }
+      {
+        "account": "5EYCAe5ViNAoHnU1ZZVit8ymcR39EP5fyU6Zv3GV7HD5MN9d",
+        "asset0": {
+          "asset_index": 0,
+          "asset_type": 0,
+          "chain_id": 200
+        },
+        "asset1": {
+          "asset_index": 0,
+          "asset_type": 0,
+          "chain_id": 300
+        },
+        "holdingLiquidity": "0x0",
+        "lpAssetId": {
+          "asset_index": 0,
+          "asset_type": 1,
+          "chain_id": 300
+        },
+        "reserve0": "0x1d91d9f5",
+        "reserve1": "0x29d7f22d",
+        "totalLiquidity": "0x232aaf80"
+      }
     ],
     "id": 1
   }
   ```
 
-- `zenlinkProtocol_getOwnerPairs`：
+- 5.`zenlinkProtocol_getOwnerPairs`：
 
   查询某个账户拥有的交易对
   
@@ -119,7 +167,7 @@
         "jsonrpc":"2.0",
         "id":1,
         "method":"zenlinkProtocol_getOwnerPairs",
-        "params": ["5ExnkKkHG1xfgoCLjQ2DTHBkRxdoUrsnCsVorWKPsESrtpmd", null]
+        "params": ["5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL", null]
   }'
   ```
   
@@ -127,9 +175,9 @@
   
   - account:交易对的账户
   - holdingLiquidity: 此账户持有的lptoken量
-  - reserve0: 交易池中token0的数量
-  - reserve1: 交易池中token1的数量
-  - token0 & token1: 组成交易对的两种资产
+  - reserve0: 交易池中asset0的数量
+  - reserve1: 交易池中asset1的数量
+  - asset0 & asset1: 组成交易对的两种资产
   - totalLiquidity：lptoken 总量
   - lpAssetId: 交易中的LP token的 AssetId
   
@@ -138,88 +186,91 @@
     "jsonrpc": "2.0",
     "result": [
       {
-        "account": "5EYCAe5kj35jpW98CjJD3uDVvYH3fzm9qeT43mzL6AaStHqH",
-        "holdingLiquidity": "0x3d4",
+        "account": "5EYCAe5ViNAoHnU1ZZVit8ymcR39EP5fyU6Zv3GV7HD5MN9d",
+        "asset0": {
+          "asset_index": 0,
+          "asset_type": 0,
+          "chain_id": 200
+        },
+        "asset1": {
+          "asset_index": 0,
+          "asset_type": 0,
+          "chain_id": 300
+        },
+        "holdingLiquidity": "0x232aaf80",
         "lpAssetId": {
-          "asset_index": 1,
-          "chain_id": 300,
-          "module_index": 9
-        },
-        "reserve0": "0x3d4",
-        "reserve1": "0x3d4",
-        "token0": {
           "asset_index": 0,
-          "chain_id": 200,
-          "module_index": 8
+          "asset_type": 1,
+          "chain_id": 300
         },
-        "token1": {
-          "asset_index": 0,
-          "chain_id": 300,
-          "module_index": 2
-        },
-        "totalLiquidity": "0x3d4"
+        "reserve0": "0x1d91d9f5",
+        "reserve1": "0x29d7f22d",
+        "totalLiquidity": "0x232aaf80"
       }
     ],
     "id": 1
   }
   ```
   
-- `zenlinkProtocol_getPairByAssetId`：
+- 6.`zenlinkProtocol_getPairByAssetId`：
 
   获取指定资产ID的交易对信息
   
-  - params: (200,8,0)(300,2,0)和组成交易对
+  - params: (200,0,0)(300,0,0)和组成交易对
   
   ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
   '{
-        "jsonrpc":"2.0",
-        "id":1,
-        "method":"zenlinkProtocol_getPairByAssetId",
-        "params": [{"chain_id": 200,"module_index": 8, "asset_index": 0 }, 
-                   {"chain_id": 300,"module_index": 2, "asset_index": 0 }]
-  }'
+     "jsonrpc":"2.0",
+     "id":1,
+     "method":"zenlinkProtocol_getPairByAssetId",
+     "params": [
+       {"chain_id": 200,"asset_type": 0, "asset_index":0}, 
+       {"chain_id": 300,"asset_type": 0, "asset_index":0},
+       null
+     ]
+   }'
   ```
 
   **Response**
     - account:交易对的账户
     - holdingLiquidity:持有的LPtoken。实际上，由于lp token全部由交易者持有，这里通常为0.
-    - reserve0: 交易池中token0的数量
-    - reserve1: 交易池中token1的数量
-    - token0 & token1: 组成交易对的两种资产
+    - reserve0: 交易池中asset0的数量
+    - reserve1: 交易池中asset1的数量
+    - asset0 & asset1: 组成交易对的两种资产
     - totalLiquidity：lptoken总量
     - lpAssetId: 交易中的LP token的 AssetId
     
   ```json
   {
-        "jsonrpc": "2.0",
-        "result": {
-            "account": "5EYCAe5kj35jpW98CjJD3uDVvYH3fzm9qeT43mzL6AaStHqH",
-            "holdingLiquidity": "0x0",
-            "lpAssetId": {
-                "asset_index": 1,
-                "chain_id": 300,
-                "module_index": 9
-            },
-            "reserve0": "0x3d4",
-            "reserve1": "0x3d4",
-            "token0": {
-                "asset_index": 0,
-                "chain_id": 200,
-                "module_index": 8
-            },
-            "token1": {
-                "asset_index": 0,
-                "chain_id": 300,
-                "module_index": 2
-            },
-            "totalLiquidity": "0x3d4"
-        },
-        "id": 1
+    "jsonrpc": "2.0",
+    "result": {
+      "account": "5EYCAe5ViNAoHnU1ZZVit8ymcR39EP5fyU6Zv3GV7HD5MN9d",
+      "asset0": {
+        "asset_index": 0,
+        "asset_type": 0,
+        "chain_id": 200
+      },
+      "asset1": {
+        "asset_index": 0,
+        "asset_type": 0,
+        "chain_id": 300
+      },
+      "holdingLiquidity": "0x0",
+      "lpAssetId": {
+        "asset_index": 0,
+        "asset_type": 1,
+        "chain_id": 300
+      },
+      "reserve0": "0x1d91d9f5",
+      "reserve1": "0x29d7f22d",
+      "totalLiquidity": "0x232aaf80"
+    },
+    "id": 1
   }
   ```
   
-- `zenlinkProtocol_getAmountInPrice`： 
+- 7.`zenlinkProtocol_getAmountInPrice`： 
   
   查询买入汇率（固定交易对右边）
   
@@ -229,26 +280,32 @@
   ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
   '{
-       "jsonrpc": "2.0",
-       "id": 0,
-       "method": "zenlinkProtocol_getAmountInPrice",
-       "params": [100,[{"chain_id": 200,"module_index": 8, "asset_index": 0 }, 
-                       {"chain_id": 300,"module_index": 2, "asset_index": 0 } ], null]
+     "jsonrpc":"2.0",
+     "id":1,
+     "method":"zenlinkProtocol_getAmountInPrice",
+     "params": [
+       100000000,
+       [
+         {"chain_id": 200,"asset_type": 0, "asset_index":0},
+         {"chain_id": 300,"asset_type": 0, "asset_index":0}
+       ],
+       null
+     ]
    }'  
     ```
   
   **Response:**
-  - result: 99226799： 表示的是用100000000个（200,8,0）兑换出99226799个(300,2,0)。
+  - result: 99226799： 表示的是用10000000个（200,0,0）兑换出82653754个(300,0,0)。
     
   ```json
   {
-        "jsonrpc": "2.0",
-        "result": "0x2f8a597",
-        "id": 0
+    "jsonrpc": "2.0",
+    "result": "0x4ed323a",
+    "id": 1
   }
   ```
   
-- `zenlinkProtocol_getAmountOutPrice`：
+- 8.`zenlinkProtocol_getAmountOutPrice`：
   
   查询卖出汇率（固定交易对左边）
   
@@ -258,44 +315,58 @@
   ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
   '{
-       "jsonrpc": "2.0",
-       "id": 0,
-       "method": "zenlinkProtocol_getAmountOutPrice",
-       "params": [100,[{"chain_id": 200,"module_index": 8, "asset_index": 0 }, 
-                       {"chain_id": 300,"module_index": 2, "asset_index": 0 } ], null]
+     "jsonrpc":"2.0",
+     "id":1,
+     "method":"zenlinkProtocol_getAmountOutPrice",
+     "params": [
+       100000000,
+       [
+         {"chain_id": 200,"asset_type": 0, "asset_index":0},
+         {"chain_id": 300,"asset_type": 0, "asset_index":0}
+       ],
+       null
+     ]
    }'  
   ```
 
-    **Response:**
-    ```json
-    {
-        "jsonrpc": "2.0",
-        "result": "0x2f87",
-        "id": 0
-    }
-    ```
+  **Response:**
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "result": "0x70085cc",
+    "id": 1
+  }
+  ```
     
-- `zenlinkProtocol_getEstimateLptoken`:
+- 9.`zenlinkProtocol_getEstimateLptoken`:
 
   ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
   '{
-       "jsonrpc":"2.0",
-       "id":1,
-       "method":"zenlinkProtocol_getEstimateLptoken",
-       "params": [{"chain_id": 200,"module_index": 8, "asset_index": 0 }, 
-                  {"chain_id": 300,"module_index": 2, "asset_index": 0 }, 
-                  1000000000000000,  100000000, 0, 0 ]
+     "jsonrpc":"2.0",
+     "id":1,
+     "method":"zenlinkProtocol_getEstimateLptoken",
+     "params": [
+       {"chain_id": 200,"asset_type": 0, "asset_index":0},
+       {"chain_id": 300,"asset_type": 0, "asset_index":0},
+       10000000,
+       40000000,
+       1,
+       1,
+       null
+     ]
    }'  
   ```
   
   **Response:**
+  
  ```json
-    {
-        "jsonrpc": "2.0",
-        "result": "0x5f5e100",
-        "id": 1
-    }
+  {
+    "jsonrpc": "2.0",
+    "result": "0xb5784f",
+    "id": 1
+  }
   ```
 
 #### 2. rpc calls
@@ -318,11 +389,11 @@
       "description": "zenlinkProtocol getBalance",
       "params": [
         {
-          "name": "asset",
+          "name": "asset_id",
           "type": "AssetId"
         },
         {
-          "name": "owner",
+          "name": "account",
           "type": "AccountID"
         },
         {
@@ -348,7 +419,7 @@
       "description": "zenlinkProtocol getOwnerPairs",
       "params": [
         {
-          "name": "owner",
+          "name": "account",
           "type": "AccountID"
         },
         {
@@ -363,11 +434,11 @@
       "description": "zenlinkProtocol getPairByAssetId",
       "params": [
         {
-          "name": "token_0",
+          "name": "asset_0",
           "type": "AssetId"
         },
         {
-          "name": "token_1",
+          "name": "asset_1",
           "type": "AssetId"
         },
         {
@@ -383,7 +454,7 @@
       "params": [
         {
           "name": "amount_out",
-          "type": "TokenBalance"
+          "type": "AssetBalance"
         },
         {
           "name": "path",
@@ -402,7 +473,7 @@
       "params": [
         {
           "name": "amount_in",
-          "type": "TokenBalance"
+          "type": "AssetBalance"
         },
         {
           "name": "path",
@@ -420,28 +491,28 @@
             "description": "zenlinkProtocol getEstimateLptoken",
             "params": [
         {
-          "name": "token_0",
+          "name": "asset_0",
           "type": "AssetId"
         },
         {
-          "name": "token_1",
+          "name": "asset_1",
           "type": "AssetId"
         },
                 {
           "name": "amount_0_desired",
-          "type": "TokenBalance"
+          "type": "AssetBalance"
         },
                 {
           "name": "amount_1_desired",
-          "type": "TokenBalance"
+          "type": "AssetBalance"
         },
                 {
           "name": "amount_0_min",
-          "type": "TokenBalance"
+          "type": "AssetBalance"
         },
                 {
           "name": "amount_1_min",
-          "type": "TokenBalance"
+          "type": "AssetBalance"
         },
         {
           "name": "at",
@@ -459,40 +530,24 @@
 
 ```json
 {
-  "PairId": "u32",
-  "Pair": {
-    "token_0": "AssetId",
-    "token_1": "AssetId",
-    "account": "AccountId",
-    "total_liquidity": "TokenBalance",
-    "lp_asset_id": "AssetId"
+  "Address": "MultiAddress",
+  "LookupSource": "MultiAddress",
+  "AssetId": {
+    "chain_id": "u32",
+    "asset_type": "u8",
+    "asset_index": "u32"
   },
+  "AssetBalance": "u128",
   "PairInfo": {
     "token_0": "AssetId",
     "token_1": "AssetId",
     "account": "AccountId",
-    "total_liquidity": "TokenBalance",
-    "holding_liquidity": "TokenBalance",
-    "reserve_0": "TokenBalance",
-    "reserve_1": "TokenBalance",
+    "total_liquidity": "AssetBalance",
+    "holding_liquidity": "AssetBalance",
+    "reserve_0": "AssetBalance",
+    "reserve_1": "AssetBalance",
     "lp_asset_id": "AssetId"
   },
-  "AssetId": {
-    "chain_id": "u32",
-    "module_index": "u8",
-    "asset_index": "u32"
-  },
-  "TokenId": "u32",
-  "AssetProperty":{
-    "_enum": {
-        "FOREIGN": null,
-        "LP": "LpProperty"
-      }
-  },
-  "LpProperty": {
-    "token_0": "AssetId",
-    "token_1": "AssetId"
-  },
-  "TokenBalance": "u128"
+  "TokenId": "u32"
 }
 ```

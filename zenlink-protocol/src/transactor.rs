@@ -7,13 +7,7 @@
 //! withdrawals and deposits to assets via XCMP message execution.
 #![allow(unused_variables)]
 
-use frame_support::traits::Get;
-use sp_std::{marker::PhantomData, prelude::Vec};
-
-use crate::{
-    AssetId, FilterAssetLocation, Junction, LocationConversion, MultiAsset, MultiAssetHandler,
-    MultiLocation, ParaId, TransactAsset, XcmError, XcmResult, LOG_TARGET,
-};
+use super::*;
 
 /// Asset transaction errors.
 enum Error {
@@ -39,48 +33,36 @@ impl From<Error> for XcmError {
     }
 }
 
-pub struct ParaChainWhiteList<ParachainList>(PhantomData<ParachainList>);
+pub struct TrustedParas<ParaChains>(PhantomData<ParaChains>);
 
-impl<ParachainList: Get<Vec<(MultiLocation, u128)>>> FilterAssetLocation
-    for ParaChainWhiteList<ParachainList>
-{
+impl<ParaChains: Get<Vec<(MultiLocation, u128)>>> FilterAssetLocation for TrustedParas<ParaChains> {
     fn filter_asset_location(_asset: &MultiAsset, origin: &MultiLocation) -> bool {
         log::info!(target: LOG_TARGET, "filter_asset_location: origin = {:?}", origin);
 
-        ParachainList::get()
-            .iter()
-            .map(|(location, _)| location)
-            .any(|l| *l == *origin)
+        ParaChains::get().iter().map(|(location, _)| location).any(|l| *l == *origin)
     }
 }
 
-pub struct TransactorAdaptor<ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>(
-    PhantomData<(ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId)>,
+pub struct TransactorAdaptor<ZenlinkAssets, AccountIdConverter, AccountId>(
+    PhantomData<(ZenlinkAssets, AccountIdConverter, AccountId)>,
 );
 
 impl<
-        ZenlinkAssets: MultiAssetHandler<AccountId>,
-        AccountIdConverter: LocationConversion<AccountId>,
-        AccountId: sp_std::fmt::Debug,
-        ParaChainId: Get<ParaId>,
-    > TransactAsset
-    for TransactorAdaptor<ZenlinkAssets, AccountIdConverter, AccountId, ParaChainId>
+        ZenlinkAssets: MultiAssetsHandler<AccountId>,
+        AccountIdConverter: Convert<MultiLocation, AccountId>,
+        AccountId: sp_std::fmt::Debug + Clone,
+    > TransactAsset for TransactorAdaptor<ZenlinkAssets, AccountIdConverter, AccountId>
 {
-    fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
-        log::info!(
-            target: LOG_TARGET,
-            "deposit_asset: asset = {:?}, location = {:?}",
-            asset,
-            location,
-        );
+    fn deposit_asset(asset: &MultiAsset, who: &MultiLocation) -> XcmResult {
+        log::info!(target: LOG_TARGET, "deposit_asset: asset = {:?}, who = {:?}", asset, who,);
 
-        let who = AccountIdConverter::from_location(location)
-            .ok_or_else(|| XcmError::from(Error::AccountIdConversionFailed))?;
+        let who =
+            AccountIdConverter::convert_ref(who).map_err(|()| Error::AccountIdConversionFailed)?;
 
         match asset {
             MultiAsset::ConcreteFungible { id, amount } => {
                 if let Some(asset_id) = multilocation_to_asset(id) {
-                    ZenlinkAssets::multi_asset_deposit(&asset_id, &who, *amount)
+                    ZenlinkAssets::deposit(asset_id, &who, *amount)
                         .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 
                     Ok(())
@@ -92,27 +74,19 @@ impl<
         }
     }
 
-    fn withdraw_asset(
-        asset: &MultiAsset,
-        location: &MultiLocation,
-    ) -> Result<MultiAsset, XcmError> {
-        log::info!(
-            target: LOG_TARGET,
-            "withdraw_asset: asset = {:?}, location = {:?}",
-            asset,
-            location,
-        );
+    fn withdraw_asset(asset: &MultiAsset, who: &MultiLocation) -> Result<Assets, XcmError> {
+        log::info!(target: LOG_TARGET, "withdraw_asset: asset = {:?}, who = {:?}", asset, who,);
 
-        let who = AccountIdConverter::from_location(location)
-            .ok_or_else(|| XcmError::from(Error::AccountIdConversionFailed))?;
+        let who =
+            AccountIdConverter::convert_ref(who).map_err(|()| Error::AccountIdConversionFailed)?;
 
         match asset {
             MultiAsset::ConcreteFungible { id, amount } => {
                 if let Some(asset_id) = multilocation_to_asset(id) {
-                    ZenlinkAssets::multi_asset_withdraw(&asset_id, &who, *amount)
+                    ZenlinkAssets::withdraw(asset_id, &who, *amount)
                         .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 
-                    Ok(asset.clone())
+                    Ok(asset.clone().into())
                 } else {
                     Err(XcmError::from(Error::XcmNotX4Format))
                 }
@@ -126,12 +100,12 @@ fn multilocation_to_asset(location: &MultiLocation) -> Option<AssetId> {
     match location {
         MultiLocation::X4(
             Junction::Parent,
-            Junction::Parachain { id: chain_id },
-            Junction::PalletInstance { id: pallet_index },
+            Junction::Parachain(chain_id),
+            Junction::PalletInstance(asset_type),
             Junction::GeneralIndex { id: asset_index },
         ) => Some(AssetId {
             chain_id: *chain_id,
-            module_index: *pallet_index,
+            asset_type: *asset_type,
             asset_index: (*asset_index) as u32,
         }),
         _ => None,

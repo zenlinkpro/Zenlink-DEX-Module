@@ -1,4 +1,4 @@
-// Copyright 2020 Zenlink
+// Copyright 2020-2021 Zenlink
 // Copyright 2020 Parity Technologies (UK) Ltd.
 // This file is part of Cumulus.
 
@@ -34,6 +34,9 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 /// An index to a block.
 pub type BlockNumber = u32;
+
+/// An instant or duration in time.
+pub type Moment = u64;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;

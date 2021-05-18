@@ -7,37 +7,42 @@
 
 use codec::Codec;
 use sp_std::vec::Vec;
-use zenlink_protocol::{AssetId, PairInfo, TokenBalance};
+use zenlink_protocol::{AssetBalance, AssetId, PairInfo};
 
 sp_api::decl_runtime_apis! {
      pub trait ZenlinkProtocolApi<AccountId>
      where
         AccountId: Codec,
-        TokenBalance: Codec
+        AssetBalance: Codec
      {
         fn get_assets() -> Vec<AssetId>;
 
-        fn get_balance(asset_id: AssetId, owner: AccountId) -> TokenBalance;
+        fn get_balance(asset_id: AssetId, owner: AccountId) -> AssetBalance;
 
-        fn get_sovereigns_info(asset_id: AssetId) -> Vec<(u32, AccountId, TokenBalance)>;
+        fn get_sovereigns_info(asset_id: AssetId) -> Vec<(u32, AccountId, AssetBalance)>;
 
-        fn get_all_pairs() -> Vec<PairInfo<AccountId, TokenBalance>>;
+        fn get_all_pairs() -> Vec<PairInfo<AccountId, AssetBalance>>;
 
-        fn get_owner_pairs(owner: AccountId) -> Vec<PairInfo<AccountId, TokenBalance>>;
+        fn get_owner_pairs(owner: AccountId) -> Vec<PairInfo<AccountId, AssetBalance>>;
 
-        //buy amount token price
-        fn get_amount_in_price(supply: TokenBalance, path: Vec<AssetId>) -> TokenBalance;
+        fn get_pair_by_asset_id(
+            asset_0: AssetId,
+            asset_1: AssetId
+        ) -> Option<PairInfo<AccountId, AssetBalance>>;
 
-        //sell amount token price
-        fn get_amount_out_price(supply: TokenBalance, path: Vec<AssetId>) -> TokenBalance;
+        //buy amount asset price
+        fn get_amount_in_price(supply: AssetBalance, path: Vec<AssetId>) -> AssetBalance;
+
+        //sell amount asset price
+        fn get_amount_out_price(supply: AssetBalance, path: Vec<AssetId>) -> AssetBalance;
 
         fn get_estimate_lptoken(
-            token_0: AssetId,
-            token_1: AssetId,
-            amount_0_desired: TokenBalance,
-            amount_1_desired: TokenBalance,
-            amount_0_min: TokenBalance,
-            amount_1_min: TokenBalance,
-        ) -> TokenBalance;
+            asset_0: AssetId,
+            asset_1: AssetId,
+            amount_0_desired: AssetBalance,
+            amount_1_desired: AssetBalance,
+            amount_0_min: AssetBalance,
+            amount_1_min: AssetBalance,
+        ) -> AssetBalance;
      }
 }

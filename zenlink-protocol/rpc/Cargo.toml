@@ -1,6 +1,6 @@
 [package]
 name = "zenlink-protocol-rpc"
-version = "0.2.3"
+version = "0.4.0"
 authors = ["Zenlink Developers"]
 edition = "2018"
 
@@ -18,12 +18,12 @@ jsonrpc-derive = "15.1.0"
 
 # Substrate packages
 
-sp-blockchain = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "rococo-v1" }
-sp-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "rococo-v1" }
-sp-rpc = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "rococo-v1" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "rococo-v1" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.1" }
+sp-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.1" }
+sp-rpc = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.1" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.1" }
 
 # Local packages
 
-zenlink-protocol = { path = "..", default-features = false }
-zenlink-protocol-runtime-api = { path = "./runtime-api", default-features = false }
+zenlink-protocol = { path = "..", version = "0.4.0"}
+zenlink-protocol-runtime-api = { path = "./runtime-api", version = "0.4.0"}
