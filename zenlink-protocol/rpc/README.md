@@ -1,10 +1,10 @@
 # zenlink-protocol-rpc(v0.4.0)
 
-#### 1. introduction (参数和返回值类型参见下文)
+#### 1. introduction
 
 - 1.`zenlinkProtocol_getAllAssets`:
 
-  查询Zenlink Module中的所有资产ID。通常有映射的资产和LP token
+   Get all AssetIds in the Zenlink Module, include `foreign` and `liquidity` assets.
   - {"chain_id":200,"asset_type":0,"asset_index":0}: ParaId=200, Native Currency
   - {"chain_id":200,"asset_type":1,"asset_index":0}: ParaId=300, Liquidity Asset
 
@@ -41,10 +41,7 @@
    
 - 2.`zenlinkProtocol_getBalance`:
 
-  查询资产余额
-
-  - params[0]: AssetId。包括了本链的资产和映射的资产
-  - params[1]: 查询账户
+  Get the balance of the AssetId and account
     
   ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
@@ -67,8 +64,8 @@
   ```
   
 - 3.`zenlinkProtocol_getSovereignsInfo`：
-  查询跨链转出资产的原始信息,
-  返回Vec<(paraid, sovereign_account, balance)>
+  Get the origin info about cross-transfer assets
+  Return <(paraid, sovereign_account, balance)>
   
   ```bash
     curl -H "Content-Type: application/json" http://localhost:11111 -d \
@@ -103,7 +100,7 @@
   
 - 4.`zenlinkProtocol_getAllPairs`：
 
-  查询所有的交易对
+  Get all the swap pairs of Zenlink Module.
 
     ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
@@ -116,13 +113,13 @@
     ```
   
   **Response:**
-  - account:交易对的账户
-  - holdingLiquidity: 此账户持有的lptoken量
-  - reserve0: 交易池中token0的数量
-  - reserve1: 交易池中asset1的数量
-  - asset0 & asset1: 组成交易对的两种资产
-  - totalLiquidity：lptoken 总量
-  - lpAssetId: 交易中的LP token的 AssetId
+  - account: the account of swap pair
+  - holdingLiquidity: the liquidity of user holding
+  - reserve0: the amount of asset0 in swap pair
+  - reserve1: the amount of asset1 in swap pair
+  - asset0 & asset1: the AssetId of asset0 and asset1
+  - totalLiquidity：lptoken total supply
+  - lpAssetId: the AssetId of lptoken
   
   ```json
   {
@@ -157,9 +154,7 @@
 
 - 5.`zenlinkProtocol_getOwnerPairs`：
 
-  查询某个账户拥有的交易对
-  
-  - params: 查询账户
+  Get the pair info of the specified account
   
   ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
@@ -173,13 +168,13 @@
   
   **Reponse:**
   
-  - account:交易对的账户
-  - holdingLiquidity: 此账户持有的lptoken量
-  - reserve0: 交易池中asset0的数量
-  - reserve1: 交易池中asset1的数量
-  - asset0 & asset1: 组成交易对的两种资产
-  - totalLiquidity：lptoken 总量
-  - lpAssetId: 交易中的LP token的 AssetId
+  - account: the account of swap pair
+  - holdingLiquidity: the liquidity of user holding
+  - reserve0: the amount of asset0 in swap pair
+  - reserve1: the amount of asset1 in swap pair
+  - asset0 & asset1: the AssetId of asset0 and asset1
+  - totalLiquidity：lptoken total supply
+  - lpAssetId: the AssetId of lptoken
   
   ```json
   {
@@ -214,9 +209,7 @@
   
 - 6.`zenlinkProtocol_getPairByAssetId`：
 
-  获取指定资产ID的交易对信息
-  
-  - params: (200,0,0)(300,0,0)和组成交易对
+  Get the pair info of the specified AssetIds
   
   ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
@@ -233,13 +226,13 @@
   ```
 
   **Response**
-    - account:交易对的账户
-    - holdingLiquidity:持有的LPtoken。实际上，由于lp token全部由交易者持有，这里通常为0.
-    - reserve0: 交易池中asset0的数量
-    - reserve1: 交易池中asset1的数量
-    - asset0 & asset1: 组成交易对的两种资产
-    - totalLiquidity：lptoken总量
-    - lpAssetId: 交易中的LP token的 AssetId
+  - account: the account of swap pair
+  - holdingLiquidity: the liquidity of user holding
+  - reserve0: the amount of asset0 in swap pair
+  - reserve1: the amount of asset1 in swap pair
+  - asset0 & asset1: the AssetId of asset0 and asset1
+  - totalLiquidity：lptoken total supply
+  - lpAssetId: the AssetId of lptoken
     
   ```json
   {
@@ -272,10 +265,10 @@
   
 - 7.`zenlinkProtocol_getAmountInPrice`： 
   
-  查询买入汇率（固定交易对右边）
+  Query the buying rate (fixed trading pair on the right)
   
-  - params[0]: "100": 买入的量
-  - params[1]: 兑换路径。
+  - params[0]: "100": the amount of buy
+  - params[1]: swap path。
   
   ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
@@ -295,7 +288,7 @@
     ```
   
   **Response:**
-  - result: 99226799： 表示的是用10000000个（200,0,0）兑换出82653754个(300,0,0)。
+  - result: 99226799： it means that 10000000 (200,0,0) are exchanged for 82653754 (300,0,0)
     
   ```json
   {
@@ -307,10 +300,10 @@
   
 - 8.`zenlinkProtocol_getAmountOutPrice`：
   
-  查询卖出汇率（固定交易对左边）
+   Query the selling exchange rate (fixed trading pair on the left)
   
-  - params[0]: "100000000": 卖出的量
-  - params[1]: 交易路径。
+  - params[0]: "100000000": the amount of sell
+  - params[1]: swap path
   
   ```bash
   curl -H "Content-Type: application/json" http://localhost:11111 -d \
@@ -530,8 +523,6 @@
 
 ```json
 {
-  "Address": "MultiAddress",
-  "LookupSource": "MultiAddress",
   "AssetId": {
     "chain_id": "u32",
     "asset_type": "u8",
@@ -547,7 +538,6 @@
     "reserve_0": "AssetBalance",
     "reserve_1": "AssetBalance",
     "lp_asset_id": "AssetId"
-  },
-  "TokenId": "u32"
+  }
 }
 ```
