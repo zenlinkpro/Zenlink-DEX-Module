@@ -541,3 +541,7 @@
   }
 }
 ```
+
+## License
+
+[GPL-v3](LICENSE)

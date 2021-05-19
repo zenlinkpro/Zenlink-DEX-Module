@@ -1,3 +1,6 @@
+// Copyright 2020-2021 Zenlink
+// Licensed under GPL-3.0.
+
 use super::*;
 
 impl<T: Config> Pallet<T> {
