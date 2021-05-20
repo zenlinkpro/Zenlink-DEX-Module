@@ -153,14 +153,22 @@ pub mod pallet {
 
         /// Swap
 
-        /// Create a trading pair. \[creator, asset_id, asset_id\]
+        /// Create a trading pair. \[creator, asset_0, asset_1\]
         PairCreated(T::AccountId, AssetId, AssetId),
-        /// Add liquidity. \[owner, asset_id, asset_id\]
-        LiquidityAdded(T::AccountId, AssetId, AssetId),
-        /// Remove liquidity. \[owner, recipient, asset_id, asset_id, amount\]
-        LiquidityRemoved(T::AccountId, T::AccountId, AssetId, AssetId, AssetBalance),
-        /// Transact in trading \[owner, recipient, swap_path\]
-        AssetSwap(T::AccountId, T::AccountId, Vec<AssetId>),
+        /// Add liquidity. \[owner, asset_0, asset_1, add_balance_0, add_balance_1, mint_balance_lp\]
+        LiquidityAdded(T::AccountId, AssetId, AssetId, AssetBalance, AssetBalance, AssetBalance),
+        /// Remove liquidity. \[owner, recipient, asset_0, asset_1, rm_balance_0, rm_balance_1, burn_balance_lp\]
+        LiquidityRemoved(
+            T::AccountId,
+            T::AccountId,
+            AssetId,
+            AssetId,
+            AssetBalance,
+            AssetBalance,
+            AssetBalance,
+        ),
+        /// Transact in trading \[owner, recipient, swap_path, balance_in, balance_out\]
+        AssetSwap(T::AccountId, T::AccountId, Vec<AssetId>, AssetBalance, AssetBalance),
 
         /// Transfer by xcm
 
@@ -381,7 +389,6 @@ pub mod pallet {
             ensure!(asset_0.is_support() && asset_1.is_support(), Error::<T>::UnsupportedAssetType);
             let who = ensure_signed(origin)?;
             let now = frame_system::Pallet::<T>::block_number();
-            let (asset_0, asset_1) = Self::sort_asset_id(asset_0, asset_1);
             ensure!(deadline > now, Error::<T>::Deadline);
 
             Self::inner_add_liquidity(
@@ -392,11 +399,7 @@ pub mod pallet {
                 amount_1_desired,
                 amount_0_min,
                 amount_1_min,
-            )?;
-
-            Self::deposit_event(Event::LiquidityAdded(who, asset_0, asset_1));
-
-            Ok(())
+            )
         }
 
         /// Extract liquidity.
@@ -419,8 +422,8 @@ pub mod pallet {
             asset_0: AssetId,
             asset_1: AssetId,
             #[pallet::compact] liquidity: AssetBalance,
-            #[pallet::compact] amount_asset_0_min: AssetBalance,
-            #[pallet::compact] amount_asset_1_min: AssetBalance,
+            #[pallet::compact] amount_0_min: AssetBalance,
+            #[pallet::compact] amount_1_min: AssetBalance,
             recipient: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] deadline: T::BlockNumber,
         ) -> DispatchResult {
@@ -428,7 +431,6 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             let recipient = T::Lookup::lookup(recipient)?;
             let now = frame_system::Pallet::<T>::block_number();
-            let (asset_0, asset_1) = Self::sort_asset_id(asset_0, asset_1);
             ensure!(deadline > now, Error::<T>::Deadline);
 
             Self::inner_remove_liquidity(
@@ -436,16 +438,10 @@ pub mod pallet {
                 asset_0,
                 asset_1,
                 liquidity,
-                amount_asset_0_min,
-                amount_asset_1_min,
+                amount_0_min,
+                amount_1_min,
                 &recipient,
-            )?;
-
-            Self::deposit_event(Event::LiquidityRemoved(
-                who, recipient, asset_0, asset_1, liquidity,
-            ));
-
-            Ok(())
+            )
         }
 
         /// Sell amount of foreign by path.
@@ -459,7 +455,7 @@ pub mod pallet {
         /// - `deadline`: Height of the cutoff block of this transaction
         #[pallet::weight(1_000_000)]
         #[frame_support::transactional]
-        pub fn swap_exact_tokens_for_tokens(
+        pub fn swap_exact_assets_for_assets(
             origin: OriginFor<T>,
             #[pallet::compact] amount_in: AssetBalance,
             #[pallet::compact] amount_out_min: AssetBalance,
@@ -473,17 +469,13 @@ pub mod pallet {
             let now = frame_system::Pallet::<T>::block_number();
             ensure!(deadline > now, Error::<T>::Deadline);
 
-            Self::inner_swap_exact_tokens_for_tokens(
+            Self::inner_swap_exact_assets_for_assets(
                 &who,
                 amount_in,
                 amount_out_min,
                 &path,
                 &recipient,
-            )?;
-
-            Self::deposit_event(Event::AssetSwap(who, recipient, path));
-
-            Ok(())
+            )
         }
 
         /// Buy amount of foreign by path.
@@ -497,7 +489,7 @@ pub mod pallet {
         /// - `deadline`: Height of the cutoff block of this transaction
         #[pallet::weight(1_000_000)]
         #[frame_support::transactional]
-        pub fn swap_tokens_for_exact_tokens(
+        pub fn swap_assets_for_exact_assets(
             origin: OriginFor<T>,
             #[pallet::compact] amount_out: AssetBalance,
             #[pallet::compact] amount_in_max: AssetBalance,
@@ -511,17 +503,13 @@ pub mod pallet {
             let now = frame_system::Pallet::<T>::block_number();
             ensure!(deadline > now, Error::<T>::Deadline);
 
-            Self::inner_swap_tokens_for_exact_tokens(
+            Self::inner_swap_assets_for_exact_assets(
                 &who,
                 amount_out,
                 amount_in_max,
                 &path,
                 &recipient,
-            )?;
-
-            Self::deposit_event(Event::AssetSwap(who, recipient, path));
-
-            Ok(())
+            )
         }
     }
 }

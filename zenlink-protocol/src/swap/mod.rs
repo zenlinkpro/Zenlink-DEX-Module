@@ -65,7 +65,7 @@ impl<T: Config> Pallet<T> {
         amount_0_min: AssetBalance,
         amount_1_min: AssetBalance,
     ) -> DispatchResult {
-        LiquidityMeta::<T>::try_mutate((asset_0, asset_1), |meta| {
+        LiquidityMeta::<T>::try_mutate(Self::sort_asset_id(asset_0, asset_1), |meta| {
             if let Some((pair_account, total_liquidity)) = meta {
                 let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, pair_account);
                 let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, pair_account);
@@ -99,8 +99,17 @@ impl<T: Config> Pallet<T> {
                     total_liquidity.checked_add(mint_liquidity).ok_or(Error::<T>::Overflow)?;
                 Self::mutate_liquidity(asset_0, asset_1, who, mint_liquidity, true)?;
 
-                T::MultiAssetsHandler::transfer(asset_0, &who, &pair_account, amount_0)?;
-                T::MultiAssetsHandler::transfer(asset_1, &who, &pair_account, amount_1)?;
+                T::MultiAssetsHandler::transfer(asset_0, who, &pair_account, amount_0)?;
+                T::MultiAssetsHandler::transfer(asset_1, who, &pair_account, amount_1)?;
+
+                Self::deposit_event(Event::LiquidityAdded(
+                    who.clone(),
+                    asset_0,
+                    asset_1,
+                    amount_0,
+                    amount_1,
+                    mint_liquidity,
+                ));
 
                 Ok(())
             } else {
@@ -115,8 +124,8 @@ impl<T: Config> Pallet<T> {
         asset_0: AssetId,
         asset_1: AssetId,
         remove_liquidity: AssetBalance,
-        amount_token_0_min: AssetBalance,
-        amount_token_1_min: AssetBalance,
+        amount_0_min: AssetBalance,
+        amount_1_min: AssetBalance,
         recipient: &T::AccountId,
     ) -> DispatchResult {
         ensure!(
@@ -124,7 +133,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::InsufficientLiquidity
         );
 
-        LiquidityMeta::<T>::try_mutate((asset_0, asset_1), |meta| {
+        LiquidityMeta::<T>::try_mutate(Self::sort_asset_id(asset_0, asset_1), |meta| {
             if let Some((pair_account, total_liquidity)) = meta {
                 let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &pair_account);
                 let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &pair_account);
@@ -135,7 +144,7 @@ impl<T: Config> Pallet<T> {
                     Self::calculate_share_amount(remove_liquidity, *total_liquidity, reserve_1);
 
                 ensure!(
-                    amount_0 >= amount_token_0_min && amount_1 >= amount_token_1_min,
+                    amount_0 >= amount_0_min && amount_1 >= amount_1_min,
                     Error::<T>::InsufficientTargetAmount
                 );
 
@@ -147,6 +156,16 @@ impl<T: Config> Pallet<T> {
                 T::MultiAssetsHandler::transfer(asset_0, &pair_account, recipient, amount_0)?;
                 T::MultiAssetsHandler::transfer(asset_1, &pair_account, recipient, amount_1)?;
 
+                Self::deposit_event(Event::LiquidityRemoved(
+                    who.clone(),
+                    recipient.clone(),
+                    asset_0,
+                    asset_1,
+                    amount_0,
+                    amount_1,
+                    remove_liquidity,
+                ));
+
                 Ok(())
             } else {
                 Err(Error::<T>::PairNotExists.into())
@@ -155,7 +174,7 @@ impl<T: Config> Pallet<T> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn inner_swap_exact_tokens_for_tokens(
+    pub(crate) fn inner_swap_exact_assets_for_assets(
         who: &T::AccountId,
         amount_in: AssetBalance,
         amount_out_min: AssetBalance,
@@ -171,11 +190,19 @@ impl<T: Config> Pallet<T> {
         T::MultiAssetsHandler::transfer(path[0], who, &pair_account, amount_in)?;
         Self::swap(&amounts, &path, &recipient)?;
 
+        Self::deposit_event(Event::AssetSwap(
+            who.clone(),
+            recipient.clone(),
+            Vec::from(path),
+            amount_in,
+            amounts[amounts.len() - 1],
+        ));
+
         Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn inner_swap_tokens_for_exact_tokens(
+    pub(crate) fn inner_swap_assets_for_exact_assets(
         who: &T::AccountId,
         amount_out: AssetBalance,
         amount_in_max: AssetBalance,
@@ -191,6 +218,14 @@ impl<T: Config> Pallet<T> {
 
         T::MultiAssetsHandler::transfer(path[0], who, &pair_account, amounts[0])?;
         Self::swap(&amounts, &path, recipient)?;
+
+        Self::deposit_event(Event::AssetSwap(
+            who.clone(),
+            recipient.clone(),
+            Vec::from(path),
+            amounts[0],
+            amount_out,
+        ));
 
         Ok(())
     }
@@ -255,16 +290,19 @@ impl<T: Config> Pallet<T> {
         amount: AssetBalance,
         is_mint: bool,
     ) -> DispatchResult {
-        LiquidityLedger::<T>::try_mutate(((asset_0, asset_1), who), |liquidity| {
-            if is_mint {
-                *liquidity = liquidity.checked_add(amount).ok_or(Error::<T>::Overflow)?;
-            } else {
-                *liquidity =
-                    liquidity.checked_sub(amount).ok_or(Error::<T>::InsufficientLiquidity)?;
-            }
+        LiquidityLedger::<T>::try_mutate(
+            (Self::sort_asset_id(asset_0, asset_1), who),
+            |liquidity| {
+                if is_mint {
+                    *liquidity = liquidity.checked_add(amount).ok_or(Error::<T>::Overflow)?;
+                } else {
+                    *liquidity =
+                        liquidity.checked_sub(amount).ok_or(Error::<T>::InsufficientLiquidity)?;
+                }
 
-            Ok(())
-        })
+                Ok(())
+            },
+        )
     }
 
     fn get_amount_in(

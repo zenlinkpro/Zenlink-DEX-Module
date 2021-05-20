@@ -103,8 +103,8 @@ fn add_liquidity_should_work() {
             <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
 
         //println!("balance_DOT {}, balance_BTC {}", balance_dot, balance_btc);
-        assert_eq!(balance_dot, 1000005000000000);
-        assert_eq!(balance_btc, 100000500);
+        assert_eq!(balance_dot, 51000000000000000);
+        assert_eq!(balance_btc, 5100000000);
 
         assert_eq!((balance_dot / DOT_UNIT), (balance_btc / BTC_UNIT));
     });
@@ -245,7 +245,7 @@ fn remove_liquidity_should_work() {
 }
 
 #[test]
-fn inner_swap_exact_tokens_for_tokens_should_work() {
+fn inner_swap_exact_assets_for_assets_should_work() {
     new_test_ext().execute_with(|| {
         assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
         assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
@@ -275,7 +275,7 @@ fn inner_swap_exact_tokens_for_tokens_should_work() {
         let path = vec![DOT_ASSET_ID, BTC_ASSET_ID];
         let amount_in = 1 * DOT_UNIT;
         let amount_out_min = BTC_UNIT * 996 / 1000;
-        assert_ok!(DexPallet::inner_swap_exact_tokens_for_tokens(
+        assert_ok!(DexPallet::inner_swap_exact_assets_for_assets(
             &ALICE,
             amount_in,
             amount_out_min,
@@ -293,7 +293,7 @@ fn inner_swap_exact_tokens_for_tokens_should_work() {
         let path = vec![BTC_ASSET_ID.clone(), DOT_ASSET_ID.clone()];
         let amount_in = 1 * BTC_UNIT;
         let amount_out_min = DOT_UNIT * 996 / 1000;
-        assert_ok!(DexPallet::inner_swap_exact_tokens_for_tokens(
+        assert_ok!(DexPallet::inner_swap_exact_assets_for_assets(
             &ALICE,
             amount_in,
             amount_out_min,
@@ -308,7 +308,7 @@ fn inner_swap_exact_tokens_for_tokens_should_work() {
 }
 
 #[test]
-fn inner_swap_exact_tokens_for_tokens_in_pairs_should_work() {
+fn inner_swap_exact_assets_for_assets_in_pairs_should_work() {
     new_test_ext().execute_with(|| {
         assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
         assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
@@ -342,7 +342,7 @@ fn inner_swap_exact_tokens_for_tokens_in_pairs_should_work() {
         let path = vec![DOT_ASSET_ID, BTC_ASSET_ID, ETH_ASSET_ID];
         let amount_in = 1 * DOT_UNIT;
         let amount_out_min = 1 * ETH_UNIT * 996 / 1000 * 996 / 1000;
-        assert_ok!(DexPallet::inner_swap_exact_tokens_for_tokens(
+        assert_ok!(DexPallet::inner_swap_exact_assets_for_assets(
             &ALICE,
             amount_in,
             amount_out_min,
@@ -362,7 +362,7 @@ fn inner_swap_exact_tokens_for_tokens_in_pairs_should_work() {
         // println!("dot_balance {}", dot_balance);
         assert_eq!(dot_balance, 0);
 
-        assert_ok!(DexPallet::inner_swap_exact_tokens_for_tokens(
+        assert_ok!(DexPallet::inner_swap_exact_assets_for_assets(
             &ALICE,
             amount_in,
             amount_out_min,
@@ -377,7 +377,7 @@ fn inner_swap_exact_tokens_for_tokens_in_pairs_should_work() {
 }
 
 #[test]
-fn inner_swap_tokens_for_exact_tokens_should_work() {
+fn inner_swap_assets_for_exact_assets_should_work() {
     new_test_ext().execute_with(|| {
         let total_supply_dot = 10000 * DOT_UNIT;
         let total_supply_btc = 10000 * BTC_UNIT;
@@ -401,7 +401,7 @@ fn inner_swap_tokens_for_exact_tokens_should_work() {
         let path = vec![DOT_ASSET_ID, BTC_ASSET_ID];
         let amount_out = 1 * BTC_UNIT;
         let amount_in_max = 1 * DOT_UNIT * 1004 / 1000;
-        assert_ok!(DexPallet::inner_swap_tokens_for_exact_tokens(
+        assert_ok!(DexPallet::inner_swap_assets_for_exact_assets(
             &ALICE,
             amount_out,
             amount_in_max,
@@ -423,7 +423,7 @@ fn inner_swap_tokens_for_exact_tokens_should_work() {
         let path = vec![BTC_ASSET_ID, DOT_ASSET_ID];
         let amount_out = 1 * DOT_UNIT;
         let amount_in_max = 1 * BTC_UNIT * 1004 / 1000;
-        assert_ok!(DexPallet::inner_swap_tokens_for_exact_tokens(
+        assert_ok!(DexPallet::inner_swap_assets_for_exact_assets(
             &ALICE,
             amount_out,
             amount_in_max,
@@ -449,7 +449,7 @@ fn inner_swap_tokens_for_exact_tokens_should_work() {
 }
 
 #[test]
-fn inner_swap_tokens_for_exact_tokens_in_pairs_should_work() {
+fn inner_swap_assets_for_exact_assets_in_pairs_should_work() {
     new_test_ext().execute_with(|| {
         let total_supply_dot = 10000 * DOT_UNIT;
         let total_supply_btc = 10000 * BTC_UNIT;
@@ -489,7 +489,7 @@ fn inner_swap_tokens_for_exact_tokens_in_pairs_should_work() {
         let amount_out = 1 * ETH_UNIT;
         let amount_in_max = 1 * DOT_UNIT * 1004 / 1000 * 1004 / 1000;
         let bob_dev_balance = <Test as Config>::MultiAssetsHandler::balance_of(ETH_ASSET_ID, &BOB);
-        assert_ok!(DexPallet::inner_swap_tokens_for_exact_tokens(
+        assert_ok!(DexPallet::inner_swap_assets_for_exact_assets(
             &ALICE,
             amount_out,
             amount_in_max,
@@ -506,7 +506,7 @@ fn inner_swap_tokens_for_exact_tokens_in_pairs_should_work() {
         let path = vec![ETH_ASSET_ID, BTC_ASSET_ID, DOT_ASSET_ID];
         let amount_out = 1 * DOT_UNIT;
         let amount_in_max = 1 * ETH_UNIT * 1004 / 1000 * 1004 / 1000;
-        assert_ok!(DexPallet::inner_swap_tokens_for_exact_tokens(
+        assert_ok!(DexPallet::inner_swap_assets_for_exact_assets(
             &ALICE,
             amount_out,
             amount_in_max,
