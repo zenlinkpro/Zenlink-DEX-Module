@@ -1222,7 +1222,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-aura-ext"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#95d81d499927e508769690fc43a480f00ddd131e"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#4b2c51514cd5f34a5aa0404d4a2eac86f88203f8"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -1239,7 +1239,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-dmp-queue"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#95d81d499927e508769690fc43a480f00ddd131e"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#4b2c51514cd5f34a5aa0404d4a2eac86f88203f8"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -1258,7 +1258,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-parachain-system"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#95d81d499927e508769690fc43a480f00ddd131e"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#4b2c51514cd5f34a5aa0404d4a2eac86f88203f8"
 dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
@@ -1288,7 +1288,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-xcm"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#95d81d499927e508769690fc43a480f00ddd131e"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#4b2c51514cd5f34a5aa0404d4a2eac86f88203f8"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -1304,7 +1304,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-xcmp-queue"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#95d81d499927e508769690fc43a480f00ddd131e"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#4b2c51514cd5f34a5aa0404d4a2eac86f88203f8"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -1322,7 +1322,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-core"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#95d81d499927e508769690fc43a480f00ddd131e"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#4b2c51514cd5f34a5aa0404d4a2eac86f88203f8"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -1330,6 +1330,7 @@ dependencies = [
  "polkadot-core-primitives",
  "polkadot-parachain",
  "polkadot-primitives",
+ "sp-api",
  "sp-runtime",
  "sp-std",
  "sp-trie",
@@ -1339,7 +1340,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-parachain-inherent"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#95d81d499927e508769690fc43a480f00ddd131e"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#4b2c51514cd5f34a5aa0404d4a2eac86f88203f8"
 dependencies = [
  "async-trait",
  "cumulus-primitives-core",
@@ -1359,7 +1360,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-utility"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#95d81d499927e508769690fc43a480f00ddd131e"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#4b2c51514cd5f34a5aa0404d4a2eac86f88203f8"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -4917,7 +4918,7 @@ dependencies = [
 [[package]]
 name = "parachain-info"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#95d81d499927e508769690fc43a480f00ddd131e"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1#4b2c51514cd5f34a5aa0404d4a2eac86f88203f8"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -10495,7 +10496,7 @@ dependencies = [
 
 [[package]]
 name = "zenlink-protocol"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -10515,7 +10516,7 @@ dependencies = [
 
 [[package]]
 name = "zenlink-protocol-rpc"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -10532,7 +10533,7 @@ dependencies = [
 
 [[package]]
 name = "zenlink-protocol-runtime-api"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "parity-scale-codec",
  "serde_json",
