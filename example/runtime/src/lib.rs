@@ -373,6 +373,7 @@ impl pallet_xcm::Config for Runtime {
     type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+    type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 }
 
@@ -591,16 +592,16 @@ impl_runtime_apis! {
         }
 
         fn get_estimate_lptoken(
-            token_0: AssetId,
-            token_1: AssetId,
+            asset_0: AssetId,
+            asset_1: AssetId,
             amount_0_desired: AssetBalance,
             amount_1_desired: AssetBalance,
             amount_0_min: AssetBalance,
             amount_1_min: AssetBalance,
         ) -> AssetBalance{
             ZenlinkProtocol::get_estimate_lptoken(
-                token_0,
-                token_1,
+                asset_0,
+                asset_1,
                 amount_0_desired,
                 amount_1_desired,
                 amount_0_min,

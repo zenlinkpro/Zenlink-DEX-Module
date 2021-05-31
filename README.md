@@ -4,11 +4,11 @@
 
 It should at least work until the following commits
 
--   rustc 1.52.0-nightly (d1206f950 2021-02-15)
--   polkadot.js.org (apps v0.90.2-79)
--   Polkadot release-v0.9.1 @ `629b86977c88e8ad81e63aafb7f22062c90a6bf6`
--   Cumulus polkadot-v0.9.1 @ `4b2c51514cd5f34a5aa0404d4a2eac86f88203f8`
--   Substrate polkadot-v0.9.1 @ `3f110196163b5ec03bac5ee188d60bedf3ebd91d`
+-   rustc 1.53.0-nightly (673d0db5e 2021-03-23)
+-   polkadot.js.org (apps v0.91.3-47)
+-   Polkadot master @ `aa386760948574af4078c59decf558d16efe15e2`
+-   Cumulus master @ `78b31b21122995b49f3c2cfe2791f188e33e5917`
+-   Substrate master @ `85fa0ab80c3ceccf4bb98380d7833578aaf8815e`
 
 
 ## Precondition
@@ -209,8 +209,8 @@ Transaction type
   },
   "AssetBalance": "u128",
   "PairInfo": {
-    "token_0": "AssetId",
-    "token_1": "AssetId",
+    "asset_0": "AssetId",
+    "asset_1": "AssetId",
     "account": "AccountId",
     "total_liquidity": "AssetBalance",
     "holding_liquidity": "AssetBalance",
