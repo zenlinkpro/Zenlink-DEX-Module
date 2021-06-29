@@ -133,7 +133,7 @@ pub mod pallet {
 	#[pallet::getter(fn k_last)]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
 	/// Last unliquidated protocol fee;
-	pub type KLast<T: Config> = StorageValue<_, AssetBalance, ValueQuery>;
+	pub type KLast<T: Config> = StorageMap<_, Twox64Concat, (AssetId, AssetId), AssetBalance, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn fee_meta)]

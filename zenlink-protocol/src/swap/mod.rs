@@ -90,7 +90,7 @@ impl<T: Config> Pallet<T> {
 					Error::<T>::InsufficientAssetBalance
 				);
 
-				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, *total_liquidity);
+				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, *total_liquidity);
 				if let Some(fee_to) = Self::fee_meta().1 {
 					if mint_fee > 0 {
 						Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
@@ -101,9 +101,6 @@ impl<T: Config> Pallet<T> {
 
 						ensure!(*total_liquidity > old_total_liquidity, Error::<T>::Overflow);
 					}
-
-					// We allow reserve_0.saturating_mul(reserve_1) to overflow
-					Self::mutate_k_last(reserve_0.saturating_mul(reserve_1));
 				}
 
 				let mint_liquidity =
@@ -117,6 +114,15 @@ impl<T: Config> Pallet<T> {
 
 				T::MultiAssetsHandler::transfer(asset_0, who, &pair_account, amount_0)?;
 				T::MultiAssetsHandler::transfer(asset_1, who, &pair_account, amount_1)?;
+
+				if let Some(_fee_to) = Self::fee_meta().1 {
+					// update reserve_0 and reserve_1
+					let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, pair_account);
+					let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, pair_account);
+
+					// We allow reserve_0.saturating_mul(reserve_1) to overflow
+					Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
+				}
 
 				Self::deposit_event(Event::LiquidityAdded(
 					who.clone(),
@@ -162,7 +168,7 @@ impl<T: Config> Pallet<T> {
 					Error::<T>::InsufficientTargetAmount
 				);
 
-				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, *total_liquidity);
+				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, *total_liquidity);
 				if let Some(fee_to) = Self::fee_meta().1 {
 					if mint_fee > 0 {
 						Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
@@ -173,9 +179,6 @@ impl<T: Config> Pallet<T> {
 
 						ensure!(*total_liquidity > old_total_liquidity, Error::<T>::Overflow);
 					}
-
-					// We allow reserve_0.saturating_mul(reserve_1) to overflow
-					Self::mutate_k_last(reserve_0.saturating_mul(reserve_1));
 				}
 
 				*total_liquidity = total_liquidity
@@ -185,6 +188,15 @@ impl<T: Config> Pallet<T> {
 
 				T::MultiAssetsHandler::transfer(asset_0, &pair_account, recipient, amount_0)?;
 				T::MultiAssetsHandler::transfer(asset_1, &pair_account, recipient, amount_1)?;
+
+				if let Some(_fee_to) = Self::fee_meta().1 {
+					// update reserve_0 and reserve_1
+					let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, pair_account);
+					let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, pair_account);
+
+					// We allow reserve_0.saturating_mul(reserve_1) to overflow
+					Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
+				}
 
 				Self::deposit_event(Event::LiquidityRemoved(
 					who.clone(),
@@ -295,9 +307,11 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn mint_protocol_fee(
 		reserve_0: AssetBalance,
 		reserve_1: AssetBalance,
+		asset_0: AssetId,
+		asset_1: AssetId,
 		total_liquidity: AssetBalance,
 	) -> AssetBalance {
-		let new_k_last = Self::k_last();
+		let new_k_last = Self::k_last(Self::sort_asset_id(asset_0, asset_1));
 		let mut mint_fee: AssetBalance = 0;
 
 		if let Some(_fee_to) = Self::fee_meta().1 {
@@ -323,14 +337,14 @@ impl<T: Config> Pallet<T> {
 				}
 			}
 		} else if new_k_last != 0 {
-			Self::mutate_k_last(0)
+			Self::mutate_k_last(asset_0, asset_1, 0)
 		}
 
 		mint_fee
 	}
 
-	pub(crate) fn mutate_k_last(last: AssetBalance) {
-		KLast::<T>::mutate(|k| *k = last)
+	pub(crate) fn mutate_k_last(asset_0: AssetId, asset_1: AssetId, last: AssetBalance) {
+		KLast::<T>::mutate(Self::sort_asset_id(asset_0, asset_1), |k| *k = last)
 	}
 
 	pub(crate) fn calculate_added_amount(
