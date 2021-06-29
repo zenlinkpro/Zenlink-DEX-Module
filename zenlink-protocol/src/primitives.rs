@@ -18,21 +18,21 @@ pub const RESERVED: u8 = 3;
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Default))]
 pub struct AssetId {
-    pub chain_id: u32,
-    pub asset_type: u8,
-    pub asset_index: u32,
+	pub chain_id: u32,
+	pub asset_type: u8,
+	pub asset_index: u32,
 }
 
 impl AssetId {
-    pub fn is_support(&self) -> bool {
-        matches!(self.asset_type, NATIVE | LIQUIDITY | LOCAL | RESERVED)
-    }
+	pub fn is_support(&self) -> bool {
+		matches!(self.asset_type, NATIVE | LIQUIDITY | LOCAL | RESERVED)
+	}
 
-    pub fn is_native(&self, self_chain_id: u32) -> bool {
-        self.chain_id == self_chain_id && self.asset_type == NATIVE && self.asset_index == 0
-    }
+	pub fn is_native(&self, self_chain_id: u32) -> bool {
+		self.chain_id == self_chain_id && self.asset_type == NATIVE && self.asset_index == 0
+	}
 
-    pub fn is_foreign(&self, self_chain_id: u32) -> bool {
-        self.chain_id != self_chain_id
-    }
+	pub fn is_foreign(&self, self_chain_id: u32) -> bool {
+		self.chain_id != self_chain_id
+	}
 }

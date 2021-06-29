@@ -21,9 +21,9 @@
 
 pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 use sp_runtime::{
-    generic,
-    traits::{BlakeTwo256, IdentifyAccount, Verify},
-    MultiSignature,
+	generic,
+	traits::{BlakeTwo256, IdentifyAccount, Verify},
+	MultiSignature,
 };
 
 /// Opaque block header type.

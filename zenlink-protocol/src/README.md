@@ -9,13 +9,14 @@ Through the `UAI`(unified asset identifier) and `MultiAssetsHandler` interfaces,
 ## Zenlink Protocol v0.4.0 Features
 - Based on the `newest` XCM design
 - Based on `FRAMEv2`
-- Swap exchange fee `configurable`
+- Swap exchange fee rate `configurable`
 - `Compatible` Polkadot XCMP cross-chain asset processing
 - Zenlink Protocol registration whitelist-XCM `trust collection management`
 - Through Transfer-By-XCM, `assets can flow freely` between parachains
 - ZenlinkMultiAssets adapter comes with `LIQUIDITY` and `Foreign` asset processing, which can `adapt to various native assets such as NATIVE/LOCAL/RESERVE`
 - Provide LocalAssetHandler, OtherAssetHandler and other traits to `support locally defined assets such as LOCAL and RESERVE`
 - Under the control of MultiAssetsHandler, `assets can swap freely`
+- Add `protocol fee manage` feature(fee_admin,fee_receiver,fee_point)
 
 ##  UAI v0.1.0
 

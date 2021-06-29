@@ -23,7 +23,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 8,
-		Zenlink: pallet_zenlink::{Pallet, Call, Storage, Event<T>} = 9,
+		Zenlink: pallet_zenlink::{Pallet, Call, Storage, Config<T>, Event<T>} = 9,
 	}
 );
 
@@ -103,5 +103,14 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
+
+	pallet_zenlink::GenesisConfig::<Test> {
+		fee_admin: 1,
+		fee_receiver: None,
+		fee_point: 5,
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
 	t.into()
 }
