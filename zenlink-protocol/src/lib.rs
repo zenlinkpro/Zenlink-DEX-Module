@@ -18,7 +18,7 @@ use frame_support::{
 	PalletId, RuntimeDebug,
 };
 use sp_core::U256;
-use sp_runtime::traits::{AccountIdConversion, Hash, IntegerSquareRoot, One, StaticLookup, UniqueSaturatedInto, Zero};
+use sp_runtime::traits::{AccountIdConversion, Hash, IntegerSquareRoot, One, StaticLookup, Zero};
 use sp_std::{convert::TryInto, marker::PhantomData, prelude::*};
 
 // -------xcm--------
@@ -67,12 +67,6 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-		/// Trading fee rate
-		/// The first item of the tuple is the numerator of the fee rate, second
-		/// item is the denominator, fee_rate = numerator / denominator,
-		/// use (u32, u32) over `Rate` type to minimize internal division operation.
-		#[pallet::constant]
-		type GetExchangeFee: Get<(u32, u32)>;
 		/// The assets interface beyond native currency and other assets.
 		type MultiAssetsHandler: MultiAssetsHandler<Self::AccountId>;
 		/// This pallet id.
@@ -147,8 +141,10 @@ pub mod pallet {
 		pub fee_admin: T::AccountId,
 		/// The receiver of the protocol fee.
 		pub fee_receiver: Option<T::AccountId>,
-		/// The fee point which integer between [0,256),
-		/// 0 means 100% new liquidity and 255 means 1/256.
+		/// The fee point which integer between [0,30]
+		/// 0 means no protocol fee.
+		/// 30 means 0.3% * 100% = 0.0030.
+		/// default is 5 and means 0.3% * 1 / 6 = 0.0005.
 		pub fee_point: u8,
 	}
 
@@ -230,6 +226,8 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Require the admin who can reset the admin and receiver of the protocol fee.
 		RequireProtocolAdmin,
+		/// Invalid fee_point
+		InvalidFeePoint,
 		/// Unsupported AssetId by this ZenlinkProtocol Version.
 		UnsupportedAssetType,
 		/// Account balance must be greater than or equal to the transfer amount.
@@ -329,12 +327,15 @@ pub mod pallet {
 		/// # Arguments
 		///
 		/// - `fee_point`:
-		/// The fee point which integer between [0,256),
-		/// 0 means mint 100% new liquidity and 255 means 1/256.
+		/// The fee_point which integer between [0,30]
+		/// 0 means no protocol fee.
+		/// 30 means 0.3% * 100% = 0.0030.
+		/// default is 5 and means 0.3% * 1 / 6 = 0.0005.
 		#[pallet::weight(1_000_000)]
 		pub fn set_fee_point(origin: OriginFor<T>, fee_point: u8) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 			ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
+			ensure!(fee_point <= 30, Error::<T>::InvalidFeePoint);
 
 			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).2 = fee_point);
 

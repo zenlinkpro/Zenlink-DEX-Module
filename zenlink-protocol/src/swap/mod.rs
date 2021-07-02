@@ -92,7 +92,7 @@ impl<T: Config> Pallet<T> {
 
 				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, *total_liquidity);
 				if let Some(fee_to) = Self::fee_meta().1 {
-					if mint_fee > 0 {
+					if mint_fee > 0 && Self::fee_meta().2 > 0 {
 						Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
 
 						let old_total_liquidity = *total_liquidity;
@@ -116,12 +116,14 @@ impl<T: Config> Pallet<T> {
 				T::MultiAssetsHandler::transfer(asset_1, who, &pair_account, amount_1)?;
 
 				if let Some(_fee_to) = Self::fee_meta().1 {
-					// update reserve_0 and reserve_1
-					let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, pair_account);
-					let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, pair_account);
+					if Self::fee_meta().2 > 0 {
+						// update reserve_0 and reserve_1
+						let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, pair_account);
+						let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, pair_account);
 
-					// We allow reserve_0.saturating_mul(reserve_1) to overflow
-					Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
+						// We allow reserve_0.saturating_mul(reserve_1) to overflow
+						Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
+					}
 				}
 
 				Self::deposit_event(Event::LiquidityAdded(
@@ -170,7 +172,7 @@ impl<T: Config> Pallet<T> {
 
 				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, *total_liquidity);
 				if let Some(fee_to) = Self::fee_meta().1 {
-					if mint_fee > 0 {
+					if mint_fee > 0 && Self::fee_meta().2 > 0 {
 						Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
 
 						let old_total_liquidity = *total_liquidity;
@@ -190,12 +192,14 @@ impl<T: Config> Pallet<T> {
 				T::MultiAssetsHandler::transfer(asset_1, &pair_account, recipient, amount_1)?;
 
 				if let Some(_fee_to) = Self::fee_meta().1 {
-					// update reserve_0 and reserve_1
-					let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, pair_account);
-					let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, pair_account);
+					if Self::fee_meta().2 > 0 {
+						// update reserve_0 and reserve_1
+						let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, pair_account);
+						let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, pair_account);
 
-					// We allow reserve_0.saturating_mul(reserve_1) to overflow
-					Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
+						// We allow reserve_0.saturating_mul(reserve_1) to overflow
+						Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
+					}
 				}
 
 				Self::deposit_event(Event::LiquidityRemoved(
@@ -303,7 +307,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
-	/// Take as a 1/(fee_point+1) cut of the ExchangeFeeRate fees earned by liquidity providers
+	/// Take as a [0, 100%] cut of the exchange fees earned by liquidity providers
 	pub(crate) fn mint_protocol_fee(
 		reserve_0: AssetBalance,
 		reserve_1: AssetBalance,
@@ -315,16 +319,18 @@ impl<T: Config> Pallet<T> {
 		let mut mint_fee: AssetBalance = 0;
 
 		if let Some(_fee_to) = Self::fee_meta().1 {
-			if new_k_last != 0 {
+			if new_k_last != 0 && Self::fee_meta().2 > 0 {
 				// u128 support integer_sqrt, but U256 not support
 				// thus we allow reserve_0.saturating_mul(reserve_1) to overflow
 				let root_k = U256::from(reserve_0.saturating_mul(reserve_1).integer_sqrt());
 				let root_k_last = U256::from(new_k_last.integer_sqrt());
 				if root_k > root_k_last {
 					let fee_point = Self::fee_meta().2;
+					let fix_fee_point = (30 - fee_point) / fee_point;
 					let numerator = U256::from(total_liquidity).saturating_mul(root_k.saturating_sub(root_k_last));
-
-					let denominator = root_k.saturating_mul(U256::from(fee_point)).saturating_add(root_k_last);
+					let denominator = root_k
+						.saturating_mul(U256::from(fix_fee_point))
+						.saturating_add(root_k_last);
 
 					let liquidity = numerator
 						.checked_div(denominator)
@@ -389,6 +395,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
+	// 0.3% exchange fee rate
 	fn get_amount_in(
 		output_amount: AssetBalance,
 		input_reserve: AssetBalance,
@@ -398,14 +405,12 @@ impl<T: Config> Pallet<T> {
 			return Zero::zero();
 		}
 
-		let (fee_numerator, fee_denominator) = T::GetExchangeFee::get();
-
 		let numerator = U256::from(input_reserve)
 			.saturating_mul(U256::from(output_amount))
-			.saturating_mul(U256::from(fee_denominator));
+			.saturating_mul(U256::from(1000));
 
-		let denominator = (U256::from(output_reserve).saturating_sub(U256::from(output_amount)))
-			.saturating_mul(U256::from(fee_denominator.saturating_sub(fee_numerator)));
+		let denominator =
+			(U256::from(output_reserve).saturating_sub(U256::from(output_amount))).saturating_mul(U256::from(997));
 
 		numerator
 			.checked_div(denominator)
@@ -414,6 +419,7 @@ impl<T: Config> Pallet<T> {
 			.unwrap_or_else(Zero::zero)
 	}
 
+	// 0.3% exchange fee rate
 	fn get_amount_out(
 		input_amount: AssetBalance,
 		input_reserve: AssetBalance,
@@ -423,16 +429,12 @@ impl<T: Config> Pallet<T> {
 			return Zero::zero();
 		}
 
-		let (fee_numerator, fee_denominator) = T::GetExchangeFee::get();
-
-		let input_amount_with_fee = U256::from(
-			input_amount.saturating_mul(fee_denominator.saturating_sub(fee_numerator).unique_saturated_into()),
-		);
+		let input_amount_with_fee = U256::from(input_amount).saturating_mul(U256::from(997));
 
 		let numerator = input_amount_with_fee.saturating_mul(U256::from(output_reserve));
 
 		let denominator = U256::from(input_reserve)
-			.saturating_mul(U256::from(fee_denominator))
+			.saturating_mul(U256::from(1000))
 			.saturating_add(input_amount_with_fee);
 
 		numerator

@@ -32,7 +32,6 @@ parameter_types! {
 
 	pub const BlockHashCount: u64 = 250;
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
-	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 	pub const MaxReserves: u32 = 50;
 }
 
@@ -76,7 +75,6 @@ impl pallet_balances::Config for Test {
 
 impl Config for Test {
 	type Event = Event;
-	type GetExchangeFee = GetExchangeFee;
 	type MultiAssetsHandler = ZenlinkMultiAssets<Zenlink, Balances>;
 	type PalletId = ZenlinkPalletId;
 	type TargetChains = ();

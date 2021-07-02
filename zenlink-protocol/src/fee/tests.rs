@@ -66,6 +66,11 @@ fn fee_meta_setter_should_not_work() {
 			DexPallet::set_fee_point(Origin::signed(BOB), 0),
 			Error::<Test>::RequireProtocolAdmin
 		);
+
+		assert_noop!(
+			DexPallet::set_fee_point(Origin::signed(ALICE), 31u8),
+			Error::<Test>::InvalidFeePoint
+		);
 	})
 }
 
@@ -278,11 +283,12 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 fn turn_on_protocol_fee_swap_have_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		// 1. turn on the protocol fee
-		// use default rate: 1/6
 
 		let sorted_pair = DexPallet::sort_asset_id(DOT_ASSET_ID, BTC_ASSET_ID);
 
 		assert_ok!(DexPallet::set_fee_receiver(Origin::signed(ALICE), Some(BOB)));
+		// use default rate: 0.3% * 1 / 6 = 0.0005
+		assert_ok!(DexPallet::set_fee_point(Origin::signed(ALICE), 5u8));
 		assert_eq!(DexPallet::k_last(sorted_pair), 0);
 
 		// 2. first add_liquidity
