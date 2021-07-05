@@ -36,6 +36,8 @@ parameter_types! {
     pub const BlockHashCount: u64 = 250;
     pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
     pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
+
+    pub const MaxReserves: u32 = 50;
 }
 
 impl frame_system::Config for Test {
@@ -72,6 +74,8 @@ impl pallet_balances::Config for Test {
     type AccountStore = frame_system::Pallet<Test>;
     type WeightInfo = ();
     type MaxLocks = ();
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
 }
 
 impl Config for Test {
