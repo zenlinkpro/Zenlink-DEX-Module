@@ -52,7 +52,7 @@ mod transfer;
 pub use multiassets::{MultiAssetsHandler, ZenlinkMultiAssets};
 pub use primitives::{AssetBalance, AssetId, LIQUIDITY, LOCAL, NATIVE, RESERVED};
 pub use rpc::PairInfo;
-pub use traits::{LocalAssetHandler, OtherAssetHandler};
+pub use traits::{LocalAssetHandler, OtherAssetHandler, ExportZenlink};
 pub use transactor::{TransactorAdaptor, TrustedParas};
 
 const LOG_TARGET: &str = "zenlink_protocol";

@@ -485,3 +485,91 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 }
+
+
+impl<T: Config> ExportZenlink<T::AccountId> for Pallet<T> {
+    fn get_amount_in_by_path(
+        amount_out: AssetBalance,
+        path: &[AssetId]
+    ) -> Result<Vec<AssetBalance>, DispatchError> {
+        Self::get_amount_in_by_path(amount_out, path)
+    }
+
+    fn get_amount_out_by_path(
+        amount_in: AssetBalance,
+        path: &[AssetId]
+    ) -> Result<Vec<AssetBalance>, DispatchError> {
+        Self::get_amount_out_by_path(amount_in, path)
+    }
+
+    fn inner_swap_assets_for_exact_assets(
+        who: &T::AccountId,
+        amount_out: AssetBalance,
+        amount_in_max: AssetBalance,
+        path: &[AssetId],
+        recipient: &T::AccountId
+    ) -> DispatchResult {
+        Self::inner_swap_assets_for_exact_assets(
+            who,
+            amount_out,
+            amount_in_max,
+            path, recipient
+        )
+    }
+
+    fn inner_swap_exact_assets_for_assets(
+        who: &T::AccountId,
+        amount_in: AssetBalance,
+        amount_out_min: AssetBalance,
+        path: &[AssetId],
+        recipient: &T::AccountId
+    ) -> DispatchResult {
+        Self::inner_swap_exact_assets_for_assets(
+            who,
+            amount_in,
+            amount_out_min,
+            path,
+            recipient
+        )
+    }
+
+    fn inner_add_liquidity(
+        who: &T::AccountId,
+        asset_0: AssetId,
+        asset_1: AssetId,
+        amount_0_desired: AssetBalance,
+        amount_1_desired: AssetBalance,
+        amount_0_min: AssetBalance,
+        amount_1_min: AssetBalance
+    ) -> DispatchResult {
+        Self::inner_add_liquidity(
+            who,
+            asset_0,
+            asset_1,
+            amount_0_desired,
+            amount_1_desired,
+            amount_0_min,
+            amount_1_min
+        )
+    }
+
+    fn inner_remove_liquidity(
+        who: &T::AccountId,
+        asset_0: AssetId,
+        asset_1: AssetId,
+        remove_liquidity: AssetBalance,
+        amount_0_min: AssetBalance,
+        amount_1_min: AssetBalance,
+        recipient: &T::AccountId
+    ) -> DispatchResult {
+        Self::inner_remove_liquidity(
+            who,
+            asset_0,
+            asset_1,
+            remove_liquidity,
+            amount_0_min,
+            amount_1_min,
+            recipient
+        )
+    }
+}
