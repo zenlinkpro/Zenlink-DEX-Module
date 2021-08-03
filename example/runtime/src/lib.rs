@@ -415,7 +415,7 @@ construct_runtime! {
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 4,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>} = 5,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 6,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 7,
@@ -509,8 +509,9 @@ impl_runtime_apis! {
 		fn validate_transaction(
 			source: TransactionSource,
 			tx: <Block as BlockT>::Extrinsic,
+			block_hash: <Block as BlockT>::Hash,
 		) -> TransactionValidity {
-			Executive::validate_transaction(source, tx)
+			Executive::validate_transaction(source, tx, block_hash)
 		}
 	}
 

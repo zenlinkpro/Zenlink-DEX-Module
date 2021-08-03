@@ -48,7 +48,7 @@ mod transfer;
 pub use multiassets::{MultiAssetsHandler, ZenlinkMultiAssets};
 pub use primitives::{AssetBalance, AssetId, LIQUIDITY, LOCAL, NATIVE, RESERVED};
 pub use rpc::PairInfo;
-pub use traits::{LocalAssetHandler, OtherAssetHandler};
+pub use traits::{ExportZenlink, LocalAssetHandler, OtherAssetHandler};
 pub use transactor::{TransactorAdaptor, TrustedParas};
 
 const LOG_TARGET: &str = "zenlink_protocol";
@@ -266,6 +266,8 @@ pub mod pallet {
 		DeniedTransferToSelf,
 		/// Not in ZenlinkRegistedParaChains.
 		TargetChainNotRegistered,
+		/// Can't pass the K value check
+		InvariantCheckFailed,
 	}
 
 	#[pallet::hooks]
