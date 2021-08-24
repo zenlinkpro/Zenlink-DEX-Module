@@ -113,7 +113,7 @@ fn multilocation_to_asset(location: &MultiLocation) -> Option<AssetId> {
 		) => Some(AssetId {
 			chain_id: *chain_id,
 			asset_type: *asset_type,
-			asset_index: (*asset_index) as u32,
+			asset_index: (*asset_index) as u64,
 		}),
 		_ => None,
 	}

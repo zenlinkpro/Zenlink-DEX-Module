@@ -18,18 +18,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
-#![allow(clippy::from_over_into)]
 
-/// Constant values used within the runtime.
+// Make the WASM binary available.
+#[cfg(feature = "std")]
+include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
+
 pub mod constants;
 use constants::{currency::*, time::*};
 
+use dev_parachain_primitives::currency::CurrencyId::Native;
 use dev_parachain_primitives::*;
+
 use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, Perbill,
 };
@@ -42,18 +46,21 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
-use frame_support::{
+pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::Get,
+	traits::{Get, IsInVec, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
 	},
-	PalletId,
+	PalletId, StorageValue,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use pallet_transaction_payment_rpc_runtime_api::{FeeDetails, RuntimeDispatchInfo};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+
+use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::parameter_type_with_key;
 
 //---XCM imports--------------------------------start
 use frame_support::traits::Everything;
@@ -72,10 +79,6 @@ use xcm_executor::{traits::ShouldExecute, Config, XcmExecutor};
 mod zenlink;
 use zenlink::*;
 
-// Make the WASM binary available.
-#[cfg(feature = "std")]
-include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
-
 pub type SessionHandlers = ();
 
 impl_opaque_keys! {
@@ -90,7 +93,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("dev-parachain"),
 	impl_name: create_runtime_str!("dev-parachain"),
 	authoring_version: 1,
-	spec_version: 100,
+	spec_version: 144,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -115,7 +118,6 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 
 parameter_types! {
-	pub const SS58Prefix: u8 = 42;
 	pub const BlockHashCount: BlockNumber = 250;
 	pub const Version: RuntimeVersion = VERSION;
 	pub RuntimeBlockLength: BlockLength =
@@ -138,7 +140,7 @@ parameter_types! {
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
-
+	pub const SS58Prefix: u8 = 42;
 }
 
 impl frame_system::Config for Runtime {
@@ -324,8 +326,7 @@ parameter_types! {
 
 match_type! {
 	pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
-		X1(Parent)
-		| X2(Parent, Plurality { id: BodyId::Unit, .. })
+		X1(Parent) | X2(Parent, Plurality { id: BodyId::Unit, .. })
 	};
 }
 
@@ -347,7 +348,7 @@ impl Config for XcmConfig {
 	type Call = Call;
 	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
-	type AssetTransactor = Transactors;
+	type AssetTransactor = ();
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = TrustedParas<ZenlinkRegistedParaChains>;
 	type IsTeleporter = NativeAsset; // <- should be enough to allow teleportation of ROC
@@ -359,7 +360,7 @@ impl Config for XcmConfig {
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
-pub type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, RococoNetwork>,);
+pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RococoNetwork>;
 
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
@@ -407,34 +408,68 @@ impl pallet_assets::Config for Runtime {
 	type TokenId = u32;
 }
 
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = Native(TokenSymbol::BNC);
+}
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		Zero::zero()
+	};
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
+	type MaxLocks = MaxLocks;
+	type DustRemovalWhitelist = ();
+}
+
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Tokens;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
+}
+
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
-		NodeBlock = dev_parachain_primitives::Block,
+		NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Storage, Config, Event<T>} = 0,
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>} = 5,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 6,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 7,
+		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>},
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 
-		Aura: pallet_aura::{Pallet, Config<T>} = 8,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 9,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>} = 20,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 21,
 
-		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 20,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 21,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 22,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 23,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
+		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 11,
+		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 12,
 
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 31,
-		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 32,
 
-		Utility: pallet_utility::{Pallet, Call, Event} = 50,
+		Aura: pallet_aura::{Pallet, Config<T>},
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
+
+		// XCM helpers.
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 50,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 51,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 52,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 53,
+
+		Utility: pallet_utility::{Pallet, Call, Event} = 70,
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Config<T>, Event<T>} = 99,
 	}
 }
 
@@ -545,10 +580,6 @@ impl_runtime_apis! {
 		}
 	}
 	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
-		fn get_assets() -> Vec<AssetId> {
-			ZenlinkProtocol::get_assets()
-		}
-
 		fn get_balance(
 			asset_id: AssetId,
 			owner: AccountId
@@ -562,53 +593,11 @@ impl_runtime_apis! {
 			ZenlinkProtocol::get_sovereigns_info(&asset_id)
 		}
 
-		fn get_all_pairs() -> Vec<PairInfo<AccountId, AssetBalance>> {
-			ZenlinkProtocol::get_all_pairs()
-		}
-
-		fn get_owner_pairs(
-			owner: AccountId
-		) -> Vec<PairInfo<AccountId, AssetBalance>> {
-			ZenlinkProtocol::get_owner_pairs(&owner)
-		}
-
 		fn get_pair_by_asset_id(
 			asset_0: AssetId,
 			asset_1: AssetId
 		) -> Option<PairInfo<AccountId, AssetBalance>> {
 			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
-		}
-
-		fn get_amount_in_price(
-			supply: AssetBalance,
-			path: Vec<AssetId>
-		) -> AssetBalance {
-			ZenlinkProtocol::desired_in_amount(supply, path)
-		}
-
-		fn get_amount_out_price(
-			supply: AssetBalance,
-			path: Vec<AssetId>
-		) -> AssetBalance {
-			ZenlinkProtocol::supply_out_amount(supply, path)
-		}
-
-		fn get_estimate_lptoken(
-			asset_0: AssetId,
-			asset_1: AssetId,
-			amount_0_desired: AssetBalance,
-			amount_1_desired: AssetBalance,
-			amount_0_min: AssetBalance,
-			amount_1_min: AssetBalance,
-		) -> AssetBalance{
-			ZenlinkProtocol::get_estimate_lptoken(
-				asset_0,
-				asset_1,
-				amount_0_desired,
-				amount_1_desired,
-				amount_0_min,
-				amount_1_min
-			)
 		}
 	}
 

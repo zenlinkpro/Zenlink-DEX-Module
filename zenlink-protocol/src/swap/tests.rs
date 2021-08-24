@@ -1,22 +1,9 @@
 // Copyright 2020-2021 Zenlink
 // Licensed under GPL-3.0.
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::assert_ok;
 
-use super::{mock::*, AssetId, Error, MultiAssetsHandler};
-
-// Native Currency
-const DEV_ASSET_ID: AssetId = AssetId {
-	chain_id: 0,
-	asset_type: NATIVE,
-	asset_index: 0,
-};
-// Foreign Liquidity
-const LP_ASSET_ID: AssetId = AssetId {
-	chain_id: 100,
-	asset_type: LIQUIDITY,
-	asset_index: 1,
-};
+use super::{mock::*, AssetId, MultiAssetsHandler};
 
 const DOT_ASSET_ID: AssetId = AssetId {
 	chain_id: 200,
@@ -31,12 +18,18 @@ const BTC_ASSET_ID: AssetId = AssetId {
 };
 
 const ETH_ASSET_ID: AssetId = AssetId {
-	chain_id: 400,
+	chain_id: 300,
 	asset_type: NATIVE,
 	asset_index: 0,
 };
 
-const PAIR_DOT_BTC: u128 = 64962681870856338328114322245433978733;
+const DOT_BTC_LP_ID: AssetId = AssetId {
+	chain_id: 0,
+	asset_type: 2,
+	asset_index: 12885034496,
+};
+
+const PAIR_DOT_BTC: u128 = 111825939709248857954450132390071529325;
 
 const ALICE: u128 = 1;
 const BOB: u128 = 2;
@@ -45,81 +38,10 @@ const BTC_UNIT: u128 = 1000_000_00;
 const ETH_UNIT: u128 = 1000_000_000_000;
 
 #[test]
-fn foreign_create_pair_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(<Test as Config>::MultiAssetsHandler::deposit(LP_ASSET_ID, &ALICE, 0));
-		assert_ok!(<Test as Config>::MultiAssetsHandler::deposit(DOT_ASSET_ID, &ALICE, 0));
-		assert_ok!(<Test as Config>::MultiAssetsHandler::deposit(BTC_ASSET_ID, &ALICE, 0));
-		assert_ok!(<Test as Config>::MultiAssetsHandler::deposit(ETH_ASSET_ID, &ALICE, 0));
-
-		assert!(<Test as Config>::MultiAssetsHandler::is_exists(DEV_ASSET_ID));
-		assert!(<Test as Config>::MultiAssetsHandler::is_exists(LP_ASSET_ID));
-		assert!(<Test as Config>::MultiAssetsHandler::is_exists(DOT_ASSET_ID));
-		assert!(<Test as Config>::MultiAssetsHandler::is_exists(BTC_ASSET_ID));
-		assert!(<Test as Config>::MultiAssetsHandler::is_exists(ETH_ASSET_ID));
-
-		assert_ok!(DexPallet::create_pair(Origin::signed(ALICE), DEV_ASSET_ID, LP_ASSET_ID));
-
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DEV_ASSET_ID,
-			DOT_ASSET_ID
-		));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DEV_ASSET_ID,
-			BTC_ASSET_ID
-		));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DEV_ASSET_ID,
-			ETH_ASSET_ID
-		));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			ETH_ASSET_ID
-		));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			BTC_ASSET_ID,
-			ETH_ASSET_ID
-		));
-	});
-}
-
-#[test]
-fn foreign_create_pair_should_not_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, 0));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DEV_ASSET_ID,
-			DOT_ASSET_ID
-		));
-
-		assert_noop!(
-			DexPallet::create_pair(Origin::signed(ALICE), DOT_ASSET_ID, DEV_ASSET_ID),
-			Error::<Test>::PairAlreadyExists
-		);
-	});
-}
-
-#[test]
 fn add_liquidity_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
 
 		let total_supply_dot: u128 = 1 * DOT_UNIT;
 		let total_supply_btc: u128 = 1 * BTC_UNIT;
@@ -135,6 +57,9 @@ fn add_liquidity_should_work() {
 			100
 		));
 
+		let mint_liquidity = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
+
+		assert_eq!(mint_liquidity, 316227766016);
 		let total_supply_dot = 50 * DOT_UNIT;
 		let total_supply_btc = 50 * BTC_UNIT;
 
@@ -152,7 +77,9 @@ fn add_liquidity_should_work() {
 		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
 		let balance_btc = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
 
-		//println!("balance_DOT {}, balance_BTC {}", balance_dot, balance_btc);
+		let mint_liquidity = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
+		assert_eq!(mint_liquidity, 16127616066816);
+
 		assert_eq!(balance_dot, 51000000000000000);
 		assert_eq!(balance_btc, 5100000000);
 
@@ -161,15 +88,49 @@ fn add_liquidity_should_work() {
 }
 
 #[test]
+fn remove_liquidity_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
+
+		let total_supply_dot = 50 * DOT_UNIT;
+		let total_supply_btc = 50 * BTC_UNIT;
+		assert_ok!(DexPallet::inner_add_liquidity(
+			&ALICE,
+			DOT_ASSET_ID,
+			BTC_ASSET_ID,
+			total_supply_dot,
+			total_supply_btc,
+			0,
+			0
+		));
+
+		assert_ok!(DexPallet::remove_liquidity(
+			Origin::signed(ALICE),
+			DOT_ASSET_ID,
+			BTC_ASSET_ID,
+			1 * BTC_UNIT,
+			0u128,
+			0u128,
+			BOB,
+			100
+		));
+
+		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &BOB);
+		let balance_btc = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &BOB);
+
+		assert_eq!(balance_dot, 316227766016);
+		assert_eq!(balance_btc, 31622);
+
+		assert_eq!((balance_dot / balance_btc) / (DOT_UNIT / BTC_UNIT), 1);
+	})
+}
+
+#[test]
 fn foreign_get_in_price_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
 
 		let total_supply_dot = 10000 * DOT_UNIT;
 		let total_supply_btc = 10000 * BTC_UNIT;
@@ -188,7 +149,6 @@ fn foreign_get_in_price_should_work() {
 
 		let target_amount = DexPallet::get_amount_out_by_path(amount_in, &path).unwrap();
 
-		// println!("target_amount {:#?}", target_amount);
 		assert_eq!(target_amount, vec![1000000000000000, 99690060]);
 
 		assert!(
@@ -201,7 +161,6 @@ fn foreign_get_in_price_should_work() {
 
 		let target_amount = DexPallet::get_amount_out_by_path(amount_in, &path).unwrap();
 
-		// println!("target_amount {:#?}", target_amount);
 		assert_eq!(target_amount, vec![100000000, 996900609009281]);
 
 		assert!(
@@ -216,11 +175,6 @@ fn foreign_get_out_price_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
 
 		let total_supply_dot = 1000000 * DOT_UNIT;
 		let total_supply_btc = 1000000 * BTC_UNIT;
@@ -262,60 +216,10 @@ fn foreign_get_out_price_should_work() {
 }
 
 #[test]
-fn remove_liquidity_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
-
-		let total_supply_dot = 50 * DOT_UNIT;
-		let total_supply_btc = 50 * BTC_UNIT;
-		assert_ok!(DexPallet::inner_add_liquidity(
-			&ALICE,
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-			total_supply_dot,
-			total_supply_btc,
-			0,
-			0
-		));
-
-		assert_ok!(DexPallet::remove_liquidity(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-			1 * BTC_UNIT,
-			0u128,
-			0u128,
-			BOB,
-			100
-		));
-
-		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &BOB);
-		let balance_btc = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &BOB);
-
-		// println!("balance_dot {}, balance_btc {}", (balance_dot / balance_btc), balance_btc);
-		assert_eq!(balance_dot, 316227766016);
-		assert_eq!(balance_btc, 31622);
-
-		assert_eq!((balance_dot / balance_btc) / (DOT_UNIT / BTC_UNIT), 1);
-	})
-}
-
-#[test]
 fn inner_swap_exact_assets_for_assets_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
 
 		let total_supply_dot = 50000 * DOT_UNIT;
 		let total_supply_btc = 50000 * BTC_UNIT;
@@ -377,16 +281,6 @@ fn inner_swap_exact_assets_for_assets_in_pairs_should_work() {
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(ETH_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			BTC_ASSET_ID,
-			ETH_ASSET_ID
-		));
 
 		let total_supply_dot = 5000 * DOT_UNIT;
 		let total_supply_btc = 5000 * BTC_UNIT;
@@ -456,11 +350,6 @@ fn inner_swap_assets_for_exact_assets_should_work() {
 
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, total_supply_dot));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, total_supply_btc));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
 
 		let supply_dot = 5000 * DOT_UNIT;
 		let supply_btc = 5000 * BTC_UNIT;
@@ -532,16 +421,6 @@ fn inner_swap_assets_for_exact_assets_in_pairs_should_work() {
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, total_supply_dot));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, total_supply_btc));
 		assert_ok!(DexPallet::foreign_mint(ETH_ASSET_ID, &ALICE, total_supply_eth));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			BTC_ASSET_ID,
-			ETH_ASSET_ID
-		));
 
 		let supply_dot = 5000 * DOT_UNIT;
 		let supply_btc = 5000 * BTC_UNIT;

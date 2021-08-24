@@ -20,7 +20,7 @@ pub const RESERVED: u8 = 3;
 pub struct AssetId {
 	pub chain_id: u32,
 	pub asset_type: u8,
-	pub asset_index: u32,
+	pub asset_index: u64,
 }
 
 impl AssetId {

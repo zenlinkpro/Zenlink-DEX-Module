@@ -6,7 +6,7 @@ edition = '2018'
 
 [dependencies]
 serde = { version = '1.0.119', optional = true, features = ['derive'] }
-codec = { package = 'parity-scale-codec', version = '2.2.0', default-features = false, features = ['derive'] }
+codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive'] }
 
 # dev collator
 dev-parachain-primitives = { path = '../primitives', default-features = false }
@@ -57,6 +57,10 @@ xcm = { git = "https://github.com/paritytech/polkadot", default-features = false
 xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.9" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.9" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.9" }
+
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
+orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 
 [build-dependencies]
 substrate-wasm-builder = '3.0.0'
@@ -109,4 +113,7 @@ std = [
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
+	"orml-currencies/std",
+	"orml-traits/std",
+	"orml-tokens/std",
 ]

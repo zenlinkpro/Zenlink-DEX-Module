@@ -19,7 +19,7 @@ const BTC_ASSET_ID: AssetId = AssetId {
 	asset_index: 3,
 };
 
-const PAIR_DOT_BTC: u128 = 64962681870856338328114322245433978733;
+const PAIR_DOT_BTC: u128 = 111825939709248857954450132390071529325;
 
 const ALICE: u128 = 1;
 const BOB: u128 = 2;
@@ -29,7 +29,7 @@ const BTC_UNIT: u128 = 1000_000_00;
 const LP_DOT_BTC: AssetId = AssetId {
 	chain_id: 0,
 	asset_type: 2,
-	asset_index: 0,
+	asset_index: 12885034496,
 };
 
 #[test]
@@ -109,11 +109,6 @@ fn turn_on_protocol_fee_only_add_liquidity_no_fee_should_work() {
 
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
 
 		let total_supply_dot: u128 = 1 * DOT_UNIT;
 		let total_supply_btc: u128 = 1 * BTC_UNIT;
@@ -130,8 +125,11 @@ fn turn_on_protocol_fee_only_add_liquidity_no_fee_should_work() {
 		));
 
 		let lp_of_alice_0 = 316227766016;
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &ALICE), lp_of_alice_0);
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &BOB), 0);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
+			lp_of_alice_0
+		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
 		assert_eq!(DexPallet::k_last(sorted_pair), DOT_UNIT * BTC_UNIT);
 
 		// 3. second add_liquidity
@@ -151,8 +149,11 @@ fn turn_on_protocol_fee_only_add_liquidity_no_fee_should_work() {
 		));
 
 		let lp_of_alice_1 = 16127616066816u128;
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &ALICE), lp_of_alice_1);
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &BOB), 0);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
+			lp_of_alice_1
+		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
 		assert_eq!(DexPallet::k_last(sorted_pair), 51 * DOT_UNIT * 51 * BTC_UNIT);
 
 		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
@@ -175,11 +176,17 @@ fn turn_on_protocol_fee_only_add_liquidity_no_fee_should_work() {
 			100
 		));
 
-		let lp_total = DexPallet::lp_total_supply(LP_DOT_BTC);
+		let lp_total = <Test as Config>::MultiAssetsHandler::total_supply(LP_DOT_BTC);
 		let lp_of_alice_2 = 31939004367616u128;
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &ALICE), lp_of_alice_2);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
+			lp_of_alice_2
+		);
 		let lp_of_bob = 0u128;
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &BOB), lp_of_bob);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB),
+			lp_of_bob
+		);
 		assert_eq!(lp_total, lp_of_alice_2 + lp_of_bob);
 
 		assert_eq!(DexPallet::k_last(sorted_pair), 101 * DOT_UNIT * 101 * BTC_UNIT);
@@ -201,11 +208,6 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
 
 		let total_supply_dot: u128 = 1 * DOT_UNIT;
 		let total_supply_btc: u128 = 1 * BTC_UNIT;
@@ -222,8 +224,11 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 		));
 
 		let lp_of_alice_0 = 316227766016;
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &ALICE), 316227766016);
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &BOB), 0);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
+			316227766016
+		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
 		assert_eq!(DexPallet::k_last(sorted_pair), DOT_UNIT * BTC_UNIT);
 
 		// 3. second add_liquidity
@@ -243,8 +248,11 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 		));
 
 		let lp_of_alice_1 = 16127616066816u128;
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &ALICE), lp_of_alice_1);
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &BOB), 0);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
+			lp_of_alice_1
+		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
 		assert_eq!(DexPallet::k_last(sorted_pair), 51 * DOT_UNIT * 51 * BTC_UNIT);
 
 		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
@@ -267,13 +275,16 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 			100
 		));
 
-		let lp_total = DexPallet::lp_total_supply(LP_DOT_BTC);
+		let lp_total = <Test as Config>::MultiAssetsHandler::total_supply(LP_DOT_BTC);
 		assert_eq!(
-			DexPallet::lp_balance_of(LP_DOT_BTC, &ALICE),
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
 			lp_of_alice_1 - lp_of_alice_0
 		);
 		let lp_of_bob = 0u128;
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &BOB), lp_of_bob);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB),
+			lp_of_bob
+		);
 		assert_eq!(lp_total, lp_of_alice_1 - lp_of_alice_0 + lp_of_bob);
 		assert_eq!(DexPallet::k_last(sorted_pair), 50 * DOT_UNIT * 50 * BTC_UNIT);
 	});
@@ -296,11 +307,6 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, u128::MAX));
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
 
 		let total_supply_dot: u128 = 1 * DOT_UNIT;
 		let total_supply_btc: u128 = 1 * BTC_UNIT;
@@ -317,8 +323,11 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 		));
 
 		let lp_of_alice_0 = 316227766016;
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &ALICE), lp_of_alice_0);
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &BOB), 0);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
+			lp_of_alice_0
+		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
 		assert_eq!(DexPallet::k_last(sorted_pair), DOT_UNIT * BTC_UNIT);
 
 		// 3. swap
@@ -331,8 +340,11 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 			&CHARLIE,
 		));
 
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &ALICE), lp_of_alice_0);
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &BOB), 0);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
+			lp_of_alice_0
+		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
 		assert_eq!(DexPallet::k_last(sorted_pair), DOT_UNIT * BTC_UNIT);
 
 		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
@@ -350,7 +362,7 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 
 		assert!(root_k > root_k_last);
 
-		let lp_total = DexPallet::lp_total_supply(LP_DOT_BTC);
+		let lp_total = <Test as Config>::MultiAssetsHandler::total_supply(LP_DOT_BTC);
 		let numerator = lp_total.saturating_mul(root_k.saturating_sub(root_k_last));
 		let denominator = root_k.saturating_mul(5).saturating_add(root_k_last);
 		let expect_fee = numerator.checked_div(denominator).unwrap_or_default();
@@ -367,13 +379,19 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 			100
 		));
 
-		let lp_total = DexPallet::lp_total_supply(LP_DOT_BTC);
+		let lp_total = <Test as Config>::MultiAssetsHandler::total_supply(LP_DOT_BTC);
 		let lp_of_alice_2 = 474361420078u128;
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &ALICE), lp_of_alice_2);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
+			lp_of_alice_2
+		);
 
 		let lp_of_bob = 39548424u128;
 		assert_eq!(expect_fee, lp_of_bob);
-		assert_eq!(DexPallet::lp_balance_of(LP_DOT_BTC, &BOB), expect_fee);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB),
+			expect_fee
+		);
 		assert_eq!(lp_total, lp_of_alice_2 + lp_of_bob);
 
 		assert_eq!(DexPallet::k_last(sorted_pair), 225338007000000000000000);

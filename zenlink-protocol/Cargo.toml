@@ -29,6 +29,9 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "relea
 # Cumulus
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.9" }
 
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
+
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.9" }
 sp-io = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.9" }
@@ -50,5 +53,8 @@ std = [
 
     "xcm/std",
     "xcm-executor/std",
-    "cumulus-primitives-core/std"
+    "cumulus-primitives-core/std",
+
+    "orml-traits/std",
+    "orml-tokens/std",
 ]

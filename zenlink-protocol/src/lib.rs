@@ -36,7 +36,6 @@ use xcm_executor::{
 
 mod fee;
 mod foreign;
-mod liquidity;
 mod multiassets;
 mod primitives;
 mod rpc;
@@ -105,23 +104,6 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn foreign_list)]
 	pub type ForeignList<T: Config> = StorageValue<_, Vec<AssetId>, ValueQuery>;
-
-	/// Swap liquidity storage
-	#[pallet::storage]
-	#[pallet::getter(fn lp_metadata)]
-	/// TWOX-NOTE: `AssetId` is trusted, so this is safe.
-	/// (AssetId, AssetId) -> (PairAccountId, TotalSupply)
-	pub type LiquidityMeta<T: Config> = StorageMap<_, Twox64Concat, (AssetId, AssetId), (T::AccountId, AssetBalance)>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn lp_ledger)]
-	/// ((AssetId, AssetId), AccountId) -> AssetBalance
-	pub type LiquidityLedger<T: Config> =
-		StorageMap<_, Blake2_128Concat, ((AssetId, AssetId), T::AccountId), AssetBalance, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn lp_pairs)]
-	pub type LiquidityPairs<T: Config> = StorageValue<_, Vec<(AssetId, AssetId)>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn k_last)]
@@ -214,8 +196,8 @@ pub mod pallet {
 			AssetBalance,
 			AssetBalance,
 		),
-		/// Transact in trading \[owner, recipient, swap_path, balance_in, balance_out\]
-		AssetSwap(T::AccountId, T::AccountId, Vec<AssetId>, AssetBalance, AssetBalance),
+		/// Transact in trading \[owner, recipient, swap_path, balances\]
+		AssetSwap(T::AccountId, T::AccountId, Vec<AssetId>, Vec<AssetBalance>),
 
 		/// Transfer by xcm
 
@@ -439,44 +421,6 @@ pub mod pallet {
 					Err(Error::<T>::ExecutionFailed.into())
 				}
 			}
-		}
-
-		/// Create pair by two assets.
-		///
-		/// The order of foreign dot effect result.
-		///
-		/// # Arguments
-		///
-		/// - `asset_0`: Asset which make up Pair
-		/// - `asset_1`: Asset which make up Pair
-		#[pallet::weight(1_000_000)]
-		pub fn create_pair(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			ensure!(
-				asset_0.is_support() && asset_1.is_support(),
-				Error::<T>::UnsupportedAssetType
-			);
-			ensure!(asset_0 != asset_1, Error::<T>::DeniedCreatePair);
-			ensure!(T::MultiAssetsHandler::is_exists(asset_0), Error::<T>::AssetNotExists);
-			ensure!(T::MultiAssetsHandler::is_exists(asset_1), Error::<T>::AssetNotExists);
-
-			let (asset_0, asset_1) = Self::sort_asset_id(asset_0, asset_1);
-
-			let pair_account = Self::pair_account_id(asset_0, asset_1);
-
-			LiquidityMeta::<T>::try_mutate((asset_0, asset_1), |meta| {
-				if meta.is_none() {
-					*meta = Some((pair_account, Default::default()));
-
-					Self::mutate_lp_pairs(asset_0, asset_1);
-
-					Self::deposit_event(Event::PairCreated(who, asset_0, asset_1));
-
-					Ok(())
-				} else {
-					Err(Error::<T>::PairAlreadyExists.into())
-				}
-			})
 		}
 
 		/// Provide liquidity to a pair.
