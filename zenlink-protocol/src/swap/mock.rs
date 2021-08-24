@@ -172,7 +172,7 @@ fn asset_id_to_currency_id(asset_id: &AssetId) -> Result<CurrencyId, ()> {
 		let token_id = asset_id.asset_index as u8;
 
 		Ok(CurrencyId::Token(token_id))
-	}
+	};
 }
 
 impl<Local> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>

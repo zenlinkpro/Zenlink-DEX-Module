@@ -1,7 +1,7 @@
 // Copyright 2020-2021 Zenlink
 // Licensed under GPL-3.0.
 
-use sp_std::{marker::PhantomData, convert::TryInto};
+use sp_std::{convert::TryInto, marker::PhantomData};
 
 use frame_support::dispatch::{DispatchError, DispatchResult};
 use orml_traits::MultiCurrency;
@@ -13,8 +13,8 @@ use super::{
 };
 
 pub use zenlink_protocol::{
-	make_x2_location, AssetBalance, AssetId, MultiAssetsHandler, PairInfo, TransactorAdaptor, TrustedParas,
-	ZenlinkMultiAssets,LocalAssetHandler, LIQUIDITY, LOCAL
+	make_x2_location, AssetBalance, AssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo, TransactorAdaptor,
+	TrustedParas, ZenlinkMultiAssets, LIQUIDITY, LOCAL,
 };
 
 use dev_parachain_primitives::CurrencyId;
@@ -114,9 +114,11 @@ where
 		target: &AccountId,
 		amount: AssetBalance,
 	) -> DispatchResult {
-		asset_id.try_into().map_or(Err(DispatchError::CannotLookup), |currency_id| {
-			Local::transfer(currency_id, origin, target, amount)
-		})
+		asset_id
+			.try_into()
+			.map_or(Err(DispatchError::CannotLookup), |currency_id| {
+				Local::transfer(currency_id, origin, target, amount)
+			})
 	}
 
 	fn local_deposit(
