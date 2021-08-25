@@ -44,11 +44,11 @@ impl<T: Config> Pallet<T> {
 
 		let index = currency_0 + currency_1 + discr;
 
-		return AssetId {
+		AssetId {
 			chain_id: T::SelfParaId::get(),
 			asset_type: LOCAL,
 			asset_index: index,
-		};
+		}
 	}
 
 	#[allow(clippy::too_many_arguments)]
