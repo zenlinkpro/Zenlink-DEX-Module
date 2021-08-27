@@ -118,7 +118,7 @@ impl TryInto<CurrencyId> for AssetId {
 
 	fn try_into(self) -> Result<CurrencyId, Self::Error> {
 		let id = self.asset_index;
-		let c_discr = (id >> 8) as u32;
+		let c_discr = ((id & 0x0000_0000_0000_ff00) >> 8) as u32;
 		let _index = (0x0000_00ff & id) as u8;
 		match c_discr {
 			0 => Ok(CurrencyId::Native(TokenSymbol::try_from(_index)?)),
