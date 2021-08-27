@@ -163,10 +163,10 @@ pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 type AccountId = u128;
 
 fn asset_id_to_currency_id(asset_id: &AssetId) -> Result<CurrencyId, ()> {
-	let discr = (asset_id.asset_index & 0x0000_0000_ffff_0000) >> 16;
+	let discr = (asset_id.asset_index & 0x0000_0000_0000_ff00) >> 8;
 	return if discr == 6 {
-		let token0_id = ((asset_id.asset_index & 0x0000_ffff_0000_0000) >> 32) as u8;
-		let token1_id = ((asset_id.asset_index & 0xffff_0000_0000_0000) >> 48) as u8;
+		let token0_id = ((asset_id.asset_index & 0x0000_0000_ffff_0000) >> 16) as u8;
+		let token1_id = ((asset_id.asset_index & 0x0000_ffff_0000_0000) >> 16) as u8;
 		Ok(CurrencyId::ZenlinkLp(token0_id, token1_id))
 	} else {
 		let token_id = asset_id.asset_index as u8;

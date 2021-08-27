@@ -38,9 +38,9 @@ impl<T: Config> Pallet<T> {
 
 	pub fn lp_asset_id(asset_0: &AssetId, asset_1: &AssetId) -> AssetId {
 		let (asset_0, asset_1) = Self::sort_asset_id(*asset_0, *asset_1);
-		let currency_0 = (asset_0.asset_index & 0x0000_0000_0000_ffff) << 32;
-		let currency_1 = (asset_1.asset_index & 0x0000_0000_0000_ffff) << 48;
-		let discr = 6u64 << 16;
+		let currency_0 = (asset_0.asset_index & 0x0000_0000_0000_ffff) << 16;
+		let currency_1 = (asset_1.asset_index & 0x0000_0000_0000_ffff) << 32;
+		let discr = 6u64 << 8;
 
 		let index = currency_0 + currency_1 + discr;
 
