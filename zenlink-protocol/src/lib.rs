@@ -131,8 +131,9 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn fee_meta)]
-	/// (fee_admin, Option<fee_receiver>, fee_point)
-	pub(super) type FeeMeta<T: Config> = StorageValue<_, (T::AccountId, Option<T::AccountId>, u8), ValueQuery>;
+	/// (fee_admin, Option<fee_receiver>, fee_point, admin_candidate)
+	pub(super) type FeeMeta<T: Config> =
+	StorageValue<_, (T::AccountId, Option<T::AccountId>, u8, Option<T::AccountId>), ValueQuery>;
 
 	#[pallet::genesis_config]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
@@ -162,7 +163,7 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			<FeeMeta<T>>::put((&self.fee_admin, &self.fee_receiver, &self.fee_point));
+			<FeeMeta<T>>::put((&self.fee_admin, &self.fee_receiver, &self.fee_point, &self.fee_receiver));
 		}
 	}
 
@@ -214,8 +215,8 @@ pub mod pallet {
 			AssetBalance,
 			AssetBalance,
 		),
-		/// Transact in trading \[owner, recipient, swap_path, balance_in, balance_out\]
-		AssetSwap(T::AccountId, T::AccountId, Vec<AssetId>, AssetBalance, AssetBalance),
+		/// Transact in trading \[owner, recipient, swap_path, balances\]
+		AssetSwap(T::AccountId, T::AccountId, Vec<AssetId>, Vec<AssetBalance>),
 
 		/// Transfer by xcm
 
@@ -226,6 +227,8 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Require the admin who can reset the admin and receiver of the protocol fee.
 		RequireProtocolAdmin,
+		/// Require the admin candidate who can become new admin after confirm.
+		RequireProtocolAdminCandidate,
 		/// Invalid fee_point
 		InvalidFeePoint,
 		/// Unsupported AssetId by this ZenlinkProtocol Version.
@@ -275,13 +278,16 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Set the new admin of the protocol fee.
+		/// Set the admin candidate of the protocol fee.
 		///
 		/// # Arguments
 		///
-		/// - `new_admin`: The new admin account.
+		/// - `admin_candidate`: The new admin candidate.
 		#[pallet::weight(1_000_000)]
-		pub fn set_fee_admin(origin: OriginFor<T>, new_admin: <T::Lookup as StaticLookup>::Source) -> DispatchResult {
+		pub fn set_fee_admin_candidate(
+			origin: OriginFor<T>,
+			admin_candidate: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResult {
 			if let Ok(frame_system::RawOrigin::Root) = origin.clone().into() {
 				// do nothing
 			} else {
@@ -289,9 +295,23 @@ pub mod pallet {
 				ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
 			}
 
-			let new_admin = T::Lookup::lookup(new_admin)?;
+			let new_admin_candidate = T::Lookup::lookup(admin_candidate)?;
 
-			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).0 = new_admin);
+			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).3 = Some(new_admin_candidate));
+
+			Ok(())
+		}
+
+		/// Verify the identity of the candidate
+		#[pallet::weight(1_000_000)]
+		pub fn admin_candidate_confirm(origin: OriginFor<T>) -> DispatchResult {
+			let origin = ensure_signed(origin)?;
+			ensure!(
+				Some(origin.clone()) == Self::fee_meta().3,
+				Error::<T>::RequireProtocolAdminCandidate
+			);
+
+			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).0 = origin);
 
 			Ok(())
 		}

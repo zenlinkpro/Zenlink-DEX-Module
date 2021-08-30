@@ -35,27 +35,33 @@ const LP_DOT_BTC: AssetId = AssetId {
 #[test]
 fn fee_meta_getter_should_work() {
 	new_test_ext().execute_with(|| {
-		let (fee_admin, fee_receiver, fee_point) = DexPallet::fee_meta();
+		let (fee_admin, fee_receiver, fee_point, fee_admin_candidate) = DexPallet::fee_meta();
 
 		assert_eq!(fee_admin, ALICE);
 		assert_eq!(fee_receiver, None);
 		assert_eq!(fee_point, 5);
+		assert_eq!(fee_admin_candidate, None);
 	})
 }
 
 #[test]
 fn fee_meta_setter_should_not_work() {
 	new_test_ext().execute_with(|| {
-		let (fee_admin, fee_receiver, fee_point) = DexPallet::fee_meta();
+		let (fee_admin, fee_receiver, fee_point, fee_admin_candidate) = DexPallet::fee_meta();
 
 		assert_eq!(fee_admin, ALICE);
 		assert_eq!(fee_receiver, None);
 		assert_eq!(fee_point, 5);
+		assert_eq!(fee_admin_candidate, None);
 
 		assert_noop!(
-			DexPallet::set_fee_admin(Origin::signed(BOB), BOB),
+			DexPallet::set_fee_admin_candidate(Origin::signed(BOB), BOB),
 			Error::<Test>::RequireProtocolAdmin
 		);
+
+		assert_ok!(DexPallet::set_fee_admin_candidate(Origin::signed(ALICE), BOB));
+		let (_, _, _, fee_admin_candidate) = DexPallet::fee_meta();
+		assert_eq!(fee_admin_candidate, Some(BOB));
 
 		assert_noop!(
 			DexPallet::set_fee_receiver(Origin::signed(BOB), Some(BOB)),
@@ -77,20 +83,33 @@ fn fee_meta_setter_should_not_work() {
 #[test]
 fn fee_meta_setter_should_work() {
 	new_test_ext().execute_with(|| {
-		let (fee_admin, fee_receiver, fee_point) = DexPallet::fee_meta();
+		let (fee_admin, fee_receiver, fee_point, fee_admin_candidate) = DexPallet::fee_meta();
 
 		assert_eq!(fee_admin, ALICE);
 		assert_eq!(fee_receiver, None);
 		assert_eq!(fee_point, 5);
+		assert_eq!(fee_admin_candidate, None);
 
-		assert_ok!(DexPallet::set_fee_admin(Origin::signed(ALICE), BOB));
+		assert_ok!(DexPallet::set_fee_admin_candidate(Origin::signed(ALICE), BOB));
+		assert_noop!(
+			DexPallet::admin_candidate_confirm(Origin::signed(CHARLIE)),
+			Error::<Test>::RequireProtocolAdminCandidate
+		);
+
+		assert_ok!(DexPallet::admin_candidate_confirm(Origin::signed(BOB)));
 		assert_ok!(DexPallet::set_fee_receiver(Origin::signed(BOB), Some(BOB)));
 		assert_ok!(DexPallet::set_fee_point(Origin::signed(BOB), 0));
 
-		let (fee_admin, fee_receiver, fee_point) = DexPallet::fee_meta();
+		assert_noop!(
+			DexPallet::set_fee_admin_candidate(Origin::signed(ALICE), BOB),
+			Error::<Test>::RequireProtocolAdmin
+		);
+
+		let (fee_admin, fee_receiver, fee_point, fee_admin_candidate) = DexPallet::fee_meta();
 		assert_eq!(fee_admin, BOB);
 		assert_eq!(fee_receiver, Some(BOB));
 		assert_eq!(fee_point, 0);
+		assert_eq!(fee_admin_candidate, Some(BOB));
 	})
 }
 

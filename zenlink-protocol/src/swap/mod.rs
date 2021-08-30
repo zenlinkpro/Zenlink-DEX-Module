@@ -242,8 +242,7 @@ impl<T: Config> Pallet<T> {
 			who.clone(),
 			recipient.clone(),
 			Vec::from(path),
-			amount_in,
-			amounts[amounts.len() - 1],
+			amounts,
 		));
 
 		Ok(())
@@ -270,8 +269,7 @@ impl<T: Config> Pallet<T> {
 			who.clone(),
 			recipient.clone(),
 			Vec::from(path),
-			amounts[0],
-			amount_out,
+			amounts,
 		));
 
 		Ok(())
