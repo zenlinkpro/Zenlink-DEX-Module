@@ -128,15 +128,9 @@ impl<AccountId> OtherAssetHandler<AccountId> for () {
 }
 
 pub trait ExportZenlink<AccountId> {
-	fn get_amount_in_by_path(
-		amount_out: AssetBalance,
-		path: &[AssetId]
-	) -> Result<Vec<AssetBalance>, DispatchError>;
+	fn get_amount_in_by_path(amount_out: AssetBalance, path: &[AssetId]) -> Result<Vec<AssetBalance>, DispatchError>;
 
-	fn get_amount_out_by_path(
-		amount_in: AssetBalance,
-		path: &[AssetId]
-	) -> Result<Vec<AssetBalance>, DispatchError>;
+	fn get_amount_out_by_path(amount_in: AssetBalance, path: &[AssetId]) -> Result<Vec<AssetBalance>, DispatchError>;
 
 	fn inner_swap_assets_for_exact_assets(
 		who: &AccountId,
@@ -173,64 +167,4 @@ pub trait ExportZenlink<AccountId> {
 		amount_1_min: AssetBalance,
 		recipient: &AccountId,
 	) -> DispatchResult;
-}
-
-impl<AccountId> ExportZenlink<AccountId> for () {
-	fn get_amount_in_by_path(
-		_amount_out: AssetBalance,
-		_path: &[AssetId]
-	) -> Result<Vec<AssetBalance>, DispatchError> {
-		unimplemented!()
-	}
-
-	fn get_amount_out_by_path(
-		_amount_in: AssetBalance,
-		_path: &[AssetId]
-	) -> Result<Vec<AssetBalance>, DispatchError> {
-		unimplemented!()
-	}
-
-	fn inner_swap_assets_for_exact_assets(
-		_who: &AccountId,
-	    _amount_out: AssetBalance,
-		_amount_in_max: AssetBalance,
-		_path: &[AssetId],
-		_recipient: &AccountId
-	) -> DispatchResult {
-		unimplemented!()
-	}
-
-	fn inner_swap_exact_assets_for_assets(
-		_who: &AccountId,
-		_amount_in: AssetBalance,
-		_amount_out_min: AssetBalance,
-		_path: &[AssetId],
-		_recipient: &AccountId
-	) -> DispatchResult {
-		unimplemented!()
-	}
-
-	fn inner_add_liquidity(
-		_who: &AccountId,
-		_asset_0: AssetId,
-		_asset_1: AssetId,
-		_amount_0_desired: AssetBalance,
-		_amount_1_desired: AssetBalance,
-		_amount_0_min: AssetBalance,
-		_amount_1_min: AssetBalance
-	) -> DispatchResult {
-		unimplemented!()
-	}
-
-	fn inner_remove_liquidity(
-		_who: &AccountId,
-		_asset_0: AssetId,
-		_asset_1: AssetId,
-		_remove_liquidity: AssetBalance,
-		_amount_0_min: AssetBalance,
-		_amount_1_min: AssetBalance,
-		_recipient: &AccountId
-	) -> DispatchResult {
-		unimplemented!()
-	}
 }

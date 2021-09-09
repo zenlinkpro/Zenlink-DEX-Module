@@ -24,5 +24,20 @@ sp_api::decl_runtime_apis! {
 			asset_0: AssetId,
 			asset_1: AssetId
 		) -> Option<PairInfo<AccountId, AssetBalance>>;
+
+		//buy amount asset price
+		fn get_amount_in_price(supply: AssetBalance, path: Vec<AssetId>) -> AssetBalance;
+
+		//sell amount asset price
+		fn get_amount_out_price(supply: AssetBalance, path: Vec<AssetId>) -> AssetBalance;
+
+		fn get_estimate_lptoken(
+			asset_0: AssetId,
+			asset_1: AssetId,
+			amount_0_desired: AssetBalance,
+			amount_1_desired: AssetBalance,
+			amount_0_min: AssetBalance,
+			amount_1_min: AssetBalance,
+		) -> AssetBalance;
 	 }
 }

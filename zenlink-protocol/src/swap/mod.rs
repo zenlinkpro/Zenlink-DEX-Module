@@ -9,6 +9,9 @@
 //! mechanism refers to the design of Uniswap V2.
 
 use super::*;
+use crate::primitives::PairMetadata;
+use crate::primitives::PairStatus::{Bootstrap, Enable};
+use frame_support::sp_runtime::FixedPointNumber;
 
 #[cfg(test)]
 mod mock;
@@ -36,6 +39,13 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
+	pub(crate) fn mutate_lp_pairs(asset_0: AssetId, asset_1: AssetId) {
+		LiquidityPairs::<T>::insert(
+			Self::sort_asset_id(asset_0, asset_1),
+			Some(Self::lp_asset_id(&asset_0, &asset_1)),
+		)
+	}
+
 	pub fn lp_asset_id(asset_0: &AssetId, asset_1: &AssetId) -> AssetId {
 		let (asset_0, asset_1) = Self::sort_asset_id(*asset_0, *asset_1);
 		let currency_0 = (asset_0.asset_index & 0x0000_0000_0000_ffff) << 16;
@@ -44,11 +54,11 @@ impl<T: Config> Pallet<T> {
 
 		let index = currency_0 + currency_1 + discr;
 
-		AssetId {
+		return AssetId {
 			chain_id: T::SelfParaId::get(),
 			asset_type: LOCAL,
 			asset_index: index,
-		}
+		};
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -61,78 +71,81 @@ impl<T: Config> Pallet<T> {
 		amount_0_min: AssetBalance,
 		amount_1_min: AssetBalance,
 	) -> DispatchResult {
-		let pair_account = Self::pair_account_id(asset_0, asset_1);
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		PairStatuses::<T>::try_mutate(pair, |status| {
+			if let Enable(parameter) = status {
+				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
+				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
-		let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &pair_account);
-		let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &pair_account);
+				let (amount_0, amount_1) = Self::calculate_added_amount(
+					amount_0_desired,
+					amount_1_desired,
+					amount_0_min,
+					amount_1_min,
+					reserve_0,
+					reserve_1,
+				)?;
 
-		let (amount_0, amount_1) = Self::calculate_added_amount(
-			amount_0_desired,
-			amount_1_desired,
-			amount_0_min,
-			amount_1_min,
-			reserve_0,
-			reserve_1,
-		)?;
+				let balance_asset_0 = T::MultiAssetsHandler::balance_of(asset_0, who);
+				let balance_asset_1 = T::MultiAssetsHandler::balance_of(asset_1, who);
+				ensure!(
+					balance_asset_0 >= amount_0 && balance_asset_1 >= amount_1,
+					Error::<T>::InsufficientAssetBalance
+				);
 
-		let balance_asset_0 = T::MultiAssetsHandler::balance_of(asset_0, who);
-		let balance_asset_1 = T::MultiAssetsHandler::balance_of(asset_1, who);
-		ensure!(
-			balance_asset_0 >= amount_0 && balance_asset_1 >= amount_1,
-			Error::<T>::InsufficientAssetBalance
-		);
+				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
-		let lp_asset_id = Self::lp_asset_id(&asset_0, &asset_1);
+				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, parameter.total_supply);
+				if let Some(fee_to) = Self::fee_meta().1 {
+					if mint_fee > 0 && Self::fee_meta().2 > 0 {
+						//Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
+						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee).map(|_| mint_fee)?;
+						parameter.total_supply = parameter
+							.total_supply
+							.checked_add(mint_fee)
+							.ok_or(Error::<T>::Overflow)?;
+					}
+				}
 
-		let mut total_liquidity = T::MultiAssetsHandler::total_supply(lp_asset_id);
+				let mint_liquidity =
+					Self::calculate_liquidity(amount_0, amount_1, reserve_0, reserve_1, parameter.total_supply);
+				ensure!(mint_liquidity > Zero::zero(), Error::<T>::Overflow);
 
-		let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, total_liquidity);
-		if let Some(fee_to) = Self::fee_meta().1 {
-			if mint_fee > 0 && Self::fee_meta().2 > 0 {
-				T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee).map(|_| mint_fee)?;
+				parameter.total_supply = parameter
+					.total_supply
+					.checked_add(mint_liquidity)
+					.ok_or(Error::<T>::Overflow)?;
 
-				let old_total_liquidity = total_liquidity;
+				T::MultiAssetsHandler::deposit(lp_asset_id, who, mint_liquidity).map(|_| mint_liquidity)?;
 
-				total_liquidity = total_liquidity.checked_add(mint_fee).ok_or(Error::<T>::Overflow)?;
+				T::MultiAssetsHandler::transfer(asset_0, who, &parameter.pair_account, amount_0)?;
+				T::MultiAssetsHandler::transfer(asset_1, who, &parameter.pair_account, amount_1)?;
 
-				ensure!(total_liquidity > old_total_liquidity, Error::<T>::Overflow);
+				if let Some(_fee_to) = Self::fee_meta().1 {
+					if Self::fee_meta().2 > 0 {
+						// update reserve_0 and reserve_1
+						let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
+						let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
+
+						// We allow reserve_0.saturating_mul(reserve_1) to overflow
+						Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
+					}
+				}
+
+				Self::deposit_event(Event::LiquidityAdded(
+					who.clone(),
+					asset_0,
+					asset_1,
+					amount_0,
+					amount_1,
+					mint_liquidity,
+				));
+
+				Ok(())
+			} else {
+				Err(Error::<T>::PairNotExists.into())
 			}
-		}
-
-		let mint_liquidity = Self::calculate_liquidity(amount_0, amount_1, reserve_0, reserve_1, total_liquidity);
-
-		ensure!(mint_liquidity > Zero::zero(), Error::<T>::Overflow);
-
-		total_liquidity
-			.checked_add(mint_liquidity)
-			.ok_or(Error::<T>::Overflow)?;
-
-		T::MultiAssetsHandler::deposit(lp_asset_id, who, mint_liquidity).map(|_| mint_liquidity)?;
-
-		T::MultiAssetsHandler::transfer(asset_0, who, &pair_account, amount_0)?;
-		T::MultiAssetsHandler::transfer(asset_1, who, &pair_account, amount_1)?;
-
-		if let Some(_fee_to) = Self::fee_meta().1 {
-			if Self::fee_meta().2 > 0 {
-				// update reserve_0 and reserve_1
-				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &pair_account);
-				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &pair_account);
-
-				// We allow reserve_0.saturating_mul(reserve_1) to overflow
-				Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
-			}
-		}
-
-		Self::deposit_event(Event::LiquidityAdded(
-			who.clone(),
-			asset_0,
-			asset_1,
-			amount_0,
-			amount_1,
-			mint_liquidity,
-		));
-
-		Ok(())
+		})
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -145,64 +158,71 @@ impl<T: Config> Pallet<T> {
 		amount_1_min: AssetBalance,
 		recipient: &T::AccountId,
 	) -> DispatchResult {
-		let pair_account = Self::pair_account_id(asset_0, asset_1);
-		let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &pair_account);
-		let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &pair_account);
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		PairStatuses::<T>::try_mutate(pair, |status| {
+			if let Enable(parameter) = status {
+				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
+				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
-		let lp_asset_id = Self::lp_asset_id(&asset_0, &asset_1);
-		let mut total_liquidity = T::MultiAssetsHandler::total_supply(lp_asset_id);
+				let amount_0 = Self::calculate_share_amount(remove_liquidity, parameter.total_supply, reserve_0);
+				let amount_1 = Self::calculate_share_amount(remove_liquidity, parameter.total_supply, reserve_1);
 
-		let amount_0 = Self::calculate_share_amount(remove_liquidity, total_liquidity, reserve_0);
-		let amount_1 = Self::calculate_share_amount(remove_liquidity, total_liquidity, reserve_1);
+				ensure!(
+					amount_0 >= amount_0_min && amount_1 >= amount_1_min,
+					Error::<T>::InsufficientTargetAmount
+				);
 
-		ensure!(
-			amount_0 >= amount_0_min && amount_1 >= amount_1_min,
-			Error::<T>::InsufficientTargetAmount
-		);
+				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
-		let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, total_liquidity);
-		if let Some(fee_to) = Self::fee_meta().1 {
-			if mint_fee > 0 && Self::fee_meta().2 > 0 {
-				T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee).map(|_| mint_fee)?;
+				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, parameter.total_supply);
+				if let Some(fee_to) = Self::fee_meta().1 {
+					if mint_fee > 0 && Self::fee_meta().2 > 0 {
+						//Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
+						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee).map(|_| mint_fee)?;
+						parameter.total_supply = parameter
+							.total_supply
+							.checked_add(mint_fee)
+							.ok_or(Error::<T>::Overflow)?;
+					}
+				}
 
-				let old_total_liquidity = total_liquidity;
+				parameter.total_supply = parameter
+					.total_supply
+					.checked_sub(remove_liquidity)
+					.ok_or(Error::<T>::InsufficientLiquidity)?;
 
-				total_liquidity = total_liquidity.checked_add(mint_fee).ok_or(Error::<T>::Overflow)?;
+				// Self::mutate_liquidity(asset_0, asset_1, who, remove_liquidity, false)?;
+				T::MultiAssetsHandler::withdraw(lp_asset_id, &who, remove_liquidity).map(|_| remove_liquidity)?;
 
-				ensure!(total_liquidity > old_total_liquidity, Error::<T>::Overflow);
+				T::MultiAssetsHandler::transfer(asset_0, &parameter.pair_account, recipient, amount_0)?;
+				T::MultiAssetsHandler::transfer(asset_1, &parameter.pair_account, recipient, amount_1)?;
+
+				if let Some(_fee_to) = Self::fee_meta().1 {
+					if Self::fee_meta().2 > 0 {
+						// update reserve_0 and reserve_1
+						let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
+						let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
+
+						// We allow reserve_0.saturating_mul(reserve_1) to overflow
+						Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
+					}
+				}
+
+				Self::deposit_event(Event::LiquidityRemoved(
+					who.clone(),
+					recipient.clone(),
+					asset_0,
+					asset_1,
+					amount_0,
+					amount_1,
+					remove_liquidity,
+				));
+
+				Ok(())
+			} else {
+				Err(Error::<T>::PairNotExists.into())
 			}
-		}
-
-		total_liquidity
-			.checked_sub(remove_liquidity)
-			.ok_or(Error::<T>::InsufficientLiquidity)?;
-
-		T::MultiAssetsHandler::withdraw(lp_asset_id, &who, remove_liquidity).map(|_| remove_liquidity)?;
-
-		T::MultiAssetsHandler::transfer(asset_0, &pair_account, recipient, amount_0)?;
-		T::MultiAssetsHandler::transfer(asset_1, &pair_account, recipient, amount_1)?;
-
-		if let Some(_fee_to) = Self::fee_meta().1 {
-			if Self::fee_meta().2 > 0 {
-				// update reserve_0 and reserve_1
-				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &pair_account);
-				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &pair_account);
-
-				// We allow reserve_0.saturating_mul(reserve_1) to overflow
-				Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
-			}
-		}
-
-		Self::deposit_event(Event::LiquidityRemoved(
-			who.clone(),
-			recipient.clone(),
-			asset_0,
-			asset_1,
-			amount_0,
-			amount_1,
-			remove_liquidity,
-		));
-		Ok(())
+		})
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -518,6 +538,12 @@ impl<T: Config> Pallet<T> {
 		amount_1: AssetBalance,
 		recipient: &T::AccountId,
 	) -> DispatchResult {
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		match Self::pair_status(pair) {
+			Enable(_) => Ok(()),
+			_ => Err(Error::<T>::PairNotExists),
+		}?;
+
 		let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &pair_account);
 		let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &pair_account);
 
@@ -534,6 +560,195 @@ impl<T: Config> Pallet<T> {
 			T::MultiAssetsHandler::transfer(asset_1, &pair_account, recipient, amount_1)?;
 		}
 
+		Ok(())
+	}
+
+	pub(crate) fn do_bootstrap_contribute(
+		who: T::AccountId,
+		asset_0: AssetId,
+		asset_1: AssetId,
+		amount_0_contribute: AssetBalance,
+		amount_1_contribute: AssetBalance,
+	) -> DispatchResult {
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		let mut bootstrap_parameter = match Self::pair_status(pair) {
+			PairStatus::Bootstrap(bootstrap_parameter) => bootstrap_parameter,
+			_ => return Err(Error::<T>::NotInBootstrap.into()),
+		};
+		let (amount_0_contribute, amount_1_contribute) = if pair.0 == asset_0 {
+			(amount_0_contribute, amount_1_contribute)
+		} else {
+			(amount_1_contribute, amount_0_contribute)
+		};
+
+		ensure!(
+			amount_0_contribute >= bootstrap_parameter.min_contribution.0
+				|| amount_1_contribute >= bootstrap_parameter.min_contribution.1,
+			Error::<T>::InvalidContributionAmount
+		);
+
+		BootstrapPersonalSupply::<T>::try_mutate((pair, &who), |contribution| {
+			contribution.0 = contribution
+				.0
+				.checked_add(amount_0_contribute)
+				.ok_or(Error::<T>::Overflow)?;
+			contribution.1 = contribution
+				.1
+				.checked_add(amount_1_contribute)
+				.ok_or(Error::<T>::Overflow)?;
+
+			let pair_account = Self::pair_account_id(asset_0, asset_1);
+
+			T::MultiAssetsHandler::transfer(asset_0, &who, &pair_account, amount_0_contribute)?;
+			T::MultiAssetsHandler::transfer(asset_1, &who, &pair_account, amount_1_contribute)?;
+
+			let accumulated_supply_0 = bootstrap_parameter
+				.accumulated_supply
+				.0
+				.checked_add(amount_0_contribute)
+				.ok_or(Error::<T>::Overflow)?;
+
+			let accumulated_supply_1 = bootstrap_parameter
+				.accumulated_supply
+				.1
+				.checked_add(amount_1_contribute)
+				.ok_or(Error::<T>::Overflow)?;
+			bootstrap_parameter.accumulated_supply = (accumulated_supply_0, accumulated_supply_1);
+			PairStatuses::<T>::insert(pair, Bootstrap(bootstrap_parameter));
+
+			Self::deposit_event(Event::BootstrapContribute(
+				who.clone(),
+				pair.0,
+				amount_0_contribute,
+				pair.1,
+				amount_1_contribute,
+			));
+			Ok(())
+		})
+	}
+
+	pub(crate) fn do_end_bootstrap(asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		match Self::pair_status(pair) {
+			Bootstrap(bootstrap_parameter) => {
+				ensure!(
+					frame_system::Pallet::<T>::block_number() >= bootstrap_parameter.end_block_number
+						&& bootstrap_parameter.accumulated_supply.0 >= bootstrap_parameter.target_supply.0
+						&& bootstrap_parameter.accumulated_supply.1 >= bootstrap_parameter.target_supply.1,
+					Error::<T>::UnqualifiedBootstrap
+				);
+
+				let (lp_rate_0, lp_rate_1) = (
+					Rate::one(),
+					Rate::checked_from_rational(
+						bootstrap_parameter.target_supply.0,
+						bootstrap_parameter.target_supply.1,
+					)
+					.ok_or(Error::<T>::Overflow)?,
+				);
+				let lp_from_contribute_0 = lp_rate_0
+					.checked_mul_int(bootstrap_parameter.accumulated_supply.0)
+					.ok_or(Error::<T>::Overflow)?;
+
+				let lp_from_contribute_1 = lp_rate_1
+					.checked_mul_int(bootstrap_parameter.accumulated_supply.1)
+					.ok_or(Error::<T>::Overflow)?;
+
+				let total_lp_supply = lp_from_contribute_0
+					.checked_add(lp_from_contribute_1)
+					.ok_or(Error::<T>::Overflow)?;
+
+				let pair_account = Self::pair_account_id(pair.0, pair.1);
+				//Self::mutate_liquidity(asset_0, asset_1, &pair_account, total_lp_supply, true)?;
+				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
+				T::MultiAssetsHandler::deposit(lp_asset_id, &pair_account, total_lp_supply).map(|_| total_lp_supply)?;
+
+				PairStatuses::<T>::insert(
+					pair,
+					Enable(PairMetadata {
+						pair_account,
+						total_supply: total_lp_supply,
+					}),
+				);
+
+				FreezePairExchangeRates::<T>::insert(pair, (lp_rate_0, lp_rate_1));
+
+				Self::deposit_event(Event::BootstrapEnd(
+					pair.0,
+					pair.1,
+					bootstrap_parameter.accumulated_supply.0,
+					bootstrap_parameter.accumulated_supply.1,
+					total_lp_supply,
+				));
+
+				Ok(())
+			}
+			_ => Err(Error::<T>::NotInBootstrap.into()),
+		}
+	}
+
+	pub(crate) fn do_bootstrap_claim(
+		who: T::AccountId,
+		recipient: T::AccountId,
+		asset_0: AssetId,
+		asset_1: AssetId,
+	) -> DispatchResult {
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		match Self::pair_status(pair) {
+			Enable(_) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
+				if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
+					let (exchange_rate_0, exchange_rate_1) = Self::freeze_pair_exchange_rates(pair);
+					let lp_from_contribute_0 = exchange_rate_0
+						.checked_mul_int(amount_0_contribute)
+						.ok_or(Error::<T>::Overflow)?;
+
+					let lp_from_contribute_1 = exchange_rate_1
+						.checked_mul_int(amount_1_contribute)
+						.ok_or(Error::<T>::Overflow)?;
+
+					let lp_amount = lp_from_contribute_0
+						.checked_add(lp_from_contribute_1)
+						.ok_or(Error::<T>::Overflow)?;
+
+					let pair_account = Self::pair_account_id(pair.0, pair.1);
+					let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
+
+					T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, lp_amount)?;
+
+					Ok(())
+				} else {
+					Err(Error::<T>::ZeroContribute.into())
+				}
+			}),
+			_ => Err(Error::<T>::NotInBootstrap.into()),
+		}
+	}
+
+	pub(crate) fn do_bootstrap_refund(who: T::AccountId, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		match Self::pair_status(pair) {
+			PairStatus::Disable => {
+				BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| -> DispatchResult {
+					if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
+						let pair_account = Self::pair_account_id(asset_0, asset_1);
+
+						T::MultiAssetsHandler::transfer(asset_0, &pair_account, &who, amount_0_contribute)?;
+						T::MultiAssetsHandler::transfer(asset_1, &pair_account, &who, amount_1_contribute)?;
+						*contribution = None;
+						Ok(())
+					} else {
+						Err(Error::<T>::ZeroContribute.into())
+					}
+				})?;
+			}
+			_ => {
+				return Err(Error::<T>::NotInBootstrap.into());
+			}
+		};
+		// If pair is disable and all contributor refunded, it will be removed.
+		if BootstrapPersonalSupply::<T>::iter().next().is_none() {
+			PairStatuses::<T>::remove(pair);
+		}
 		Ok(())
 	}
 }
