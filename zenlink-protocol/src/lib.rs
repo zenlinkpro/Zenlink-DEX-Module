@@ -45,7 +45,11 @@ mod transactor;
 mod transfer;
 
 pub use multiassets::{MultiAssetsHandler, ZenlinkMultiAssets};
-pub use primitives::{AssetBalance, AssetId, PairStatus, Rate, LIQUIDITY, LOCAL, NATIVE, RESERVED};
+pub use primitives::{
+	AssetBalance, AssetId, BootstrapParameter, PairMetadata, PairStatus,
+	PairStatus::{Bootstrap, Disable, Enable},
+	Rate, LIQUIDITY, LOCAL, NATIVE, RESERVED,
+};
 pub use rpc::PairInfo;
 pub use traits::{ExportZenlink, LocalAssetHandler, OtherAssetHandler};
 pub use transactor::{TransactorAdaptor, TrustedParas};
@@ -58,8 +62,6 @@ pub fn make_x2_location(para_id: u32) -> MultiLocation {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::primitives::PairStatus::{Bootstrap, Disable, Enable};
-	use crate::primitives::{BootstrapParameter, PairMetadata};
 	use frame_support::dispatch::DispatchResult;
 	use frame_system::pallet_prelude::*;
 

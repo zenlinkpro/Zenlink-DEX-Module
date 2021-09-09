@@ -9,8 +9,6 @@
 //! mechanism refers to the design of Uniswap V2.
 
 use super::*;
-use crate::primitives::PairMetadata;
-use crate::primitives::PairStatus::{Bootstrap, Enable};
 use frame_support::sp_runtime::FixedPointNumber;
 
 #[cfg(test)]

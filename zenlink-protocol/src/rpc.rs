@@ -8,7 +8,6 @@ use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 use super::*;
-use crate::primitives::PairStatus::{Enable};
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -48,8 +47,8 @@ impl<T: Config> Pallet<T> {
 		amount_1_min: AssetBalance,
 	) -> AssetBalance {
 		let sorted_pair = Self::sort_asset_id(asset_0, asset_1);
-		match Self::pair_status(sorted_pair){
-			Enable(metadata) =>{
+		match Self::pair_status(sorted_pair) {
+			Enable(metadata) => {
 				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &metadata.pair_account);
 				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &metadata.pair_account);
 				Self::calculate_added_amount(
@@ -60,11 +59,11 @@ impl<T: Config> Pallet<T> {
 					reserve_0,
 					reserve_1,
 				)
-					.map_or(Zero::zero(), |(amount_0, amount_1)| {
-						Self::calculate_liquidity(amount_0, amount_1, reserve_0, reserve_1, metadata.total_supply)
-					})
+				.map_or(Zero::zero(), |(amount_0, amount_1)| {
+					Self::calculate_liquidity(amount_0, amount_1, reserve_0, reserve_1, metadata.total_supply)
+				})
 			}
-			_ =>Zero::zero()
+			_ => Zero::zero(),
 		}
 	}
 
@@ -81,7 +80,7 @@ impl<T: Config> Pallet<T> {
 			reserve_0: T::MultiAssetsHandler::balance_of(asset_0, &pair_account),
 			reserve_1: T::MultiAssetsHandler::balance_of(asset_1, &pair_account),
 			lp_asset_id,
-			status: 0
+			status: 0,
 		})
 	}
 
