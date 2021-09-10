@@ -810,7 +810,7 @@ pub mod pallet {
 		#[pallet::weight(1_000_000)]
 		#[frame_support::transactional]
 		pub fn bootstrap_end(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
-			ensure_root(origin)?;
+			ensure_signed(origin)?;
 
 			Self::mutate_lp_pairs(asset_0, asset_1);
 

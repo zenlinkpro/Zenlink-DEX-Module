@@ -633,7 +633,7 @@ fn bootstrap_contribute_end_should_work() {
 		));
 
 		assert_noop!(
-			DexPallet::bootstrap_end(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID),
+			DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID),
 			Error::<Test>::UnqualifiedBootstrap
 		);
 
@@ -647,7 +647,7 @@ fn bootstrap_contribute_end_should_work() {
 		));
 
 		assert_noop!(
-			DexPallet::bootstrap_end(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID),
+			DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID),
 			Error::<Test>::UnqualifiedBootstrap
 		);
 
@@ -660,7 +660,7 @@ fn bootstrap_contribute_end_should_work() {
 			1000,
 		));
 
-		assert_ok!(DexPallet::bootstrap_end(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID));
+		assert_ok!(DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID));
 	})
 }
 
@@ -705,7 +705,7 @@ fn bootstrap_contribute_claim_reward_should_work() {
 			1000,
 		));
 
-		assert_ok!(DexPallet::bootstrap_end(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID));
+		assert_ok!(DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID));
 
 		let total_supply = 20 * DOT_UNIT + ((20 * DOT_UNIT) / (2 * BTC_UNIT)) * 2 * BTC_UNIT;
 
