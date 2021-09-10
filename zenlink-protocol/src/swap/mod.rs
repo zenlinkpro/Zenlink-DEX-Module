@@ -94,8 +94,8 @@ impl<T: Config> Pallet<T> {
 				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
 				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, parameter.total_supply);
-				if let Some(fee_to) = Self::fee_meta().1 {
-					if mint_fee > 0 && Self::fee_meta().2 > 0 {
+				if let Some(fee_to) = Self::fee_meta().0 {
+					if mint_fee > 0 && Self::fee_meta().1 > 0 {
 						//Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
 						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee).map(|_| mint_fee)?;
 						parameter.total_supply = parameter
@@ -119,8 +119,8 @@ impl<T: Config> Pallet<T> {
 				T::MultiAssetsHandler::transfer(asset_0, who, &parameter.pair_account, amount_0)?;
 				T::MultiAssetsHandler::transfer(asset_1, who, &parameter.pair_account, amount_1)?;
 
-				if let Some(_fee_to) = Self::fee_meta().1 {
-					if Self::fee_meta().2 > 0 {
+				if let Some(_fee_to) = Self::fee_meta().0 {
+					if Self::fee_meta().1 > 0 {
 						// update reserve_0 and reserve_1
 						let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
 						let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
@@ -173,8 +173,8 @@ impl<T: Config> Pallet<T> {
 				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
 				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, parameter.total_supply);
-				if let Some(fee_to) = Self::fee_meta().1 {
-					if mint_fee > 0 && Self::fee_meta().2 > 0 {
+				if let Some(fee_to) = Self::fee_meta().0 {
+					if mint_fee > 0 && Self::fee_meta().1 > 0 {
 						//Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
 						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee).map(|_| mint_fee)?;
 						parameter.total_supply = parameter
@@ -195,8 +195,8 @@ impl<T: Config> Pallet<T> {
 				T::MultiAssetsHandler::transfer(asset_0, &parameter.pair_account, recipient, amount_0)?;
 				T::MultiAssetsHandler::transfer(asset_1, &parameter.pair_account, recipient, amount_1)?;
 
-				if let Some(_fee_to) = Self::fee_meta().1 {
-					if Self::fee_meta().2 > 0 {
+				if let Some(_fee_to) = Self::fee_meta().0 {
+					if Self::fee_meta().1 > 0 {
 						// update reserve_0 and reserve_1
 						let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
 						let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
@@ -320,14 +320,14 @@ impl<T: Config> Pallet<T> {
 		let new_k_last = Self::k_last(Self::sort_asset_id(asset_0, asset_1));
 		let mut mint_fee: AssetBalance = 0;
 
-		if let Some(_fee_to) = Self::fee_meta().1 {
-			if new_k_last != 0 && Self::fee_meta().2 > 0 {
+		if let Some(_fee_to) = Self::fee_meta().0 {
+			if new_k_last != 0 && Self::fee_meta().1 > 0 {
 				// u128 support integer_sqrt, but U256 not support
 				// thus we allow reserve_0.saturating_mul(reserve_1) to overflow
 				let root_k = U256::from(reserve_0.saturating_mul(reserve_1).integer_sqrt());
 				let root_k_last = U256::from(new_k_last.integer_sqrt());
 				if root_k > root_k_last {
-					let fee_point = Self::fee_meta().2;
+					let fee_point = Self::fee_meta().1;
 					let fix_fee_point = (30 - fee_point) / fee_point;
 					let numerator = U256::from(total_liquidity).saturating_mul(root_k.saturating_sub(root_k_last));
 					let denominator = root_k

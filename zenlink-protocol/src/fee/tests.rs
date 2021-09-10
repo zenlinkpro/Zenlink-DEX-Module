@@ -1,7 +1,7 @@
 // Copyright 2020-2021 Zenlink
 // Licensed under GPL-3.0.
 
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 
 use super::mock::*;
 use crate::{AssetId, Error, MultiAssetsHandler};
@@ -35,81 +35,29 @@ const LP_DOT_BTC: AssetId = AssetId {
 #[test]
 fn fee_meta_getter_should_work() {
 	new_test_ext().execute_with(|| {
-		let (fee_admin, fee_receiver, fee_point, fee_admin_candidate) = DexPallet::fee_meta();
+		let (fee_receiver, fee_point) = DexPallet::fee_meta();
 
-		assert_eq!(fee_admin, ALICE);
 		assert_eq!(fee_receiver, None);
 		assert_eq!(fee_point, 5);
-		assert_eq!(fee_admin_candidate, None);
 	})
 }
 
 #[test]
 fn fee_meta_setter_should_not_work() {
 	new_test_ext().execute_with(|| {
-		let (fee_admin, fee_receiver, fee_point, fee_admin_candidate) = DexPallet::fee_meta();
+		let (fee_receiver, fee_point) = DexPallet::fee_meta();
 
-		assert_eq!(fee_admin, ALICE);
 		assert_eq!(fee_receiver, None);
 		assert_eq!(fee_point, 5);
-		assert_eq!(fee_admin_candidate, None);
+
+		assert_noop!(DexPallet::set_fee_receiver(Origin::signed(BOB), Some(BOB)), BadOrigin,);
+
+		assert_noop!(DexPallet::set_fee_point(Origin::signed(BOB), 0), BadOrigin);
 
 		assert_noop!(
-			DexPallet::set_fee_admin_candidate(Origin::signed(BOB), BOB),
-			Error::<Test>::RequireProtocolAdmin
-		);
-
-		assert_ok!(DexPallet::set_fee_admin_candidate(Origin::signed(ALICE), BOB));
-		let (_, _, _, fee_admin_candidate) = DexPallet::fee_meta();
-		assert_eq!(fee_admin_candidate, Some(BOB));
-
-		assert_noop!(
-			DexPallet::set_fee_receiver(Origin::signed(BOB), Some(BOB)),
-			Error::<Test>::RequireProtocolAdmin
-		);
-
-		assert_noop!(
-			DexPallet::set_fee_point(Origin::signed(BOB), 0),
-			Error::<Test>::RequireProtocolAdmin
-		);
-
-		assert_noop!(
-			DexPallet::set_fee_point(Origin::signed(ALICE), 31u8),
+			DexPallet::set_fee_point(Origin::root(), 31u8),
 			Error::<Test>::InvalidFeePoint
 		);
-	})
-}
-
-#[test]
-fn fee_meta_setter_should_work() {
-	new_test_ext().execute_with(|| {
-		let (fee_admin, fee_receiver, fee_point, fee_admin_candidate) = DexPallet::fee_meta();
-
-		assert_eq!(fee_admin, ALICE);
-		assert_eq!(fee_receiver, None);
-		assert_eq!(fee_point, 5);
-		assert_eq!(fee_admin_candidate, None);
-
-		assert_ok!(DexPallet::set_fee_admin_candidate(Origin::signed(ALICE), BOB));
-		assert_noop!(
-			DexPallet::admin_candidate_confirm(Origin::signed(CHARLIE)),
-			Error::<Test>::RequireProtocolAdminCandidate
-		);
-
-		assert_ok!(DexPallet::admin_candidate_confirm(Origin::signed(BOB)));
-		assert_ok!(DexPallet::set_fee_receiver(Origin::signed(BOB), Some(BOB)));
-		assert_ok!(DexPallet::set_fee_point(Origin::signed(BOB), 0));
-
-		assert_noop!(
-			DexPallet::set_fee_admin_candidate(Origin::signed(ALICE), BOB),
-			Error::<Test>::RequireProtocolAdmin
-		);
-
-		let (fee_admin, fee_receiver, fee_point, fee_admin_candidate) = DexPallet::fee_meta();
-		assert_eq!(fee_admin, BOB);
-		assert_eq!(fee_receiver, Some(BOB));
-		assert_eq!(fee_point, 0);
-		assert_eq!(fee_admin_candidate, Some(BOB));
 	})
 }
 
@@ -121,7 +69,7 @@ fn turn_on_protocol_fee_only_add_liquidity_no_fee_should_work() {
 
 		let sorted_pair = DexPallet::sort_asset_id(DOT_ASSET_ID, BTC_ASSET_ID);
 
-		assert_ok!(DexPallet::set_fee_receiver(Origin::signed(ALICE), Some(BOB)));
+		assert_ok!(DexPallet::set_fee_receiver(Origin::root(), Some(BOB)));
 		assert_eq!(DexPallet::k_last(sorted_pair), 0);
 
 		// 2. first add_liquidity
@@ -132,11 +80,7 @@ fn turn_on_protocol_fee_only_add_liquidity_no_fee_should_work() {
 		let total_supply_dot: u128 = 1 * DOT_UNIT;
 		let total_supply_btc: u128 = 1 * BTC_UNIT;
 
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-		));
+		assert_ok!(DexPallet::create_pair(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID,));
 
 		assert_ok!(DexPallet::add_liquidity(
 			Origin::signed(ALICE),
@@ -226,7 +170,7 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 
 		let sorted_pair = DexPallet::sort_asset_id(DOT_ASSET_ID, BTC_ASSET_ID);
 
-		assert_ok!(DexPallet::set_fee_receiver(Origin::signed(ALICE), Some(BOB)));
+		assert_ok!(DexPallet::set_fee_receiver(Origin::root(), Some(BOB)));
 		assert_eq!(DexPallet::k_last(sorted_pair), 0);
 
 		// 2. first add_liquidity
@@ -237,11 +181,7 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 		let total_supply_dot: u128 = 1 * DOT_UNIT;
 		let total_supply_btc: u128 = 1 * BTC_UNIT;
 
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-		));
+		assert_ok!(DexPallet::create_pair(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID,));
 
 		assert_ok!(DexPallet::add_liquidity(
 			Origin::signed(ALICE),
@@ -328,9 +268,9 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 
 		let sorted_pair = DexPallet::sort_asset_id(DOT_ASSET_ID, BTC_ASSET_ID);
 
-		assert_ok!(DexPallet::set_fee_receiver(Origin::signed(ALICE), Some(BOB)));
+		assert_ok!(DexPallet::set_fee_receiver(Origin::root(), Some(BOB)));
 		// use default rate: 0.3% * 1 / 6 = 0.0005
-		assert_ok!(DexPallet::set_fee_point(Origin::signed(ALICE), 5u8));
+		assert_ok!(DexPallet::set_fee_point(Origin::root(), 5u8));
 		assert_eq!(DexPallet::k_last(sorted_pair), 0);
 
 		// 2. first add_liquidity
@@ -339,11 +279,7 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, u128::MAX));
 
-		assert_ok!(DexPallet::create_pair(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-		));
+		assert_ok!(DexPallet::create_pair(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID,));
 
 		let total_supply_dot: u128 = 1 * DOT_UNIT;
 		let total_supply_btc: u128 = 1 * BTC_UNIT;

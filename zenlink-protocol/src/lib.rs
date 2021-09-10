@@ -117,9 +117,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn fee_meta)]
-	/// (fee_admin, Option<fee_receiver>, fee_point, admin_candidate)
-	pub(super) type FeeMeta<T: Config> =
-		StorageValue<_, (T::AccountId, Option<T::AccountId>, u8, Option<T::AccountId>), ValueQuery>;
+	/// (Option<fee_receiver>, fee_point)
+	pub(super) type FeeMeta<T: Config> = StorageValue<_, (Option<T::AccountId>, u8), ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn pair_white_list)]
@@ -158,7 +157,7 @@ pub mod pallet {
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
 	pub struct GenesisConfig<T: Config> {
 		/// The admin of the protocol fee.
-		pub fee_admin: T::AccountId,
+		// pub fee_admin: T::AccountId,
 		/// The receiver of the protocol fee.
 		pub fee_receiver: Option<T::AccountId>,
 		/// The fee point which integer between [0,30]
@@ -172,7 +171,6 @@ pub mod pallet {
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self {
-				fee_admin: Default::default(),
 				fee_receiver: None,
 				fee_point: 5,
 			}
@@ -182,7 +180,7 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			<FeeMeta<T>>::put((&self.fee_admin, &self.fee_receiver, &self.fee_point, &self.fee_receiver));
+			<FeeMeta<T>>::put((&self.fee_receiver, &self.fee_point));
 		}
 	}
 
@@ -218,8 +216,8 @@ pub mod pallet {
 
 		/// Swap
 
-		/// Create a trading pair. \[creator, asset_0, asset_1\]
-		PairCreated(T::AccountId, AssetId, AssetId),
+		/// Create a trading pair. \[asset_0, asset_1\]
+		PairCreated(AssetId, AssetId),
 		/// Add liquidity. \[owner, asset_0, asset_1, add_balance_0, add_balance_1,
 		/// mint_balance_lp\]
 		LiquidityAdded(T::AccountId, AssetId, AssetId, AssetBalance, AssetBalance, AssetBalance),
@@ -355,44 +353,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Set the admin candidate of the protocol fee.
-		///
-		/// # Arguments
-		///
-		/// - `admin_candidate`: The new admin candidate.
-		#[pallet::weight(1_000_000)]
-		pub fn set_fee_admin_candidate(
-			origin: OriginFor<T>,
-			admin_candidate: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResult {
-			if let Ok(frame_system::RawOrigin::Root) = origin.clone().into() {
-				// do nothing
-			} else {
-				let origin = ensure_signed(origin)?;
-				ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
-			}
-
-			let new_admin_candidate = T::Lookup::lookup(admin_candidate)?;
-
-			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).3 = Some(new_admin_candidate));
-
-			Ok(())
-		}
-
-		/// Verify the identity of the candidate
-		#[pallet::weight(1_000_000)]
-		pub fn admin_candidate_confirm(origin: OriginFor<T>) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			ensure!(
-				Some(origin.clone()) == Self::fee_meta().3,
-				Error::<T>::RequireProtocolAdminCandidate
-			);
-
-			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).0 = origin);
-
-			Ok(())
-		}
-
 		/// Set the new receiver of the protocol fee.
 		///
 		/// # Arguments
@@ -405,8 +365,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			send_to: Option<<T::Lookup as StaticLookup>::Source>,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
+			ensure_root(origin)?;
 
 			let receiver = match send_to {
 				Some(r) => {
@@ -416,7 +375,7 @@ pub mod pallet {
 				None => None,
 			};
 
-			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).1 = receiver);
+			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).0 = receiver);
 
 			Ok(())
 		}
@@ -432,11 +391,10 @@ pub mod pallet {
 		/// default is 5 and means 0.3% * 1 / 6 = 0.0005.
 		#[pallet::weight(1_000_000)]
 		pub fn set_fee_point(origin: OriginFor<T>, fee_point: u8) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
+			ensure_root(origin)?;
 			ensure!(fee_point <= 30, Error::<T>::InvalidFeePoint);
 
-			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).2 = fee_point);
+			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).1 = fee_point);
 
 			Ok(())
 		}
@@ -548,6 +506,7 @@ pub mod pallet {
 		/// - `asset_1`: Asset which make up Pair
 		#[pallet::weight(1_000_000)]
 		pub fn create_pair(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
+			ensure_root(origin)?;
 			ensure!(
 				asset_0.is_support() && asset_1.is_support(),
 				Error::<T>::UnsupportedAssetType
@@ -561,12 +520,6 @@ pub mod pallet {
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 			ensure!(!PairStatuses::<T>::contains_key(pair), Error::<T>::PairAlreadyExists);
 
-			let who = ensure_signed(origin)?;
-			if who != Self::fee_meta().0 {
-				// Not root can't create new pair in limit list.
-				ensure!(!LimitedPairList::<T>::contains_key(pair), Error::<T>::DeniedCreatePair);
-			}
-
 			Self::mutate_lp_pairs(asset_0, asset_1);
 
 			PairStatuses::<T>::insert(
@@ -577,41 +530,7 @@ pub mod pallet {
 				}),
 			);
 
-			Self::deposit_event(Event::PairCreated(who, asset_0, asset_1));
-			Ok(())
-		}
-
-		/// Add a limited pair which only admin can create to list.
-		///
-		/// # Arguments
-		///
-		/// - `asset_0`: Asset which make up Pair
-		/// - `asset_1`: Asset which make up Pair
-		#[pallet::weight(1_000_000)]
-		pub fn add_limited_pair(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
-
-			LimitedPairList::<T>::insert(Self::sort_asset_id(asset_0, asset_1), ());
-			Self::deposit_event(Event::LimitedPairAdded(asset_0, asset_1));
-			Ok(())
-		}
-
-		/// Add a limited pair which only admin can create to list.
-		///
-		/// # Arguments
-		///
-		/// - `asset_0`: Asset which make up Pair
-		/// - `asset_1`: Asset which make up Pair
-		#[pallet::weight(1_000_000)]
-		pub fn remove_limited_pair(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
-
-			LimitedPairList::<T>::remove(Self::sort_asset_id(asset_0, asset_1));
-
-			Self::deposit_event(Event::LimitedPairRemoved(asset_0, asset_1));
-
+			Self::deposit_event(Event::PairCreated(asset_0, asset_1));
 			Ok(())
 		}
 
@@ -786,8 +705,7 @@ pub mod pallet {
 			#[pallet::compact] target_supply_1: AssetBalance,
 			#[pallet::compact] end: T::BlockNumber,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
+			ensure_root(origin)?;
 
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 			ensure!(!PairStatuses::<T>::contains_key(pair), Error::<T>::PairAlreadyExists);
@@ -892,8 +810,7 @@ pub mod pallet {
 		#[pallet::weight(1_000_000)]
 		#[frame_support::transactional]
 		pub fn bootstrap_end(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
+			ensure_root(origin)?;
 
 			Self::mutate_lp_pairs(asset_0, asset_1);
 
@@ -923,8 +840,7 @@ pub mod pallet {
 			#[pallet::compact] target_supply_1: AssetBalance,
 			#[pallet::compact] end: T::BlockNumber,
 		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
+			ensure_root(origin)?;
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 			ensure!(PairStatuses::<T>::contains_key(pair), Error::<T>::PairNotExists);
 
@@ -989,8 +905,7 @@ pub mod pallet {
 		#[pallet::weight(1_000_000)]
 		#[frame_support::transactional]
 		pub fn bootstrap_disable(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			ensure!(origin == Self::fee_meta().0, Error::<T>::RequireProtocolAdmin);
+			ensure_root(origin)?;
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 			match Self::pair_status(pair) {
 				Bootstrap(_) => {

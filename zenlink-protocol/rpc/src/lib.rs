@@ -14,7 +14,7 @@ use sp_rpc::number::NumberOrHex;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
-use zenlink_protocol::{AssetId, PairInfo, AssetBalance};
+use zenlink_protocol::{AssetBalance, AssetId, PairInfo};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 #[rpc]
@@ -143,8 +143,8 @@ where
 			amount_0_min,
 			amount_1_min,
 		)
-			.map(|price| price.into())
-			.map_err(runtime_error_into_rpc_err)
+		.map(|price| price.into())
+		.map_err(runtime_error_into_rpc_err)
 	}
 
 	fn get_balance(

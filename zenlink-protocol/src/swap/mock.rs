@@ -156,7 +156,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	pallet_zenlink::GenesisConfig::<Test> {
-		fee_admin: 1,
 		fee_receiver: None,
 		fee_point: 5,
 	}
