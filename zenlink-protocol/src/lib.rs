@@ -47,7 +47,7 @@ mod transfer;
 pub use multiassets::{MultiAssetsHandler, ZenlinkMultiAssets};
 pub use primitives::{
 	AssetBalance, AssetId, BootstrapParameter, PairMetadata, PairStatus,
-	PairStatus::{Bootstrap, Disable, Enable},
+	PairStatus::{Bootstrap, Disable, Trading},
 	Rate, LIQUIDITY, LOCAL, NATIVE, RESERVED,
 };
 pub use rpc::PairInfo;
@@ -119,10 +119,6 @@ pub mod pallet {
 	#[pallet::getter(fn fee_meta)]
 	/// (Option<fee_receiver>, fee_point)
 	pub(super) type FeeMeta<T: Config> = StorageValue<_, (Option<T::AccountId>, u8), ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn pair_white_list)]
-	pub type LimitedPairList<T: Config> = StorageMap<_, Twox64Concat, (AssetId, AssetId), (), ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn lp_pairs)]
@@ -346,6 +342,8 @@ pub mod pallet {
 		UnqualifiedBootstrap,
 		/// Zero contribute in bootstrap
 		ZeroContribute,
+		/// Bootstrap deny refund
+		DenyRefund,
 	}
 
 	#[pallet::hooks]
@@ -518,13 +516,33 @@ pub mod pallet {
 			ensure!(T::MultiAssetsHandler::is_exists(asset_1), Error::<T>::AssetNotExists);
 
 			let pair = Self::sort_asset_id(asset_0, asset_1);
-			ensure!(!PairStatuses::<T>::contains_key(pair), Error::<T>::PairAlreadyExists);
+			PairStatuses::<T>::try_mutate(pair, |status| match status {
+				Trading(_) => Err(Error::<T>::PairAlreadyExists),
+				Bootstrap(params) => {
+					if Self::bootstrap_disable(params) {
+						*status = Trading(PairMetadata {
+							pair_account: Self::pair_account_id(pair.0, pair.1),
+							total_supply: Zero::zero(),
+						});
+						Ok(())
+					} else {
+						Err(Error::<T>::PairAlreadyExists)
+					}
+				}
+				Disable => {
+					*status = Trading(PairMetadata {
+						pair_account: Self::pair_account_id(pair.0, pair.1),
+						total_supply: Zero::zero(),
+					});
+					Ok(())
+				}
+			})?;
 
 			Self::mutate_lp_pairs(asset_0, asset_1);
 
 			PairStatuses::<T>::insert(
 				pair,
-				Enable(PairMetadata {
+				Trading(PairMetadata {
 					pair_account: Self::pair_account_id(asset_0, asset_1),
 					total_supply: Zero::zero(),
 				}),
@@ -708,7 +726,6 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			let pair = Self::sort_asset_id(asset_0, asset_1);
-			ensure!(!PairStatuses::<T>::contains_key(pair), Error::<T>::PairAlreadyExists);
 
 			let (min_contribution_0, min_contribution_1, target_supply_0, target_supply_1) = if pair.0 == asset_0 {
 				(min_contribution_0, min_contribution_1, target_supply_0, target_supply_1)
@@ -716,17 +733,34 @@ pub mod pallet {
 				(min_contribution_1, min_contribution_0, target_supply_1, target_supply_0)
 			};
 
-			let pair_account = Self::pair_account_id(asset_0, asset_1);
-			PairStatuses::<T>::insert(
-				pair,
-				Bootstrap(BootstrapParameter {
-					min_contribution: (min_contribution_0, min_contribution_1),
-					target_supply: (target_supply_0, target_supply_1),
-					accumulated_supply: (Zero::zero(), Zero::zero()),
-					end_block_number: end,
-					pair_account: pair_account.clone(),
-				}),
-			);
+			PairStatuses::<T>::try_mutate(pair, |status| match status {
+				Trading(_) => Err(Error::<T>::PairAlreadyExists),
+				Bootstrap(params) => {
+					if Self::bootstrap_disable(params) {
+						*status = Bootstrap(BootstrapParameter {
+							min_contribution: (min_contribution_0, min_contribution_1),
+							target_supply: (target_supply_0, target_supply_1),
+							accumulated_supply: params.accumulated_supply,
+							end_block_number: end,
+							pair_account: Self::account_id(),
+						});
+						Ok(())
+					} else {
+						Err(Error::<T>::PairAlreadyExists)
+					}
+				}
+				Disable => {
+					*status = Bootstrap(BootstrapParameter {
+						min_contribution: (min_contribution_0, min_contribution_1),
+						target_supply: (target_supply_0, target_supply_1),
+						accumulated_supply: (Zero::zero(), Zero::zero()),
+						end_block_number: end,
+						pair_account: Self::account_id(),
+					});
+					Ok(())
+				}
+			})?;
+
 			Self::deposit_event(Event::BootstrapCreated(
 				pair_account,
 				asset_0,
@@ -811,7 +845,6 @@ pub mod pallet {
 		#[frame_support::transactional]
 		pub fn bootstrap_end(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
 			ensure_signed(origin)?;
-
 			Self::mutate_lp_pairs(asset_0, asset_1);
 
 			Self::do_end_bootstrap(asset_0, asset_1)
@@ -842,7 +875,6 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			let pair = Self::sort_asset_id(asset_0, asset_1);
-			ensure!(PairStatuses::<T>::contains_key(pair), Error::<T>::PairNotExists);
 
 			let (min_contribution_0, min_contribution_1, target_supply_0, target_supply_1) = if pair.0 == asset_0 {
 				(min_contribution_0, min_contribution_1, target_supply_0, target_supply_1)
@@ -851,16 +883,21 @@ pub mod pallet {
 			};
 
 			let pair_account = Self::pair_account_id(asset_0, asset_1);
-			PairStatuses::<T>::insert(
-				pair,
-				Bootstrap(BootstrapParameter {
-					min_contribution: (min_contribution_0, min_contribution_1),
-					target_supply: (target_supply_0, target_supply_1),
-					accumulated_supply: (Zero::zero(), Zero::zero()),
-					end_block_number: end,
-					pair_account: pair_account.clone(),
-				}),
-			);
+			PairStatuses::<T>::try_mutate(pair, |status| match status {
+				Trading(_) => Err(Error::<T>::PairAlreadyExists),
+				Bootstrap(params) => {
+					*status = Bootstrap(BootstrapParameter {
+						min_contribution: (min_contribution_0, min_contribution_1),
+						target_supply: (target_supply_0, target_supply_1),
+						accumulated_supply: params.accumulated_supply,
+						end_block_number: end,
+						pair_account: Self::account_id(),
+					});
+					Ok(())
+				}
+				Disable => Err(Error::<T>::NotInBootstrap),
+			})?;
+
 			Self::deposit_event(Event::BootstrapUpdate(
 				pair_account,
 				asset_0,
@@ -894,33 +931,6 @@ pub mod pallet {
 			));
 
 			Ok(())
-		}
-
-		/// Make bootstrap pair disable
-		///
-		/// # Arguments
-		///
-		/// - `asset_0`: Asset which make up bootstrap pair
-		/// - `asset_1`: Asset which make up bootstrap pair
-		#[pallet::weight(1_000_000)]
-		#[frame_support::transactional]
-		pub fn bootstrap_disable(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
-			ensure_root(origin)?;
-			let pair = Self::sort_asset_id(asset_0, asset_1);
-			match Self::pair_status(pair) {
-				Bootstrap(_) => {
-					PairStatuses::<T>::insert(pair, Disable);
-
-					Self::deposit_event(Event::BootstrapDisable(
-						Self::pair_account_id(asset_0, asset_1),
-						asset_0,
-						asset_1,
-					));
-
-					Ok(())
-				}
-				_ => Err(Error::<T>::NotInBootstrap.into()),
-			}
 		}
 	}
 }

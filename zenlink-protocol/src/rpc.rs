@@ -48,7 +48,7 @@ impl<T: Config> Pallet<T> {
 	) -> AssetBalance {
 		let sorted_pair = Self::sort_asset_id(asset_0, asset_1);
 		match Self::pair_status(sorted_pair) {
-			Enable(metadata) => {
+			Trading(metadata) => {
 				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &metadata.pair_account);
 				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &metadata.pair_account);
 				Self::calculate_added_amount(

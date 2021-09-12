@@ -42,14 +42,13 @@ impl AssetId {
 /// Status for TradingPair
 #[derive(Clone, Copy, Encode, Decode, RuntimeDebug, PartialEq, Eq, MaxEncodedLen)]
 pub enum PairStatus<Balance, BlockNumber, Account> {
-	/// Pair is Enable,
+	/// Pair is Trading,
 	/// can add/remove liquidity and swap.
-	Enable(PairMetadata<Balance, Account>),
+	Trading(PairMetadata<Balance, Account>),
 	/// pair is Bootstrap,
 	/// can add liquidity.
 	Bootstrap(BootstrapParameter<Balance, BlockNumber, Account>),
-	/// Pair is Disable, Bootstrap pair can be disable,
-	/// can not add/remove liquidity and swap.
+	/// nothing in pair
 	Disable,
 }
 

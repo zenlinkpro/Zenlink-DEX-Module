@@ -17,6 +17,9 @@ mod mock;
 mod tests;
 
 impl<T: Config> Pallet<T> {
+	pub(crate) fn account_id() -> T::AccountId {
+		T::PalletId::get().into_account()
+	}
 	/// The account ID of a pair account
 	/// only use two byte prefix to support 16 byte account id (used by test)
 	/// "modl" ++ "/zenlink" is 12 bytes, and 4 bytes remaining for hash of AssetId pair.
@@ -71,7 +74,7 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		PairStatuses::<T>::try_mutate(pair, |status| {
-			if let Enable(parameter) = status {
+			if let Trading(parameter) = status {
 				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
 				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
@@ -158,7 +161,7 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		PairStatuses::<T>::try_mutate(pair, |status| {
-			if let Enable(parameter) = status {
+			if let Trading(parameter) = status {
 				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
 				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
@@ -538,7 +541,7 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		match Self::pair_status(pair) {
-			Enable(_) => Ok(()),
+			Trading(_) => Ok(()),
 			_ => Err(Error::<T>::PairNotExists),
 		}?;
 
@@ -570,8 +573,16 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		let mut bootstrap_parameter = match Self::pair_status(pair) {
-			PairStatus::Bootstrap(bootstrap_parameter) => bootstrap_parameter,
-			_ => return Err(Error::<T>::NotInBootstrap.into()),
+			PairStatus::Bootstrap(bootstrap_parameter) => {
+				ensure!(
+					!Self::bootstrap_disable(&bootstrap_parameter),
+					Error::<T>::NotInBootstrap
+				);
+				bootstrap_parameter
+			}
+			_ => {
+				return Err(Error::<T>::NotInBootstrap.into());
+			}
 		};
 		let (amount_0_contribute, amount_1_contribute) = if pair.0 == asset_0 {
 			(amount_0_contribute, amount_1_contribute)
@@ -595,7 +606,7 @@ impl<T: Config> Pallet<T> {
 				.checked_add(amount_1_contribute)
 				.ok_or(Error::<T>::Overflow)?;
 
-			let pair_account = Self::pair_account_id(asset_0, asset_1);
+			let pair_account = Self::account_id();
 
 			T::MultiAssetsHandler::transfer(asset_0, &who, &pair_account, amount_0_contribute)?;
 			T::MultiAssetsHandler::transfer(asset_1, &who, &pair_account, amount_1_contribute)?;
@@ -657,13 +668,12 @@ impl<T: Config> Pallet<T> {
 					.ok_or(Error::<T>::Overflow)?;
 
 				let pair_account = Self::pair_account_id(pair.0, pair.1);
-				//Self::mutate_liquidity(asset_0, asset_1, &pair_account, total_lp_supply, true)?;
 				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 				T::MultiAssetsHandler::deposit(lp_asset_id, &pair_account, total_lp_supply).map(|_| total_lp_supply)?;
 
 				PairStatuses::<T>::insert(
 					pair,
-					Enable(PairMetadata {
+					Trading(PairMetadata {
 						pair_account,
 						total_supply: total_lp_supply,
 					}),
@@ -692,8 +702,12 @@ impl<T: Config> Pallet<T> {
 		asset_1: AssetId,
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
+		ensure!(
+			FreezePairExchangeRates::<T>::contains_key(pair),
+			Error::<T>::NotInBootstrap
+		);
 		match Self::pair_status(pair) {
-			Enable(_) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
+			Trading(_) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
 				if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
 					let (exchange_rate_0, exchange_rate_1) = Self::freeze_pair_exchange_rates(pair);
 					let lp_from_contribute_0 = exchange_rate_0
@@ -724,30 +738,45 @@ impl<T: Config> Pallet<T> {
 
 	pub(crate) fn do_bootstrap_refund(who: T::AccountId, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
-		match Self::pair_status(pair) {
-			PairStatus::Disable => {
-				BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| -> DispatchResult {
-					if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
-						let pair_account = Self::pair_account_id(asset_0, asset_1);
 
-						T::MultiAssetsHandler::transfer(asset_0, &pair_account, &who, amount_0_contribute)?;
-						T::MultiAssetsHandler::transfer(asset_1, &pair_account, &who, amount_1_contribute)?;
-						*contribution = None;
-						Ok(())
-					} else {
-						Err(Error::<T>::ZeroContribute.into())
-					}
-				})?;
+		match Self::pair_status(pair) {
+			Bootstrap(params) => {
+				ensure!(Self::bootstrap_disable(&params), Error::<T>::DenyRefund);
 			}
 			_ => {
-				return Err(Error::<T>::NotInBootstrap.into());
+				// No freeze exchange rate, so bootstrap no end. Bootstrap pair become trading pair.
+				ensure!(
+					!FreezePairExchangeRates::<T>::contains_key(pair),
+					Error::<T>::NotInBootstrap
+				);
 			}
 		};
-		// If pair is disable and all contributor refunded, it will be removed.
-		if BootstrapPersonalSupply::<T>::iter().next().is_none() {
-			PairStatuses::<T>::remove(pair);
-		}
+
+		BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| -> DispatchResult {
+			if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
+				let pair_account = Self::account_id();
+				T::MultiAssetsHandler::transfer(asset_0, &pair_account, &who, amount_0_contribute)?;
+				T::MultiAssetsHandler::transfer(asset_1, &pair_account, &who, amount_1_contribute)?;
+				*contribution = None;
+				Ok(())
+			} else {
+				Err(Error::<T>::ZeroContribute.into())
+			}
+		})?;
+
 		Ok(())
+	}
+
+	// At end block, bootstrap has not enough asset. Is will become disable.
+	pub(crate) fn bootstrap_disable(params: &BootstrapParameter<AssetBalance, T::BlockNumber, T::AccountId>) -> bool {
+		let now = frame_system::Pallet::<T>::block_number();
+		if now > params.end_block_number
+			&& (params.accumulated_supply.0 < params.target_supply.0
+				|| params.accumulated_supply.1 < params.target_supply.1)
+		{
+			return true;
+		}
+		return false;
 	}
 }
 
