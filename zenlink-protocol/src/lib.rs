@@ -762,7 +762,7 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::BootstrapCreated(
-				pair_account,
+				Self::account_id(),
 				asset_0,
 				asset_1,
 				min_contribution_0,
