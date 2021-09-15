@@ -9,7 +9,7 @@
   - {"chain_id":200,"asset_type":1,"asset_index":0}: ParaId=300, Liquidity Asset
 
   ```
-  curl -H "Content-Type: application/json" http://localhost:11111 -d \
+  curl -H "Content-Type: application/json" http://localhost:31200 -d \
     '{
       "jsonrpc":"2.0",
       "id":1,
@@ -523,21 +523,115 @@
 
 ```json
 {
+  "AccountData": {
+    "free": "Balance",
+    "reserved": "Balance",
+    "frozen": "Balance"
+  },
+  "Currency": "CurrencyIdOf",
+  "CurrencyIdOf": "CurrencyId",
+  "AmountOf": "Balance",
+  "Amount": "AmountOf",
+  "TransferOriginType": {
+    "_enum": {
+      "FromSelf": 0,
+      "FromRelayChain": 1,
+      "FromSiblingParaChain": 2
+    }
+  },
+  "TokenSymbol": {
+    "_enum": {
+      "ASG": 0,
+      "BNC": 1,
+      "KUSD": 2,
+      "DOT": 3,
+      "KSM": 4,
+      "ETH": 5
+    }
+  },
+  "CurrencyId": {
+    "_enum": {
+      "Native": "TokenSymbol",
+      "VToken": "TokenSymbol",
+      "Token": "TokenSymbol",
+      "Stable": "TokenSymbol",
+      "VSToken": "TokenSymbol",
+      "VSBond": "(TokenSymbol, ParaId, LeasePeriod, LeasePeriod)",
+      "LPToken": "(TokenSymbol, u8, TokenSymbol, u8)"
+    }
+  },
+  "TAssetBalance": "Balance",
+  "PalletBalanceOf": "Balance",
+  "BlockNumberFor": "BlockNumber",
+  "NumberOrHex": {
+    "_enum": {
+      "Number": "u64",
+      "Hex": "U256"
+    }
+  },
+  "IsExtended": "bool",
+  "SystemPalletId": "PalletId",
+  "RewardRecord": {
+    "account_id": "AccountId",
+    "record_amount": "Balance"
+  },
+  "MaxLocksOf": "u32",
+  "VestingInfo": {
+    "locked": "Balance",
+    "per_block": "Balance",
+    "starting_block": "BlockNumber"
+  },
+  "OrderId": "u64",
+  "OrderInfo": {
+    "owner": "AccountIdOf",
+    "currency_sold": "CurrencyIdOf",
+    "amount_sold": "BalanceOf",
+    "currency_expected": "CurrencyIdOf",
+    "amount_expected": "BalanceOf",
+    "order_id": "OrderId",
+    "order_state": "OrderState"
+  },
+  "OrderState": {
+    "_enum": [
+      "InTrade",
+      "Revoked",
+      "Clinchd"
+    ]
+  },
   "AssetId": {
     "chain_id": "u32",
     "asset_type": "u8",
-    "asset_index": "u32"
+    "asset_index": "u64"
+  },
+  "ZenlinkAssetBalance": "u128",
+  "PairInfo": {
+    "asset0": "AssetId",
+    "asset1": "AssetId",
+    "account": "AccountId",
+    "totalLiquidity": "ZenlinkAssetBalance",
+    "holdingLiquidity": "ZenlinkAssetBalance",
+    "reserve0": "ZenlinkAssetBalance",
+    "reserve1": "ZenlinkAssetBalance",
+    "lpAssetId": "AssetId"
+  },
+  "PairMetadata": {
+    "pair_account": "AccountId",
+    "target_supply": "AssetBalance"
   },
   "AssetBalance": "u128",
-  "PairInfo": {
-    "asset_0": "AssetId",
-    "asset_1": "AssetId",
-    "account": "AccountId",
-    "total_liquidity": "AssetBalance",
-    "holding_liquidity": "AssetBalance",
-    "reserve_0": "AssetBalance",
-    "reserve_1": "AssetBalance",
-    "lp_asset_id": "AssetId"
+  "BootstrapParamter": {
+    "min_contribution": "(AssetBalance, AssetBalance)",
+    "target_supply": "(AssetBalance, AssetBalance)",
+    "accumulated_supply": "(AssetBalance, AssetBalance)",
+    "end_block_number": "BlockNumber",
+    "pair_account": "AccountId"
+  },
+  "PairStatus": {
+    "_enum": {
+      "Enable": "PairMetadata",
+      "Bootstrap": "BootstrapParamter",
+      "Disable": null
+    }
   }
 }
 ```

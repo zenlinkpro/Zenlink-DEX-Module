@@ -717,7 +717,7 @@ fn bootstrap_contribute_claim_reward_should_work() {
 			BTC_ASSET_ID
 		));
 
-		let total_supply = 20 * DOT_UNIT + ((20 * DOT_UNIT) / (2 * BTC_UNIT)) * 2 * BTC_UNIT;
+		let total_supply = 2000000000000;
 
 		assert_ok!(match DexPallet::pair_status((DOT_ASSET_ID, BTC_ASSET_ID)) {
 			Trading(x) => {
@@ -1212,7 +1212,7 @@ fn create_bootstrap_in_disable_bootstrap() {
 		));
 		assert_eq!(
 			<Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &BOB),
-			40000000000000000
+			2000000000000
 		);
 	})
 }

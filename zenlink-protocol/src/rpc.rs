@@ -71,6 +71,14 @@ impl<T: Config> Pallet<T> {
 		let pair_account = Self::pair_account_id(asset_0, asset_1);
 		let lp_asset_id = Self::lp_asset_id(&asset_0, &asset_1);
 
+		let status = match Self::pair_status(Self::sort_asset_id(asset_0, asset_1)) {
+			Trading(_) => 0,
+			Bootstrap(_) => 1,
+			Disable => {
+				return None;
+			}
+		};
+
 		Some(PairInfo {
 			asset_0,
 			asset_1,
@@ -80,7 +88,7 @@ impl<T: Config> Pallet<T> {
 			reserve_0: T::MultiAssetsHandler::balance_of(asset_0, &pair_account),
 			reserve_1: T::MultiAssetsHandler::balance_of(asset_1, &pair_account),
 			lp_asset_id,
-			status: 0,
+			status,
 		})
 	}
 

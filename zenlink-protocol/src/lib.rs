@@ -48,7 +48,7 @@ pub use multiassets::{MultiAssetsHandler, ZenlinkMultiAssets};
 pub use primitives::{
 	AssetBalance, AssetId, BootstrapParameter, PairMetadata, PairStatus,
 	PairStatus::{Bootstrap, Disable, Trading},
-	Rate, LIQUIDITY, LOCAL, NATIVE, RESERVED,
+	LIQUIDITY, LOCAL, NATIVE, RESERVED,
 };
 pub use rpc::PairInfo;
 pub use traits::{ExportZenlink, LocalAssetHandler, OtherAssetHandler};
@@ -141,13 +141,14 @@ pub mod pallet {
 	pub type BootstrapPersonalSupply<T: Config> =
 		StorageMap<_, Blake2_128Concat, ((AssetId, AssetId), T::AccountId), (AssetBalance, AssetBalance), ValueQuery>;
 
-	/// Freeze exchange rate, used to calculate the lp amount for founders of provisioning
+	/// Freeze asset accumulated supply, used to calculate the lp amount for contributor of
+	/// bootstrap.
 	///
-	/// FreezePairExchangeRates: map Pair => (Rate, Rate)
+	/// BootstrapFreezeAccumulatedSupply: map Pair => (Amount, Amount)
 	#[pallet::storage]
-	#[pallet::getter(fn freeze_pair_exchange_rates)]
-	pub type FreezePairExchangeRates<T: Config> =
-		StorageMap<_, Twox64Concat, (AssetId, AssetId), (Rate, Rate), ValueQuery>;
+	#[pallet::getter(fn bootstrap_freezed_accumulated_supply)]
+	pub type BootstrapFreezeAccumulatedSupply<T: Config> =
+		StorageMap<_, Twox64Concat, (AssetId, AssetId), (AssetBalance, AssetBalance), ValueQuery>;
 
 	#[pallet::genesis_config]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88

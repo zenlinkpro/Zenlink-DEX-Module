@@ -2,10 +2,8 @@
 // Licensed under GPL-3.0.
 
 use super::*;
-use sp_runtime::FixedU128;
 
 pub type AssetBalance = u128;
-pub type Rate = FixedU128;
 
 /// Native currency
 pub const NATIVE: u8 = 0;

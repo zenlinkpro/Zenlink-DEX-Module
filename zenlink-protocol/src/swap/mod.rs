@@ -9,7 +9,6 @@
 //! mechanism refers to the design of Uniswap V2.
 
 use super::*;
-use frame_support::sp_runtime::FixedPointNumber;
 
 #[cfg(test)]
 mod mock;
@@ -575,7 +574,7 @@ impl<T: Config> Pallet<T> {
 		let mut bootstrap_parameter = match Self::pair_status(pair) {
 			PairStatus::Bootstrap(bootstrap_parameter) => {
 				ensure!(
-					!Self::bootstrap_disable(&bootstrap_parameter),
+					frame_system::Pallet::<T>::block_number() < bootstrap_parameter.end_block_number,
 					Error::<T>::NotInBootstrap
 				);
 				bootstrap_parameter
@@ -647,28 +646,31 @@ impl<T: Config> Pallet<T> {
 					Error::<T>::UnqualifiedBootstrap
 				);
 
-				let (lp_rate_0, lp_rate_1) = (
-					Rate::one(),
-					Rate::checked_from_rational(
-						bootstrap_parameter.target_supply.0,
-						bootstrap_parameter.target_supply.1,
-					)
-					.ok_or(Error::<T>::Overflow)?,
+				let total_lp_supply = Self::calculate_liquidity(
+					bootstrap_parameter.accumulated_supply.0,
+					bootstrap_parameter.accumulated_supply.1,
+					Zero::zero(),
+					Zero::zero(),
+					Zero::zero(),
 				);
-				let lp_from_contribute_0 = lp_rate_0
-					.checked_mul_int(bootstrap_parameter.accumulated_supply.0)
-					.ok_or(Error::<T>::Overflow)?;
-
-				let lp_from_contribute_1 = lp_rate_1
-					.checked_mul_int(bootstrap_parameter.accumulated_supply.1)
-					.ok_or(Error::<T>::Overflow)?;
-
-				let total_lp_supply = lp_from_contribute_0
-					.checked_add(lp_from_contribute_1)
-					.ok_or(Error::<T>::Overflow)?;
 
 				let pair_account = Self::pair_account_id(pair.0, pair.1);
 				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
+
+				T::MultiAssetsHandler::transfer(
+					asset_0,
+					&bootstrap_parameter.pair_account,
+					&pair_account,
+					bootstrap_parameter.accumulated_supply.0,
+				)?;
+
+				T::MultiAssetsHandler::transfer(
+					asset_1,
+					&bootstrap_parameter.pair_account,
+					&pair_account,
+					bootstrap_parameter.accumulated_supply.1,
+				)?;
+
 				T::MultiAssetsHandler::deposit(lp_asset_id, &pair_account, total_lp_supply).map(|_| total_lp_supply)?;
 
 				PairStatuses::<T>::insert(
@@ -679,7 +681,13 @@ impl<T: Config> Pallet<T> {
 					}),
 				);
 
-				FreezePairExchangeRates::<T>::insert(pair, (lp_rate_0, lp_rate_1));
+				BootstrapFreezeAccumulatedSupply::<T>::insert(
+					pair,
+					(
+						bootstrap_parameter.accumulated_supply.0,
+						bootstrap_parameter.accumulated_supply.1,
+					),
+				);
 
 				Self::deposit_event(Event::BootstrapEnd(
 					pair.0,
@@ -703,29 +711,32 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		ensure!(
-			FreezePairExchangeRates::<T>::contains_key(pair),
+			BootstrapFreezeAccumulatedSupply::<T>::contains_key(pair),
 			Error::<T>::NotInBootstrap
 		);
 		match Self::pair_status(pair) {
 			Trading(_) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
 				if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
-					let (exchange_rate_0, exchange_rate_1) = Self::freeze_pair_exchange_rates(pair);
-					let lp_from_contribute_0 = exchange_rate_0
-						.checked_mul_int(amount_0_contribute)
+					let accumulated_supply = Self::bootstrap_freezed_accumulated_supply(pair);
+
+					let exact_amount_0 = amount_0_contribute
+						.saturating_mul(accumulated_supply.1)
+						.saturating_add(amount_1_contribute.saturating_mul(accumulated_supply.0))
+						.checked_div(accumulated_supply.1.saturating_mul(2))
 						.ok_or(Error::<T>::Overflow)?;
 
-					let lp_from_contribute_1 = exchange_rate_1
-						.checked_mul_int(amount_1_contribute)
+					let exact_amount_1 = amount_1_contribute
+						.saturating_mul(accumulated_supply.0)
+						.saturating_add(amount_0_contribute.saturating_mul(accumulated_supply.1))
+						.checked_div(accumulated_supply.0.saturating_mul(2))
 						.ok_or(Error::<T>::Overflow)?;
 
-					let lp_amount = lp_from_contribute_0
-						.checked_add(lp_from_contribute_1)
-						.ok_or(Error::<T>::Overflow)?;
+					let calculated_liquidity = exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt();
 
 					let pair_account = Self::pair_account_id(pair.0, pair.1);
 					let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
-					T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, lp_amount)?;
+					T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, calculated_liquidity)?;
 
 					Ok(())
 				} else {
@@ -744,9 +755,9 @@ impl<T: Config> Pallet<T> {
 				ensure!(Self::bootstrap_disable(&params), Error::<T>::DenyRefund);
 			}
 			_ => {
-				// No freeze exchange rate, so bootstrap no end. Bootstrap pair become trading pair.
+				// No freeze accumulated assets, so bootstrap no end. Bootstrap pair become trading pair.
 				ensure!(
-					!FreezePairExchangeRates::<T>::contains_key(pair),
+					!BootstrapFreezeAccumulatedSupply::<T>::contains_key(pair),
 					Error::<T>::NotInBootstrap
 				);
 			}
@@ -757,6 +768,16 @@ impl<T: Config> Pallet<T> {
 				let pair_account = Self::account_id();
 				T::MultiAssetsHandler::transfer(asset_0, &pair_account, &who, amount_0_contribute)?;
 				T::MultiAssetsHandler::transfer(asset_1, &pair_account, &who, amount_1_contribute)?;
+
+				PairStatuses::<T>::mutate(pair, |status| match status {
+					Bootstrap(parameter) => {
+						parameter.accumulated_supply.0 =
+							parameter.accumulated_supply.0.saturating_sub(amount_0_contribute);
+						parameter.accumulated_supply.1 =
+							parameter.accumulated_supply.1.saturating_sub(amount_1_contribute);
+					}
+					_ => {}
+				});
 				*contribution = None;
 				Ok(())
 			} else {
@@ -767,7 +788,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	// At end block, bootstrap has not enough asset. Is will become disable.
+	// After end block, bootstrap has not enough asset. Is will become disable.
 	pub(crate) fn bootstrap_disable(params: &BootstrapParameter<AssetBalance, T::BlockNumber, T::AccountId>) -> bool {
 		let now = frame_system::Pallet::<T>::block_number();
 		if now > params.end_block_number
