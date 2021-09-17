@@ -201,6 +201,15 @@ Transaction type
 
 ```
 {
+   "AccountData": {
+      "free": "Balance",
+      "reserved": "Balance",
+      "frozen": "Balance"
+   },
+  "Currency": "CurrencyIdOf",
+  "CurrencyIdOf": "CurrencyId",
+  "AmountOf": "Balance",
+  "Amount": "AmountOf",
   "TransferOriginType": {
     "_enum": {
       "FromSelf": 0,
@@ -229,7 +238,6 @@ Transaction type
       "LPToken": "(TokenSymbol, u8, TokenSymbol, u8)"
     }
   },
-  "CurrencyIdOf": "CurrencyId",
   "TAssetBalance": "Balance",
   "PalletBalanceOf": "Balance",
   "BlockNumberFor": "BlockNumber",
@@ -298,12 +306,11 @@ Transaction type
   },
   "PairStatus": {
     "_enum": {
-      "Enable": "PairMetadata",
+      "Trading": "PairMetadata",
       "Bootstrap": "BootstrapParamter",
       "Disable": null
     }
-  },
-  "Rate": "FixedU128"
+  }
 }`
 ```
 

@@ -681,12 +681,9 @@ impl<T: Config> Pallet<T> {
 					}),
 				);
 
-				BootstrapFreezeAccumulatedSupply::<T>::insert(
+				BootstrapEndStatus::<T>::insert(
 					pair,
-					(
-						bootstrap_parameter.accumulated_supply.0,
-						bootstrap_parameter.accumulated_supply.1,
-					),
+					Bootstrap(bootstrap_parameter.clone()),
 				);
 
 				Self::deposit_event(Event::BootstrapEnd(
@@ -710,35 +707,34 @@ impl<T: Config> Pallet<T> {
 		asset_1: AssetId,
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
-		ensure!(
-			BootstrapFreezeAccumulatedSupply::<T>::contains_key(pair),
-			Error::<T>::NotInBootstrap
-		);
 		match Self::pair_status(pair) {
 			Trading(_) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
 				if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
-					let accumulated_supply = Self::bootstrap_freezed_accumulated_supply(pair);
 
-					let exact_amount_0 = amount_0_contribute
-						.saturating_mul(accumulated_supply.1)
-						.saturating_add(amount_1_contribute.saturating_mul(accumulated_supply.0))
-						.checked_div(accumulated_supply.1.saturating_mul(2))
-						.ok_or(Error::<T>::Overflow)?;
+					if let Bootstrap(bootstrap_parameter) = Self::bootstrap_end_status(pair){
+						let exact_amount_0 = amount_0_contribute
+							.saturating_mul(bootstrap_parameter.accumulated_supply.1)
+							.saturating_add(amount_1_contribute.saturating_mul(bootstrap_parameter.accumulated_supply.0))
+							.checked_div(bootstrap_parameter.accumulated_supply.1.saturating_mul(2))
+							.ok_or(Error::<T>::Overflow)?;
 
-					let exact_amount_1 = amount_1_contribute
-						.saturating_mul(accumulated_supply.0)
-						.saturating_add(amount_0_contribute.saturating_mul(accumulated_supply.1))
-						.checked_div(accumulated_supply.0.saturating_mul(2))
-						.ok_or(Error::<T>::Overflow)?;
+						let exact_amount_1 = amount_1_contribute
+							.saturating_mul(bootstrap_parameter.accumulated_supply.0)
+							.saturating_add(amount_0_contribute.saturating_mul(bootstrap_parameter.accumulated_supply.1))
+							.checked_div(bootstrap_parameter.accumulated_supply.0.saturating_mul(2))
+							.ok_or(Error::<T>::Overflow)?;
 
-					let calculated_liquidity = exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt();
+						let calculated_liquidity = exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt();
 
-					let pair_account = Self::pair_account_id(pair.0, pair.1);
-					let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
+						let pair_account = Self::pair_account_id(pair.0, pair.1);
+						let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
-					T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, calculated_liquidity)?;
+						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, calculated_liquidity)?;
 
-					Ok(())
+						Ok(())
+					}else{
+						Err(Error::<T>::NotInBootstrap.into())
+					}
 				} else {
 					Err(Error::<T>::ZeroContribute.into())
 				}
@@ -755,9 +751,9 @@ impl<T: Config> Pallet<T> {
 				ensure!(Self::bootstrap_disable(&params), Error::<T>::DenyRefund);
 			}
 			_ => {
-				// No freeze accumulated assets, so bootstrap no end. Bootstrap pair become trading pair.
+				// No end status, so bootstrap no end. Bootstrap pair become trading pair.
 				ensure!(
-					!BootstrapFreezeAccumulatedSupply::<T>::contains_key(pair),
+					!BootstrapEndStatus::<T>::contains_key(pair),
 					Error::<T>::NotInBootstrap
 				);
 			}

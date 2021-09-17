@@ -141,14 +141,13 @@ pub mod pallet {
 	pub type BootstrapPersonalSupply<T: Config> =
 		StorageMap<_, Blake2_128Concat, ((AssetId, AssetId), T::AccountId), (AssetBalance, AssetBalance), ValueQuery>;
 
-	/// Freeze asset accumulated supply, used to calculate the lp amount for contributor of
-	/// bootstrap.
+	/// End status of bootstrap
 	///
-	/// BootstrapFreezeAccumulatedSupply: map Pair => (Amount, Amount)
+	/// BootstrapEndStatus: map bootstrap pair => pairStatus
 	#[pallet::storage]
-	#[pallet::getter(fn bootstrap_freezed_accumulated_supply)]
-	pub type BootstrapFreezeAccumulatedSupply<T: Config> =
-		StorageMap<_, Twox64Concat, (AssetId, AssetId), (AssetBalance, AssetBalance), ValueQuery>;
+	#[pallet::getter(fn bootstrap_end_status)]
+	pub type BootstrapEndStatus<T: Config> =
+		StorageMap<_, Twox64Concat, (AssetId, AssetId), PairStatus<AssetBalance, T::BlockNumber, T::AccountId>, ValueQuery>;
 
 	#[pallet::genesis_config]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
