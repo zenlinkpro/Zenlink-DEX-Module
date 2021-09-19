@@ -146,7 +146,7 @@ pub mod pallet {
 	/// BootstrapEndStatus: map bootstrap pair => pairStatus
 	#[pallet::storage]
 	#[pallet::getter(fn bootstrap_end_status)]
-``	pub type BootstrapEndStatus<T: Config> = StorageMap<
+	pub type BootstrapEndStatus<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
 		(AssetId, AssetId),
