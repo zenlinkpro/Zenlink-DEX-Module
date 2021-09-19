@@ -146,8 +146,13 @@ pub mod pallet {
 	/// BootstrapEndStatus: map bootstrap pair => pairStatus
 	#[pallet::storage]
 	#[pallet::getter(fn bootstrap_end_status)]
-	pub type BootstrapEndStatus<T: Config> =
-		StorageMap<_, Twox64Concat, (AssetId, AssetId), PairStatus<AssetBalance, T::BlockNumber, T::AccountId>, ValueQuery>;
+``	pub type BootstrapEndStatus<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		(AssetId, AssetId),
+		PairStatus<AssetBalance, T::BlockNumber, T::AccountId>,
+		ValueQuery,
+	>;
 
 	#[pallet::genesis_config]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
@@ -256,8 +261,18 @@ pub mod pallet {
 			T::BlockNumber,
 		),
 
-		/// Claim a bootstrap pair. \[bootstrap_pair_account, claimer, receiver, asset_0, asset_1\]
-		BootstrapClaim(T::AccountId, T::AccountId, T::AccountId, AssetId, AssetId),
+		/// Claim a bootstrap pair. \[bootstrap_pair_account, claimer, receiver, asset_0, asset_1,
+		/// asset_0_refund, asset_1_refund, lp_amount\]
+		BootstrapClaim(
+			T::AccountId,
+			T::AccountId,
+			T::AccountId,
+			AssetId,
+			AssetId,
+			AssetBalance,
+			AssetBalance,
+			AssetBalance,
+		),
 
 		/// Update a bootstrap pair. \[caller, asset_0, asset_1,
 		/// min_contribution_0,min_contribution_1, total_supply_0,total_supply_1\]
@@ -272,17 +287,9 @@ pub mod pallet {
 			T::BlockNumber,
 		),
 
-		/// Refund from disable bootstrap pair. \[bootstrap_pair_account, caller, asset_0, asset_1\]
-		BootstrapRefund(T::AccountId, T::AccountId, AssetId, AssetId),
-
-		/// Disable a bootstrap pair. \[bootstrap_pair_account, asset_0, asset_1\]
-		BootstrapDisable(T::AccountId, AssetId, AssetId),
-
-		/// Limited pair added. \[asset_0, asset_1\]
-		LimitedPairAdded(AssetId, AssetId),
-
-		/// Limited pair removed. \[asset_0, asset_1\]
-		LimitedPairRemoved(AssetId, AssetId),
+		/// Refund from disable bootstrap pair. \[bootstrap_pair_account, caller, asset_0, asset_1,
+		/// asset_0_refund, asset_1_refund\]
+		BootstrapRefund(T::AccountId, T::AccountId, AssetId, AssetId, AssetBalance, AssetBalance),
 	}
 	#[pallet::error]
 	pub enum Error<T> {
@@ -344,6 +351,8 @@ pub mod pallet {
 		ZeroContribute,
 		/// Bootstrap deny refund
 		DenyRefund,
+		/// Bootstrap is disable
+		DisableBootstrap,
 	}
 
 	#[pallet::hooks]
@@ -520,6 +529,8 @@ pub mod pallet {
 				Trading(_) => Err(Error::<T>::PairAlreadyExists),
 				Bootstrap(params) => {
 					if Self::bootstrap_disable(params) {
+						BootstrapEndStatus::<T>::insert(pair, Bootstrap((*params).clone()));
+
 						*status = Trading(PairMetadata {
 							pair_account: Self::pair_account_id(pair.0, pair.1),
 							total_supply: Zero::zero(),
@@ -763,8 +774,8 @@ pub mod pallet {
 
 			Self::deposit_event(Event::BootstrapCreated(
 				Self::account_id(),
-				asset_0,
-				asset_1,
+				pair.0,
+				pair.1,
 				min_contribution_0,
 				min_contribution_1,
 				target_supply_0,
@@ -823,16 +834,7 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::do_bootstrap_claim(who.clone(), recipient.clone(), asset_0, asset_1)?;
-
-			Self::deposit_event(Event::BootstrapClaim(
-				Self::pair_account_id(asset_0, asset_1),
-				who,
-				recipient,
-				asset_0,
-				asset_1,
-			));
-			Ok(())
+			Self::do_bootstrap_claim(who.clone(), recipient.clone(), asset_0, asset_1)
 		}
 
 		/// End a bootstrap pair
@@ -921,16 +923,7 @@ pub mod pallet {
 		#[frame_support::transactional]
 		pub fn bootstrap_refund(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			Self::do_bootstrap_refund(who.clone(), asset_0, asset_1)?;
-
-			Self::deposit_event(Event::BootstrapRefund(
-				Self::pair_account_id(asset_0, asset_1),
-				who,
-				asset_0,
-				asset_1,
-			));
-
-			Ok(())
+			Self::do_bootstrap_refund(who.clone(), asset_0, asset_1)
 		}
 	}
 }

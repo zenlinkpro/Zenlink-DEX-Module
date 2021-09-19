@@ -607,8 +607,8 @@ impl<T: Config> Pallet<T> {
 
 			let pair_account = Self::account_id();
 
-			T::MultiAssetsHandler::transfer(asset_0, &who, &pair_account, amount_0_contribute)?;
-			T::MultiAssetsHandler::transfer(asset_1, &who, &pair_account, amount_1_contribute)?;
+			T::MultiAssetsHandler::transfer(pair.0, &who, &pair_account, amount_0_contribute)?;
+			T::MultiAssetsHandler::transfer(pair.1, &who, &pair_account, amount_1_contribute)?;
 
 			let accumulated_supply_0 = bootstrap_parameter
 				.accumulated_supply
@@ -658,14 +658,14 @@ impl<T: Config> Pallet<T> {
 				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
 				T::MultiAssetsHandler::transfer(
-					asset_0,
+					pair.0,
 					&bootstrap_parameter.pair_account,
 					&pair_account,
 					bootstrap_parameter.accumulated_supply.0,
 				)?;
 
 				T::MultiAssetsHandler::transfer(
-					asset_1,
+					pair.1,
 					&bootstrap_parameter.pair_account,
 					&pair_account,
 					bootstrap_parameter.accumulated_supply.1,
@@ -681,10 +681,7 @@ impl<T: Config> Pallet<T> {
 					}),
 				);
 
-				BootstrapEndStatus::<T>::insert(
-					pair,
-					Bootstrap(bootstrap_parameter.clone()),
-				);
+				BootstrapEndStatus::<T>::insert(pair, Bootstrap(bootstrap_parameter.clone()));
 
 				Self::deposit_event(Event::BootstrapEnd(
 					pair.0,
@@ -710,17 +707,24 @@ impl<T: Config> Pallet<T> {
 		match Self::pair_status(pair) {
 			Trading(_) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
 				if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
-
-					if let Bootstrap(bootstrap_parameter) = Self::bootstrap_end_status(pair){
+					if let Bootstrap(bootstrap_parameter) = Self::bootstrap_end_status(pair) {
+						ensure!(
+							!Self::bootstrap_disable(&bootstrap_parameter),
+							Error::<T>::DisableBootstrap
+						);
 						let exact_amount_0 = amount_0_contribute
 							.saturating_mul(bootstrap_parameter.accumulated_supply.1)
-							.saturating_add(amount_1_contribute.saturating_mul(bootstrap_parameter.accumulated_supply.0))
+							.saturating_add(
+								amount_1_contribute.saturating_mul(bootstrap_parameter.accumulated_supply.0),
+							)
 							.checked_div(bootstrap_parameter.accumulated_supply.1.saturating_mul(2))
 							.ok_or(Error::<T>::Overflow)?;
 
 						let exact_amount_1 = amount_1_contribute
 							.saturating_mul(bootstrap_parameter.accumulated_supply.0)
-							.saturating_add(amount_0_contribute.saturating_mul(bootstrap_parameter.accumulated_supply.1))
+							.saturating_add(
+								amount_0_contribute.saturating_mul(bootstrap_parameter.accumulated_supply.1),
+							)
 							.checked_div(bootstrap_parameter.accumulated_supply.0.saturating_mul(2))
 							.ok_or(Error::<T>::Overflow)?;
 
@@ -731,8 +735,19 @@ impl<T: Config> Pallet<T> {
 
 						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, calculated_liquidity)?;
 
+						Self::deposit_event(Event::BootstrapClaim(
+							pair_account,
+							who.clone(),
+							recipient,
+							pair.0,
+							pair.1,
+							amount_0_contribute,
+							amount_1_contribute,
+							calculated_liquidity,
+						));
+
 						Ok(())
-					}else{
+					} else {
 						Err(Error::<T>::NotInBootstrap.into())
 					}
 				} else {
@@ -751,19 +766,19 @@ impl<T: Config> Pallet<T> {
 				ensure!(Self::bootstrap_disable(&params), Error::<T>::DenyRefund);
 			}
 			_ => {
-				// No end status, so bootstrap no end. Bootstrap pair become trading pair.
-				ensure!(
-					!BootstrapEndStatus::<T>::contains_key(pair),
-					Error::<T>::NotInBootstrap
-				);
+				if let Bootstrap(bootstrap_parameter) = Self::bootstrap_end_status(pair) {
+					ensure!(Self::bootstrap_disable(&bootstrap_parameter), Error::<T>::DenyRefund);
+				} else {
+					return Err(Error::<T>::DenyRefund.into());
+				}
 			}
 		};
 
 		BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| -> DispatchResult {
 			if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
 				let pair_account = Self::account_id();
-				T::MultiAssetsHandler::transfer(asset_0, &pair_account, &who, amount_0_contribute)?;
-				T::MultiAssetsHandler::transfer(asset_1, &pair_account, &who, amount_1_contribute)?;
+				T::MultiAssetsHandler::transfer(pair.0, &pair_account, &who, amount_0_contribute)?;
+				T::MultiAssetsHandler::transfer(pair.1, &pair_account, &who, amount_1_contribute)?;
 
 				PairStatuses::<T>::mutate(pair, |status| match status {
 					Bootstrap(parameter) => {
@@ -775,6 +790,16 @@ impl<T: Config> Pallet<T> {
 					_ => {}
 				});
 				*contribution = None;
+
+				Self::deposit_event(Event::BootstrapRefund(
+					pair_account,
+					who.clone(),
+					pair.0,
+					pair.1,
+					amount_0_contribute,
+					amount_1_contribute,
+				));
+
 				Ok(())
 			} else {
 				Err(Error::<T>::ZeroContribute.into())
