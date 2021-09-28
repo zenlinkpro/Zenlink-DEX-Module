@@ -155,6 +155,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
+	pallet_zenlink::GenesisConfig::<Test> {
+		fee_receiver: None,
+		fee_point: 5,
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
 	t.into()
 }
 

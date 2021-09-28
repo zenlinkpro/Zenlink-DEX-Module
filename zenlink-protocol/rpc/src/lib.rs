@@ -14,7 +14,7 @@ use sp_rpc::number::NumberOrHex;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
-use zenlink_protocol::{AssetId, PairInfo};
+use zenlink_protocol::{AssetBalance, AssetId, PairInfo};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 #[rpc]
@@ -36,6 +36,34 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
 		asset_1: AssetId,
 		at: Option<BlockHash>,
 	) -> Result<Option<PairInfo<AccountId, NumberOrHex>>>;
+
+	#[rpc(name = "zenlinkProtocol_getAmountInPrice")]
+	fn get_amount_in_price(
+		&self,
+		supply: AssetBalance,
+		path: Vec<AssetId>,
+		at: Option<BlockHash>,
+	) -> Result<NumberOrHex>;
+
+	#[rpc(name = "zenlinkProtocol_getAmountOutPrice")]
+	fn get_amount_out_price(
+		&self,
+		supply: AssetBalance,
+		path: Vec<AssetId>,
+		at: Option<BlockHash>,
+	) -> Result<NumberOrHex>;
+
+	#[rpc(name = "zenlinkProtocol_getEstimateLptoken")]
+	fn get_estimate_lptoken(
+		&self,
+		asset_0: AssetId,
+		asset_1: AssetId,
+		amount_0_desired: AssetBalance,
+		amount_1_desired: AssetBalance,
+		amount_0_min: AssetBalance,
+		amount_1_min: AssetBalance,
+		at: Option<BlockHash>,
+	) -> Result<NumberOrHex>;
 }
 
 const RUNTIME_ERROR: i64 = 1;
@@ -63,6 +91,62 @@ where
 	C: HeaderBackend<Block>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 {
+	//buy amount asset price
+	fn get_amount_in_price(
+		&self,
+		supply: AssetBalance,
+		path: Vec<AssetId>,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<NumberOrHex> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+		api.get_amount_in_price(&at, supply, path)
+			.map(|price| price.into())
+			.map_err(runtime_error_into_rpc_err)
+	}
+
+	//sell amount asset price
+	fn get_amount_out_price(
+		&self,
+		supply: AssetBalance,
+		path: Vec<AssetId>,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<NumberOrHex> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+		api.get_amount_out_price(&at, supply, path)
+			.map(|price| price.into())
+			.map_err(runtime_error_into_rpc_err)
+	}
+
+	fn get_estimate_lptoken(
+		&self,
+		asset_0: AssetId,
+		asset_1: AssetId,
+		amount_0_desired: AssetBalance,
+		amount_1_desired: AssetBalance,
+		amount_0_min: AssetBalance,
+		amount_1_min: AssetBalance,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> Result<NumberOrHex> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+		api.get_estimate_lptoken(
+			&at,
+			asset_0,
+			asset_1,
+			amount_0_desired,
+			amount_1_desired,
+			amount_0_min,
+			amount_1_min,
+		)
+		.map(|price| price.into())
+		.map_err(runtime_error_into_rpc_err)
+	}
+
 	fn get_balance(
 		&self,
 		asset_id: AssetId,
@@ -115,6 +199,7 @@ where
 					reserve_0: pair.reserve_0.into(),
 					reserve_1: pair.reserve_1.into(),
 					lp_asset_id: pair.lp_asset_id,
+					status: pair.status,
 				})
 			})
 			.map_err(runtime_error_into_rpc_err)

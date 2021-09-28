@@ -36,3 +36,43 @@ impl AssetId {
 		self.chain_id != self_chain_id
 	}
 }
+
+/// Status for TradingPair
+#[derive(Clone, Copy, Encode, Decode, RuntimeDebug, PartialEq, Eq, MaxEncodedLen)]
+pub enum PairStatus<Balance, BlockNumber, Account> {
+	/// Pair is Trading,
+	/// can add/remove liquidity and swap.
+	Trading(PairMetadata<Balance, Account>),
+	/// pair is Bootstrap,
+	/// can add liquidity.
+	Bootstrap(BootstrapParameter<Balance, BlockNumber, Account>),
+	/// nothing in pair
+	Disable,
+}
+
+impl<Balance, BlockNumber, Account> Default for PairStatus<Balance, BlockNumber, Account> {
+	fn default() -> Self {
+		Self::Disable
+	}
+}
+
+/// Parameters of pair in Bootstrap status
+#[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq, MaxEncodedLen)]
+pub struct BootstrapParameter<Balance, BlockNumber, Account> {
+	/// limit contribution per time.
+	pub min_contribution: (Balance, Balance),
+	/// target supply that trading pair could to normal.
+	pub target_supply: (Balance, Balance),
+	/// accumulated supply for this Bootstrap pair.
+	pub accumulated_supply: (Balance, Balance),
+	/// bootstrap pair end block number.
+	pub end_block_number: BlockNumber,
+	/// bootstrap pair account.
+	pub pair_account: Account,
+}
+
+#[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq, MaxEncodedLen)]
+pub struct PairMetadata<Balance, Account> {
+	pub pair_account: Account,
+	pub total_supply: Balance,
+}

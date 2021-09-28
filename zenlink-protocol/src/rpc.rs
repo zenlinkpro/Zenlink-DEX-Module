@@ -22,12 +22,62 @@ pub struct PairInfo<AccountId, AssetBalance> {
 	pub reserve_0: AssetBalance,
 	pub reserve_1: AssetBalance,
 	pub lp_asset_id: AssetId,
+	pub status: u8,
 }
 
 impl<T: Config> Pallet<T> {
+	pub fn supply_out_amount(supply: AssetBalance, path: Vec<AssetId>) -> AssetBalance {
+		Self::get_amount_out_by_path(supply, &path).map_or(AssetBalance::default(), |amounts| {
+			*amounts.last().unwrap_or(&AssetBalance::default())
+		})
+	}
+
+	pub fn desired_in_amount(desired_amount: AssetBalance, path: Vec<AssetId>) -> AssetBalance {
+		Self::get_amount_in_by_path(desired_amount, &path).map_or(AssetBalance::default(), |amounts| {
+			*amounts.first().unwrap_or(&AssetBalance::default())
+		})
+	}
+
+	pub fn get_estimate_lptoken(
+		asset_0: AssetId,
+		asset_1: AssetId,
+		amount_0_desired: AssetBalance,
+		amount_1_desired: AssetBalance,
+		amount_0_min: AssetBalance,
+		amount_1_min: AssetBalance,
+	) -> AssetBalance {
+		let sorted_pair = Self::sort_asset_id(asset_0, asset_1);
+		match Self::pair_status(sorted_pair) {
+			Trading(metadata) => {
+				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &metadata.pair_account);
+				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &metadata.pair_account);
+				Self::calculate_added_amount(
+					amount_0_desired,
+					amount_1_desired,
+					amount_0_min,
+					amount_1_min,
+					reserve_0,
+					reserve_1,
+				)
+				.map_or(Zero::zero(), |(amount_0, amount_1)| {
+					Self::calculate_liquidity(amount_0, amount_1, reserve_0, reserve_1, metadata.total_supply)
+				})
+			}
+			_ => Zero::zero(),
+		}
+	}
+
 	pub fn get_pair_by_asset_id(asset_0: AssetId, asset_1: AssetId) -> Option<PairInfo<T::AccountId, AssetBalance>> {
 		let pair_account = Self::pair_account_id(asset_0, asset_1);
 		let lp_asset_id = Self::lp_asset_id(&asset_0, &asset_1);
+
+		let status = match Self::pair_status(Self::sort_asset_id(asset_0, asset_1)) {
+			Trading(_) => 0,
+			Bootstrap(_) => 1,
+			Disable => {
+				return None;
+			}
+		};
 
 		Some(PairInfo {
 			asset_0,
@@ -38,6 +88,7 @@ impl<T: Config> Pallet<T> {
 			reserve_0: T::MultiAssetsHandler::balance_of(asset_0, &pair_account),
 			reserve_1: T::MultiAssetsHandler::balance_of(asset_1, &pair_account),
 			lp_asset_id,
+			status,
 		})
 	}
 
