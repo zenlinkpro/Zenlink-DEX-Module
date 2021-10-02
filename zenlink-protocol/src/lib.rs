@@ -24,8 +24,9 @@ use sp_std::{convert::TryInto, marker::PhantomData, prelude::*};
 // -------xcm--------
 pub use cumulus_primitives_core::ParaId;
 
-use xcm::v0::{
-	Error as XcmError, ExecuteXcm, Junction, MultiAsset, MultiLocation, Order, Outcome, Result as XcmResult, Xcm,
+use xcm::v1::{
+	Error as XcmError, ExecuteXcm, Junction, Junctions, MultiAsset, MultiLocation, Order, Outcome, Result as XcmResult,
+	Xcm,
 };
 
 use xcm_executor::{
@@ -56,7 +57,7 @@ pub use transactor::{TransactorAdaptor, TrustedParas};
 
 const LOG_TARGET: &str = "zenlink_protocol";
 pub fn make_x2_location(para_id: u32) -> MultiLocation {
-	MultiLocation::X2(Junction::Parent, Junction::Parachain(para_id))
+	MultiLocation::new(1, Junctions::X1(Junction::Parachain(para_id)))
 }
 
 #[frame_support::pallet]
@@ -724,6 +725,7 @@ pub mod pallet {
 		/// - `end`: The earliest ending block.
 		#[pallet::weight(1_000_000)]
 		#[frame_support::transactional]
+		#[allow(clippy::too_many_arguments)]
 		pub fn bootstrap_create(
 			origin: OriginFor<T>,
 			asset_0: AssetId,
@@ -834,7 +836,7 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::do_bootstrap_claim(who.clone(), recipient.clone(), asset_0, asset_1)
+			Self::do_bootstrap_claim(who, recipient, asset_0, asset_1)
 		}
 
 		/// End a bootstrap pair
@@ -865,6 +867,7 @@ pub mod pallet {
 		/// - `end`: The earliest ending block.
 		#[pallet::weight(1_000_000)]
 		#[frame_support::transactional]
+		#[allow(clippy::too_many_arguments)]
 		pub fn bootstrap_update(
 			origin: OriginFor<T>,
 			asset_0: AssetId,
@@ -923,7 +926,7 @@ pub mod pallet {
 		#[frame_support::transactional]
 		pub fn bootstrap_refund(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			Self::do_bootstrap_refund(who.clone(), asset_0, asset_1)
+			Self::do_bootstrap_refund(who, asset_0, asset_1)
 		}
 	}
 }

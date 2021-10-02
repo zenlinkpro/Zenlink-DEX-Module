@@ -1,8 +1,45 @@
 # zenlink-protocol-rpc(v0.4.0)
 
 #### 1. introduction
- 
-- 1.`zenlinkProtocol_getBalance`:
+
+- 1.`zenlinkProtocol_getAllAssets`:
+
+   Get all AssetIds in the Zenlink Module, include `foreign` and `liquidity` assets.
+  - {"chain_id":200,"asset_type":0,"asset_index":0}: ParaId=200, Native Currency
+  - {"chain_id":200,"asset_type":1,"asset_index":0}: ParaId=300, Liquidity Asset
+
+  ```
+  curl -H "Content-Type: application/json" http://localhost:31200 -d \
+    '{
+      "jsonrpc":"2.0",
+      "id":1,
+      "method":"zenlinkProtocol_getAllAssets",
+      "params": [null]
+    }'
+  ```
+  
+  **Response:**
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "result": [
+      {
+        "asset_index": 0,
+        "asset_type": 0,
+        "chain_id": 200
+      },
+      {
+        "asset_index": 0,
+        "asset_type": 1,
+        "chain_id": 300
+      }
+    ],
+    "id": 1
+  }
+  ```
+   
+- 2.`zenlinkProtocol_getBalance`:
 
   Get the balance of the AssetId and account
     
@@ -26,7 +63,7 @@
   }
   ```
   
-- 2.`zenlinkProtocol_getSovereignsInfo`：
+- 3.`zenlinkProtocol_getSovereignsInfo`：
   Get the origin info about cross-transfer assets
   Return <(paraid, sovereign_account, balance)>
   
@@ -60,7 +97,117 @@
     "id": 1
   }
   ```
-- 3.`zenlinkProtocol_getPairByAssetId`：
+  
+- 4.`zenlinkProtocol_getAllPairs`：
+
+  Get all the swap pairs of Zenlink Module.
+
+    ```bash
+  curl -H "Content-Type: application/json" http://localhost:11111 -d \
+  '{
+        "jsonrpc":"2.0",
+        "id":1,
+        "method":"zenlinkProtocol_getAllPairs",
+        "params": [null]
+  }'  
+    ```
+  
+  **Response:**
+  - account: the account of swap pair
+  - holdingLiquidity: the liquidity of user holding
+  - reserve0: the amount of asset0 in swap pair
+  - reserve1: the amount of asset1 in swap pair
+  - asset0 & asset1: the AssetId of asset0 and asset1
+  - totalLiquidity：lptoken total supply
+  - lpAssetId: the AssetId of lptoken
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "result": [
+      {
+        "account": "5EYCAe5ViNAoHnU1ZZVit8ymcR39EP5fyU6Zv3GV7HD5MN9d",
+        "asset0": {
+          "asset_index": 0,
+          "asset_type": 0,
+          "chain_id": 200
+        },
+        "asset1": {
+          "asset_index": 0,
+          "asset_type": 0,
+          "chain_id": 300
+        },
+        "holdingLiquidity": "0x0",
+        "lpAssetId": {
+          "asset_index": 0,
+          "asset_type": 1,
+          "chain_id": 300
+        },
+        "reserve0": "0x1d91d9f5",
+        "reserve1": "0x29d7f22d",
+        "totalLiquidity": "0x232aaf80"
+      }
+    ],
+    "id": 1
+  }
+  ```
+
+- 5.`zenlinkProtocol_getOwnerPairs`：
+
+  Get the pair info of the specified account
+  
+  ```bash
+  curl -H "Content-Type: application/json" http://localhost:11111 -d \
+  '{
+        "jsonrpc":"2.0",
+        "id":1,
+        "method":"zenlinkProtocol_getOwnerPairs",
+        "params": ["5CiPPseXPECbkjWCa6MnjNokrgYjMqmKndv2rSnekmSK2DjL", null]
+  }'
+  ```
+  
+  **Reponse:**
+  
+  - account: the account of swap pair
+  - holdingLiquidity: the liquidity of user holding
+  - reserve0: the amount of asset0 in swap pair
+  - reserve1: the amount of asset1 in swap pair
+  - asset0 & asset1: the AssetId of asset0 and asset1
+  - totalLiquidity：lptoken total supply
+  - lpAssetId: the AssetId of lptoken
+  
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "result": [
+      {
+        "account": "5EYCAe5ViNAoHnU1ZZVit8ymcR39EP5fyU6Zv3GV7HD5MN9d",
+        "asset0": {
+          "asset_index": 0,
+          "asset_type": 0,
+          "chain_id": 200
+        },
+        "asset1": {
+          "asset_index": 0,
+          "asset_type": 0,
+          "chain_id": 300
+        },
+        "holdingLiquidity": "0x232aaf80",
+        "lpAssetId": {
+          "asset_index": 0,
+          "asset_type": 1,
+          "chain_id": 300
+        },
+        "reserve0": "0x1d91d9f5",
+        "reserve1": "0x29d7f22d",
+        "totalLiquidity": "0x232aaf80"
+      }
+    ],
+    "id": 1
+  }
+  ```
+  
+- 6.`zenlinkProtocol_getPairByAssetId`：
 
   Get the pair info of the specified AssetIds
   
@@ -116,7 +263,7 @@
   }
   ```
   
-- 4.`zenlinkProtocol_getAmountInPrice`： 
+- 7.`zenlinkProtocol_getAmountInPrice`： 
   
   Query the buying rate (fixed trading pair on the right)
   
@@ -151,7 +298,7 @@
   }
   ```
   
-- 5.`zenlinkProtocol_getAmountOutPrice`：
+- 8.`zenlinkProtocol_getAmountOutPrice`：
   
    Query the selling exchange rate (fixed trading pair on the left)
   

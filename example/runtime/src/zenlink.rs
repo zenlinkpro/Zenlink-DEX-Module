@@ -7,9 +7,9 @@ use frame_support::dispatch::{DispatchError, DispatchResult};
 use orml_traits::MultiCurrency;
 
 use super::{
-	parameter_types, vec, AccountId, AccountId32, AccountId32Aliases, Balances, Event, Get, MultiLocation, NetworkId,
-	PalletId, Parachain, ParachainInfo, Parent, Runtime, ShouldExecute, Sibling, SiblingParachainConvertsVia, Tokens,
-	Vec, Weight, Xcm, XcmConfig, XcmExecutor, ZenlinkProtocol, X1, X2,
+	parameter_types, vec, AccountId, AccountId32, AccountId32Aliases, Balances, Currencies, Event, Get, MultiLocation,
+	NetworkId, PalletId, Parachain, ParachainInfo, Runtime, ShouldExecute, Sibling, SiblingParachainConvertsVia, Vec,
+	Weight, Xcm, XcmConfig, XcmExecutor, ZenlinkProtocol, X1,
 };
 
 pub use zenlink_protocol::{
@@ -57,9 +57,9 @@ where
 	) -> Result<(), ()> {
 		frame_support::log::info!("zenlink_protocol: ZenlinkAllowUnpaid = {:?}", origin);
 
-		match origin {
+		match &origin.interior {
 			X1(AccountId32 { network, .. }) if *network == NetworkId::Any => Ok(()),
-			X2(Parent, Parachain(id)) => {
+			X1(Parachain(id)) => {
 				match RegisteredChains::get()
 					.iter()
 					.find(|(location, _)| *location == make_x2_location(*id))
@@ -142,7 +142,7 @@ where
 	}
 }
 
-pub type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Tokens>>;
+pub type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
 
 impl zenlink_protocol::Config for Runtime {
 	type Event = Event;
