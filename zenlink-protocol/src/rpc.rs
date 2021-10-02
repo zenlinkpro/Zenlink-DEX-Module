@@ -95,10 +95,10 @@ impl<T: Config> Pallet<T> {
 	pub fn get_sovereigns_info(asset_id: &AssetId) -> Vec<(u32, T::AccountId, AssetBalance)> {
 		T::TargetChains::get()
 			.iter()
-			.filter_map(|(location, _)| match location {
-				MultiLocation::X2(Junction::Parent, Junction::Parachain(id)) => {
+			.filter_map(|(location, _)| match location.interior {
+				Junctions::X1(Junction::Parachain(id)) => {
 					if let Ok(sovereign) = T::Conversion::convert_ref(location) {
-						Some((*id, sovereign))
+						Some((id, sovereign))
 					} else {
 						None
 					}

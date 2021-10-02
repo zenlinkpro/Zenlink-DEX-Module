@@ -54,11 +54,11 @@ impl<T: Config> Pallet<T> {
 
 		let index = currency_0 + currency_1 + discr;
 
-		return AssetId {
+		AssetId {
 			chain_id: T::SelfParaId::get(),
 			asset_type: LOCAL,
 			asset_index: index,
-		};
+		}
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -98,7 +98,6 @@ impl<T: Config> Pallet<T> {
 				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, parameter.total_supply);
 				if let Some(fee_to) = Self::fee_meta().0 {
 					if mint_fee > 0 && Self::fee_meta().1 > 0 {
-						//Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
 						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee).map(|_| mint_fee)?;
 						parameter.total_supply = parameter
 							.total_supply
@@ -192,7 +191,7 @@ impl<T: Config> Pallet<T> {
 					.ok_or(Error::<T>::InsufficientLiquidity)?;
 
 				// Self::mutate_liquidity(asset_0, asset_1, who, remove_liquidity, false)?;
-				T::MultiAssetsHandler::withdraw(lp_asset_id, &who, remove_liquidity).map(|_| remove_liquidity)?;
+				T::MultiAssetsHandler::withdraw(lp_asset_id, who, remove_liquidity).map(|_| remove_liquidity)?;
 
 				T::MultiAssetsHandler::transfer(asset_0, &parameter.pair_account, recipient, amount_0)?;
 				T::MultiAssetsHandler::transfer(asset_1, &parameter.pair_account, recipient, amount_1)?;
@@ -233,7 +232,7 @@ impl<T: Config> Pallet<T> {
 		path: &[AssetId],
 		recipient: &T::AccountId,
 	) -> DispatchResult {
-		let amounts = Self::get_amount_out_by_path(amount_in, &path)?;
+		let amounts = Self::get_amount_out_by_path(amount_in, path)?;
 		ensure!(
 			amounts[amounts.len() - 1] >= amount_out_min,
 			Error::<T>::InsufficientTargetAmount
@@ -242,7 +241,7 @@ impl<T: Config> Pallet<T> {
 		let pair_account = Self::pair_account_id(path[0], path[1]);
 
 		T::MultiAssetsHandler::transfer(path[0], who, &pair_account, amount_in)?;
-		Self::swap(&amounts, &path, &recipient)?;
+		Self::swap(&amounts, path, recipient)?;
 
 		Self::deposit_event(Event::AssetSwap(
 			who.clone(),
@@ -262,14 +261,14 @@ impl<T: Config> Pallet<T> {
 		path: &[AssetId],
 		recipient: &T::AccountId,
 	) -> DispatchResult {
-		let amounts = Self::get_amount_in_by_path(amount_out, &path)?;
+		let amounts = Self::get_amount_in_by_path(amount_out, path)?;
 
 		ensure!(amounts[0] <= amount_in_max, Error::<T>::ExcessiveSoldAmount);
 
 		let pair_account = Self::pair_account_id(path[0], path[1]);
 
 		T::MultiAssetsHandler::transfer(path[0], who, &pair_account, amounts[0])?;
-		Self::swap(&amounts, &path, recipient)?;
+		Self::swap(&amounts, path, recipient)?;
 
 		Self::deposit_event(Event::AssetSwap(
 			who.clone(),
@@ -524,7 +523,7 @@ impl<T: Config> Pallet<T> {
 				let mid_account = Self::pair_account_id(output, path[i + 2]);
 				Self::pair_swap(asset_0, asset_1, &pair_account, amount0_out, amount1_out, &mid_account)?;
 			} else {
-				Self::pair_swap(asset_0, asset_1, &pair_account, amount0_out, amount1_out, &recipient)?;
+				Self::pair_swap(asset_0, asset_1, &pair_account, amount0_out, amount1_out, recipient)?;
 			};
 		}
 		Ok(())
@@ -544,8 +543,8 @@ impl<T: Config> Pallet<T> {
 			_ => Err(Error::<T>::PairNotExists),
 		}?;
 
-		let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &pair_account);
-		let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &pair_account);
+		let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, pair_account);
+		let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, pair_account);
 
 		ensure!(
 			amount_0 <= reserve_0 && amount_1 <= reserve_1,
@@ -553,11 +552,11 @@ impl<T: Config> Pallet<T> {
 		);
 
 		if amount_0 > Zero::zero() {
-			T::MultiAssetsHandler::transfer(asset_0, &pair_account, recipient, amount_0)?;
+			T::MultiAssetsHandler::transfer(asset_0, pair_account, recipient, amount_0)?;
 		}
 
 		if amount_1 > Zero::zero() {
-			T::MultiAssetsHandler::transfer(asset_1, &pair_account, recipient, amount_1)?;
+			T::MultiAssetsHandler::transfer(asset_1, pair_account, recipient, amount_1)?;
 		}
 
 		Ok(())
@@ -780,14 +779,13 @@ impl<T: Config> Pallet<T> {
 				T::MultiAssetsHandler::transfer(pair.0, &pair_account, &who, amount_0_contribute)?;
 				T::MultiAssetsHandler::transfer(pair.1, &pair_account, &who, amount_1_contribute)?;
 
-				PairStatuses::<T>::mutate(pair, |status| match status {
-					Bootstrap(parameter) => {
+				PairStatuses::<T>::mutate(pair, |status| {
+					if let Bootstrap(parameter) = status {
 						parameter.accumulated_supply.0 =
 							parameter.accumulated_supply.0.saturating_sub(amount_0_contribute);
 						parameter.accumulated_supply.1 =
 							parameter.accumulated_supply.1.saturating_sub(amount_1_contribute);
 					}
-					_ => {}
 				});
 				*contribution = None;
 
@@ -818,7 +816,7 @@ impl<T: Config> Pallet<T> {
 		{
 			return true;
 		}
-		return false;
+		false
 	}
 }
 
