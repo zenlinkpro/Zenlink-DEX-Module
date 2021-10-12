@@ -552,14 +552,6 @@ pub mod pallet {
 
 			Self::mutate_lp_pairs(asset_0, asset_1);
 
-			PairStatuses::<T>::insert(
-				pair,
-				Trading(PairMetadata {
-					pair_account: Self::pair_account_id(asset_0, asset_1),
-					total_supply: Zero::zero(),
-				}),
-			);
-
 			Self::deposit_event(Event::PairCreated(asset_0, asset_1));
 			Ok(())
 		}
