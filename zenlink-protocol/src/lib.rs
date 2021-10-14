@@ -45,6 +45,9 @@ mod traits;
 mod transactor;
 mod transfer;
 
+mod default_weights;
+
+pub use default_weights::WeightInfo;
 pub use multiassets::{MultiAssetsHandler, ZenlinkMultiAssets};
 pub use primitives::{
 	AssetBalance, AssetId, BootstrapParameter, PairMetadata, PairStatus,
@@ -88,6 +91,8 @@ pub mod pallet {
 		/// AccountId to be used in XCM as a corresponding AccountId32
 		/// and convert from MultiLocation in XCM
 		type Conversion: Convert<MultiLocation, Self::AccountId>;
+		/// Weight information for extrinsics in this pallet.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::pallet]
@@ -368,7 +373,7 @@ pub mod pallet {
 		/// - `send_to`:
 		/// (1) Some(receiver): it turn on the protocol fee and the new receiver account.
 		/// (2) None: it turn off the protocol fee.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::set_fee_receiver())]
 		pub fn set_fee_receiver(
 			origin: OriginFor<T>,
 			send_to: Option<<T::Lookup as StaticLookup>::Source>,
@@ -397,7 +402,7 @@ pub mod pallet {
 		/// 0 means no protocol fee.
 		/// 30 means 0.3% * 100% = 0.0030.
 		/// default is 5 and means 0.3% * 1 / 6 = 0.0005.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::set_fee_point())]
 		pub fn set_fee_point(origin: OriginFor<T>, fee_point: u8) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(fee_point <= 30, Error::<T>::InvalidFeePoint);
@@ -512,7 +517,7 @@ pub mod pallet {
 		///
 		/// - `asset_0`: Asset which make up Pair
 		/// - `asset_1`: Asset which make up Pair
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::create_pair())]
 		pub fn create_pair(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(
@@ -569,7 +574,7 @@ pub mod pallet {
 		/// - `amount_0_min`: Minimum amount of asset_0 added to the pair
 		/// - `amount_1_min`: Minimum amount of asset_1 added to the pair
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::add_liquidity())]
 		#[frame_support::transactional]
 		#[allow(clippy::too_many_arguments)]
 		pub fn add_liquidity(
@@ -613,7 +618,7 @@ pub mod pallet {
 		/// - `amount_asset_1_min`: Minimum amount of asset_1 to exact
 		/// - `recipient`: Account that accepts withdrawal of assets
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::remove_liquidity())]
 		#[frame_support::transactional]
 		#[allow(clippy::too_many_arguments)]
 		pub fn remove_liquidity(
@@ -655,7 +660,7 @@ pub mod pallet {
 		/// - `path`: path can convert to pairs.
 		/// - `recipient`: Account that receive the target foreign
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::swap_exact_assets_for_assets())]
 		#[frame_support::transactional]
 		pub fn swap_exact_assets_for_assets(
 			origin: OriginFor<T>,
@@ -683,7 +688,7 @@ pub mod pallet {
 		/// - `path`: path can convert to pairs.
 		/// - `recipient`: Account that receive the target foreign
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::swap_assets_for_exact_assets())]
 		#[frame_support::transactional]
 		pub fn swap_assets_for_exact_assets(
 			origin: OriginFor<T>,
@@ -704,7 +709,7 @@ pub mod pallet {
 
 		/// Create bootstrap pair
 		///
-		/// The order of foreign dot effect result.
+		/// The order of asset don't affect result.
 		///
 		/// # Arguments
 		///
@@ -715,7 +720,7 @@ pub mod pallet {
 		/// - `target_supply_0`: Target amount of asset_0 total contribute
 		/// - `target_supply_0`: Target amount of asset_1 total contribute
 		/// - `end`: The earliest ending block.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::bootstrap_create())]
 		#[frame_support::transactional]
 		#[allow(clippy::too_many_arguments)]
 		pub fn bootstrap_create(
@@ -788,7 +793,7 @@ pub mod pallet {
 		/// - `amount_0_contribute`: The amount of asset_0 contribute to this bootstrap pair
 		/// - `amount_1_contribute`: The amount of asset_1 contribute to this bootstrap pair
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::bootstrap_contribute())]
 		#[frame_support::transactional]
 		pub fn bootstrap_contribute(
 			who: OriginFor<T>,
@@ -813,7 +818,7 @@ pub mod pallet {
 		/// - `asset_0`: Asset which make up bootstrap pair
 		/// - `asset_1`: Asset which make up bootstrap pair
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::bootstrap_claim())]
 		#[frame_support::transactional]
 		pub fn bootstrap_claim(
 			origin: OriginFor<T>,
@@ -837,7 +842,7 @@ pub mod pallet {
 		///
 		/// - `asset_0`: Asset which make up bootstrap pair
 		/// - `asset_1`: Asset which make up bootstrap pair
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::bootstrap_end())]
 		#[frame_support::transactional]
 		pub fn bootstrap_end(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
 			ensure_signed(origin)?;
@@ -857,7 +862,7 @@ pub mod pallet {
 		/// - `target_supply_0`: The new target amount of asset_0 total contribute
 		/// - `target_supply_0`: The new target amount of asset_1 total contribute
 		/// - `end`: The earliest ending block.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::bootstrap_update())]
 		#[frame_support::transactional]
 		#[allow(clippy::too_many_arguments)]
 		pub fn bootstrap_update(
@@ -914,7 +919,7 @@ pub mod pallet {
 		///
 		/// - `asset_0`: Asset which make up bootstrap pair
 		/// - `asset_1`: Asset which make up bootstrap pair
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::bootstrap_refund())]
 		#[frame_support::transactional]
 		pub fn bootstrap_refund(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
 			let who = ensure_signed(origin)?;

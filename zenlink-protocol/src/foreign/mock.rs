@@ -81,6 +81,7 @@ impl Config for Test {
 	type SelfParaId = ();
 	type XcmExecutor = ();
 	type Conversion = ();
+	type WeightInfo = ();
 }
 
 pub type DexPallet = Pallet<Test>;
