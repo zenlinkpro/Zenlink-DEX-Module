@@ -2,7 +2,7 @@
 // Licensed under GPL-3.0.
 
 use super::*;
-use xcm::v1::multiasset::{AssetId as XcmAssetId, Fungibility, MultiAssets, WildMultiAsset::All};
+use xcm::v1::{AssetId as XcmAssetId, Fungibility, MultiAssets, WildMultiAsset::All};
 
 impl<T: Config> Pallet<T> {
 	// Check the native currency must be more than ExistentialDeposit,

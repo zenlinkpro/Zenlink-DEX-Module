@@ -8,11 +8,12 @@ use std::marker::PhantomData;
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use scale_info::TypeInfo;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	pallet_prelude::GenesisBuild,
-	parameter_types, PalletId,
+	parameter_types, PalletId, traits::Contains,
 };
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 use sp_core::H256;
@@ -31,7 +32,7 @@ pub use crate::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	Token(u8),
@@ -61,7 +62,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = frame_support::traits::Everything;
 	type Origin = Origin;
 	type Index = u64;
 	type Call = Call;
@@ -92,6 +93,13 @@ parameter_type_with_key! {
 	};
 }
 
+pub struct MockDustRemovalWhitelist;
+impl Contains<AccountId> for MockDustRemovalWhitelist {
+	fn contains(_a: &AccountId) -> bool {
+		true
+	}
+}
+
 impl orml_tokens::Config for Test {
 	type Event = Event;
 	type Balance = u128;
@@ -101,7 +109,7 @@ impl orml_tokens::Config for Test {
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
-	type DustRemovalWhitelist = ();
+	type DustRemovalWhitelist = MockDustRemovalWhitelist;
 }
 
 impl pallet_balances::Config for Test {

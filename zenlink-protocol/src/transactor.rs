@@ -8,7 +8,7 @@
 #![allow(unused_variables)]
 
 use super::*;
-use xcm::latest::{multiasset, Fungibility};
+use xcm::v1::{MultiAsset, AssetId as XcmAssetId, Fungibility};
 
 /// Asset transaction errors.
 enum Error {
@@ -58,7 +58,7 @@ impl<
 		let who = AccountIdConverter::convert_ref(who).map_err(|()| Error::AccountIdConversionFailed)?;
 
 		match &asset.id {
-			multiasset::AssetId::Concrete(location) => {
+			XcmAssetId::Concrete(location) => {
 				if let Fungibility::Fungible(amount) = asset.fun {
 					let asset_id =
 						multilocation_to_asset(location).ok_or(XcmError::FailedToTransactAsset("unKnown asset"))?;
@@ -66,11 +66,11 @@ impl<
 					ZenlinkAssets::deposit(asset_id, &who, amount)
 						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 				} else {
-					return Err(XcmError::AssetNotFound);
+					return Err(XcmError::AssetNotFound.into());
 				}
 				Ok(())
 			}
-			_ => Err(XcmError::AssetNotFound),
+			_ => Err(XcmError::AssetNotFound.into()),
 		}
 	}
 
@@ -85,7 +85,7 @@ impl<
 		let who = AccountIdConverter::convert_ref(who).map_err(|()| Error::AccountIdConversionFailed)?;
 
 		match &asset.id {
-			multiasset::AssetId::Concrete(location) => {
+			XcmAssetId::Concrete(location) => {
 				if let Fungibility::Fungible(amount) = asset.fun {
 					let asset_id =
 						multilocation_to_asset(location).ok_or(XcmError::FailedToTransactAsset("unKnown asset"))?;
@@ -94,10 +94,10 @@ impl<
 						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 					Ok(asset.clone().into())
 				} else {
-					Err(XcmError::NotWithdrawable)
+					Err(XcmError::NotWithdrawable.into())
 				}
 			}
-			_ => Err(XcmError::NotWithdrawable),
+			_ => Err(XcmError::NotWithdrawable.into()),
 		}
 	}
 }

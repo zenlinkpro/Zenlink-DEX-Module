@@ -25,9 +25,11 @@ use sp_std::{convert::TryInto, marker::PhantomData, prelude::*};
 pub use cumulus_primitives_core::ParaId;
 
 use xcm::v1::{
-	Error as XcmError, ExecuteXcm, Junction, Junctions, MultiAsset, MultiLocation, Order, Outcome, Result as XcmResult,
+	ExecuteXcm, Junction, Junctions, MultiAsset, MultiLocation, Order, Outcome,
 	Xcm,
 };
+
+use xcm::v2::{Result as XcmResult, Error as XcmError};
 
 use xcm_executor::{
 	traits::{Convert, FilterAssetLocation, TransactAsset},
@@ -209,7 +211,6 @@ pub mod pallet {
 	}
 
 	#[pallet::event]
-	#[pallet::metadata(T::AccountId = "AccountId")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Foreign Asset
