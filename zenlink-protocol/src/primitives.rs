@@ -2,6 +2,7 @@
 // Licensed under GPL-3.0.
 
 use super::*;
+use scale_info::TypeInfo;
 
 pub type AssetBalance = u128;
 
@@ -15,7 +16,7 @@ pub const LOCAL: u8 = 2;
 pub const RESERVED: u8 = 3;
 
 /// AssetId use to locate assets in framed base chain.
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize, Default))]
 pub struct AssetId {
 	pub chain_id: u32,
@@ -38,7 +39,7 @@ impl AssetId {
 }
 
 /// Status for TradingPair
-#[derive(Clone, Copy, Encode, Decode, RuntimeDebug, PartialEq, Eq, MaxEncodedLen)]
+#[derive(Clone, Copy, Encode, Decode, RuntimeDebug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub enum PairStatus<Balance, BlockNumber, Account> {
 	/// Pair is Trading,
 	/// can add/remove liquidity and swap.
@@ -57,7 +58,7 @@ impl<Balance, BlockNumber, Account> Default for PairStatus<Balance, BlockNumber,
 }
 
 /// Parameters of pair in Bootstrap status
-#[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq, MaxEncodedLen)]
+#[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct BootstrapParameter<Balance, BlockNumber, Account> {
 	/// limit contribution per time.
 	pub min_contribution: (Balance, Balance),
@@ -71,7 +72,7 @@ pub struct BootstrapParameter<Balance, BlockNumber, Account> {
 	pub pair_account: Account,
 }
 
-#[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq, MaxEncodedLen)]
+#[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct PairMetadata<Balance, Account> {
 	pub pair_account: Account,
 	pub total_supply: Balance,
