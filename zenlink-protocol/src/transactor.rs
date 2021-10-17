@@ -8,7 +8,7 @@
 #![allow(unused_variables)]
 
 use super::*;
-use xcm::v1::{MultiAsset, AssetId as XcmAssetId, Fungibility};
+use xcm::v1::{AssetId as XcmAssetId, Fungibility, MultiAsset};
 
 /// Asset transaction errors.
 enum Error {

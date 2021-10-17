@@ -6,14 +6,16 @@
 use std::marker::PhantomData;
 
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use scale_info::TypeInfo;
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	pallet_prelude::GenesisBuild,
-	parameter_types, PalletId, traits::Contains,
+	parameter_types,
+	traits::Contains,
+	PalletId,
 };
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 use sp_core::H256;
