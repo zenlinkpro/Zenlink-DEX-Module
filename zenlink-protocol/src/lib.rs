@@ -24,12 +24,9 @@ use sp_std::{convert::TryInto, marker::PhantomData, prelude::*};
 // -------xcm--------
 pub use cumulus_primitives_core::ParaId;
 
-use xcm::v1::{
-	ExecuteXcm, Junction, Junctions, MultiAsset, MultiLocation, Order, Outcome,
-	Xcm,
-};
+use xcm::v1::{ExecuteXcm, Junction, Junctions, MultiAsset, MultiLocation, Order, Outcome, Xcm};
 
-use xcm::v2::{Result as XcmResult, Error as XcmError};
+use xcm::v2::{Error as XcmError, Result as XcmResult};
 
 use xcm_executor::{
 	traits::{Convert, FilterAssetLocation, TransactAsset},

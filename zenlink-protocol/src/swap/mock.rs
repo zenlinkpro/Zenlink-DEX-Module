@@ -7,13 +7,15 @@
 use std::marker::PhantomData;
 
 use codec::{Decode, Encode};
-use serde::{Deserialize, Serialize};
 use scale_info::TypeInfo;
+use serde::{Deserialize, Serialize};
 
 use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	pallet_prelude::GenesisBuild,
-	parameter_types, PalletId, traits::Contains
+	parameter_types,
+	traits::Contains,
+	PalletId,
 };
 use sp_core::H256;
 use sp_runtime::{
