@@ -906,8 +906,8 @@ pub mod pallet {
 				pair.1,
 				target_supply_0,
 				target_supply_1,
-				capacity_supply_1,
 				capacity_supply_0,
+				capacity_supply_1,
 				end,
 			));
 			Ok(())
