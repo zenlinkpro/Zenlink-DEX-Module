@@ -582,7 +582,7 @@ impl<T: Config> Pallet<T> {
 				return Err(Error::<T>::NotInBootstrap.into());
 			}
 		};
-		let (amount_0_contribute, amount_1_contribute) = if pair.0 == asset_0 {
+		let (mut amount_0_contribute, mut amount_1_contribute) = if pair.0 == asset_0 {
 			(amount_0_contribute, amount_1_contribute)
 		} else {
 			(amount_1_contribute, amount_0_contribute)
@@ -593,6 +593,24 @@ impl<T: Config> Pallet<T> {
 				|| amount_1_contribute >= bootstrap_parameter.min_contribution.1,
 			Error::<T>::InvalidContributionAmount
 		);
+
+		if amount_0_contribute.saturating_add(bootstrap_parameter.accumulated_supply.0)
+			> bootstrap_parameter.capacity_supply.0
+		{
+			amount_0_contribute = bootstrap_parameter
+				.capacity_supply
+				.0
+				.saturating_sub(bootstrap_parameter.accumulated_supply.0);
+		}
+
+		if amount_1_contribute.saturating_add(bootstrap_parameter.accumulated_supply.1)
+			> bootstrap_parameter.capacity_supply.1
+		{
+			amount_1_contribute = bootstrap_parameter
+				.capacity_supply
+				.1
+				.saturating_sub(bootstrap_parameter.accumulated_supply.1);
+		}
 
 		BootstrapPersonalSupply::<T>::try_mutate((pair, &who), |contribution| {
 			contribution.0 = contribution

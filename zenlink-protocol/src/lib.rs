@@ -717,6 +717,8 @@ pub mod pallet {
 		/// - `min_contribution_0`: Min amount of asset_1 contribute
 		/// - `target_supply_0`: Target amount of asset_0 total contribute
 		/// - `target_supply_0`: Target amount of asset_1 total contribute
+		/// - `capacity_supply_0`: The max amount of asset_0 total contribute
+		/// - `capacity_supply_1`: The max amount of asset_1 total contribute
 		/// - `end`: The earliest ending block.
 		#[pallet::weight(T::WeightInfo::bootstrap_create())]
 		#[frame_support::transactional]
@@ -729,16 +731,39 @@ pub mod pallet {
 			#[pallet::compact] min_contribution_1: AssetBalance,
 			#[pallet::compact] target_supply_0: AssetBalance,
 			#[pallet::compact] target_supply_1: AssetBalance,
+			#[pallet::compact] capacity_supply_0: AssetBalance,
+			#[pallet::compact] capacity_supply_1: AssetBalance,
 			#[pallet::compact] end: T::BlockNumber,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 
-			let (min_contribution_0, min_contribution_1, target_supply_0, target_supply_1) = if pair.0 == asset_0 {
-				(min_contribution_0, min_contribution_1, target_supply_0, target_supply_1)
+			let (
+				min_contribution_0,
+				min_contribution_1,
+				target_supply_0,
+				target_supply_1,
+				capacity_supply_0,
+				capacity_supply_1,
+			) = if pair.0 == asset_0 {
+				(
+					min_contribution_0,
+					min_contribution_1,
+					target_supply_0,
+					target_supply_1,
+					capacity_supply_0,
+					capacity_supply_1,
+				)
 			} else {
-				(min_contribution_1, min_contribution_0, target_supply_1, target_supply_0)
+				(
+					min_contribution_1,
+					min_contribution_0,
+					target_supply_1,
+					target_supply_0,
+					capacity_supply_1,
+					capacity_supply_0,
+				)
 			};
 
 			PairStatuses::<T>::try_mutate(pair, |status| match status {
@@ -748,6 +773,7 @@ pub mod pallet {
 						*status = Bootstrap(BootstrapParameter {
 							min_contribution: (min_contribution_0, min_contribution_1),
 							target_supply: (target_supply_0, target_supply_1),
+							capacity_supply: (capacity_supply_0, capacity_supply_1),
 							accumulated_supply: params.accumulated_supply,
 							end_block_number: end,
 							pair_account: Self::account_id(),
@@ -761,6 +787,7 @@ pub mod pallet {
 					*status = Bootstrap(BootstrapParameter {
 						min_contribution: (min_contribution_0, min_contribution_1),
 						target_supply: (target_supply_0, target_supply_1),
+						capacity_supply: (capacity_supply_0, capacity_supply_1),
 						accumulated_supply: (Zero::zero(), Zero::zero()),
 						end_block_number: end,
 						pair_account: Self::account_id(),
@@ -859,6 +886,8 @@ pub mod pallet {
 		/// - `min_contribution_0`: The new min amount of asset_1 contribute
 		/// - `target_supply_0`: The new target amount of asset_0 total contribute
 		/// - `target_supply_0`: The new target amount of asset_1 total contribute
+		/// - `capacity_supply_0`: The new max amount of asset_0 total contribute
+		/// - `capacity_supply_1`: The new max amount of asset_1 total contribute
 		/// - `end`: The earliest ending block.
 		#[pallet::weight(T::WeightInfo::bootstrap_update())]
 		#[frame_support::transactional]
@@ -871,15 +900,38 @@ pub mod pallet {
 			#[pallet::compact] min_contribution_1: AssetBalance,
 			#[pallet::compact] target_supply_0: AssetBalance,
 			#[pallet::compact] target_supply_1: AssetBalance,
+			#[pallet::compact] capacity_supply_0: AssetBalance,
+			#[pallet::compact] capacity_supply_1: AssetBalance,
 			#[pallet::compact] end: T::BlockNumber,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 
-			let (min_contribution_0, min_contribution_1, target_supply_0, target_supply_1) = if pair.0 == asset_0 {
-				(min_contribution_0, min_contribution_1, target_supply_0, target_supply_1)
+			let (
+				min_contribution_0,
+				min_contribution_1,
+				target_supply_0,
+				target_supply_1,
+				capacity_supply_0,
+				capacity_supply_1,
+			) = if pair.0 == asset_0 {
+				(
+					min_contribution_0,
+					min_contribution_1,
+					target_supply_0,
+					target_supply_1,
+					capacity_supply_0,
+					capacity_supply_1,
+				)
 			} else {
-				(min_contribution_1, min_contribution_0, target_supply_1, target_supply_0)
+				(
+					min_contribution_1,
+					min_contribution_0,
+					target_supply_1,
+					target_supply_0,
+					capacity_supply_1,
+					capacity_supply_0,
+				)
 			};
 
 			let pair_account = Self::pair_account_id(asset_0, asset_1);
@@ -889,6 +941,7 @@ pub mod pallet {
 					*status = Bootstrap(BootstrapParameter {
 						min_contribution: (min_contribution_0, min_contribution_1),
 						target_supply: (target_supply_0, target_supply_1),
+						capacity_supply: (capacity_supply_0, capacity_supply_1),
 						accumulated_supply: params.accumulated_supply,
 						end_block_number: end,
 						pair_account: Self::account_id(),

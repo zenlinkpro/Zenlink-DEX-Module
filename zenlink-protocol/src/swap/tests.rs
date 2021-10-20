@@ -518,6 +518,8 @@ fn create_bootstrap_should_work() {
 			100,
 			1000,
 			1000,
+			1000,
+			1000,
 			10000,
 		));
 
@@ -527,7 +529,18 @@ fn create_bootstrap_should_work() {
 		);
 
 		assert_noop!(
-			DexPallet::bootstrap_create(Origin::root(), DOT_ASSET_ID, ETH_ASSET_ID, 100, 100, 1000, 1000, 10000,),
+			DexPallet::bootstrap_create(
+				Origin::root(),
+				DOT_ASSET_ID,
+				ETH_ASSET_ID,
+				100,
+				100,
+				1000,
+				1000,
+				1000,
+				1000,
+				10000,
+			),
 			Error::<Test>::PairAlreadyExists
 		);
 	})
@@ -547,6 +560,8 @@ fn update_bootstrap_should_work() {
 			100,
 			1000,
 			1000,
+			1000,
+			1000,
 			10000,
 		));
 
@@ -556,6 +571,8 @@ fn update_bootstrap_should_work() {
 			ETH_ASSET_ID,
 			100,
 			100,
+			10000,
+			10000,
 			10000,
 			10000,
 			100000,
@@ -568,6 +585,8 @@ fn update_bootstrap_should_work() {
 				ETH_ASSET_ID,
 				100,
 				100,
+				10000,
+				10000,
 				10000,
 				10000,
 				100000,
@@ -591,6 +610,8 @@ fn bootstrap_contribute_should_work() {
 			ETH_ASSET_ID,
 			1000,
 			1000,
+			20 * DOT_UNIT,
+			1 * BTC_UNIT,
 			20 * DOT_UNIT,
 			1 * BTC_UNIT,
 			10000,
@@ -627,6 +648,8 @@ fn bootstrap_contribute_end_should_work() {
 			BTC_ASSET_ID,
 			1000,
 			1000,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
 			2,
@@ -687,6 +710,8 @@ fn bootstrap_contribute_claim_reward_should_work() {
 			BTC_ASSET_ID,
 			1000,
 			1000,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
 			2,
@@ -796,6 +821,8 @@ fn refund_in_disable_bootstrap_should_work() {
 			1000,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			2,
 		));
 
@@ -869,6 +896,8 @@ fn disable_bootstrap_removed_after_all_refund_should_work() {
 			1000,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			2,
 		));
 
@@ -908,6 +937,8 @@ fn bootstrap_pair_deny_swap_should_work() {
 			BTC_ASSET_ID,
 			1000,
 			1000,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
 			1,
@@ -980,6 +1011,8 @@ fn refund_in_success_bootstrap_should_not_work() {
 			1000,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			2,
 		));
 
@@ -1040,6 +1073,8 @@ fn refund_in_ongoing_bootstrap_should_not_work() {
 			1000,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			2,
 		));
 
@@ -1077,6 +1112,8 @@ fn create_pair_in_disable_bootstrap_should_work() {
 			BTC_ASSET_ID,
 			1000,
 			1000,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
 			2,
@@ -1154,6 +1191,8 @@ fn create_bootstrap_in_disable_bootstrap() {
 			1000,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			2,
 		));
 
@@ -1173,6 +1212,8 @@ fn create_bootstrap_in_disable_bootstrap() {
 			BTC_ASSET_ID,
 			1000,
 			1000,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
 			4,
@@ -1235,6 +1276,8 @@ fn create_pair_in_ongoing_bootstrap_should_not_work() {
 			BTC_ASSET_ID,
 			1000,
 			1000,
+			20 * DOT_UNIT,
+			2 * BTC_UNIT,
 			20 * DOT_UNIT,
 			2 * BTC_UNIT,
 			2,

@@ -64,7 +64,9 @@ pub struct BootstrapParameter<Balance, BlockNumber, Account> {
 	pub min_contribution: (Balance, Balance),
 	/// target supply that trading pair could to normal.
 	pub target_supply: (Balance, Balance),
-	/// accumulated supply for this Bootstrap pair.
+	/// max supply in this bootstrap pair
+	pub capacity_supply: (Balance, Balance),
+	/// accumulated supply in this bootstrap pair.
 	pub accumulated_supply: (Balance, Balance),
 	/// bootstrap pair end block number.
 	pub end_block_number: BlockNumber,
