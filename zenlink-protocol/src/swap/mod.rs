@@ -607,8 +607,7 @@ impl<T: Config> Pallet<T> {
 		}
 
 		ensure!(
-			amount_0_contribute >= bootstrap_parameter.min_contribution.0
-				|| amount_1_contribute >= bootstrap_parameter.min_contribution.1,
+			amount_0_contribute >= One::one() || amount_1_contribute >= One::one(),
 			Error::<T>::InvalidContributionAmount
 		);
 

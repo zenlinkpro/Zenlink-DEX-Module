@@ -60,8 +60,6 @@ impl<Balance, BlockNumber, Account> Default for PairStatus<Balance, BlockNumber,
 /// Parameters of pair in Bootstrap status
 #[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct BootstrapParameter<Balance, BlockNumber, Account> {
-	/// limit contribution per time.
-	pub min_contribution: (Balance, Balance),
 	/// target supply that trading pair could to normal.
 	pub target_supply: (Balance, Balance),
 	/// max supply in this bootstrap pair

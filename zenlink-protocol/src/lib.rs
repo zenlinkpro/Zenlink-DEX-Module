@@ -253,7 +253,7 @@ pub mod pallet {
 		BootstrapEnd(AssetId, AssetId, AssetBalance, AssetBalance, AssetBalance),
 
 		/// Create a bootstrap pair. \[bootstrap_pair_account, asset_0, asset_1,
-		/// min_contribution_0,min_contribution_1, total_supply_0,total_supply_1, end\]
+		/// total_supply_0,total_supply_1, capacity_supply_0,capacity_supply_1, end\]
 		BootstrapCreated(
 			T::AccountId,
 			AssetId,
@@ -279,7 +279,7 @@ pub mod pallet {
 		),
 
 		/// Update a bootstrap pair. \[caller, asset_0, asset_1,
-		/// min_contribution_0,min_contribution_1, total_supply_0,total_supply_1\]
+		/// total_supply_0,total_supply_1, capacity_supply_0,capacity_supply_1\]
 		BootstrapUpdate(
 			T::AccountId,
 			AssetId,
@@ -713,8 +713,6 @@ pub mod pallet {
 		///
 		/// - `asset_0`: Asset which make up bootstrap pair
 		/// - `asset_1`: Asset which make up bootstrap pair
-		/// - `min_contribution_0`: Min amount of asset_0 contribute
-		/// - `min_contribution_0`: Min amount of asset_1 contribute
 		/// - `target_supply_0`: Target amount of asset_0 total contribute
 		/// - `target_supply_0`: Target amount of asset_1 total contribute
 		/// - `capacity_supply_0`: The max amount of asset_0 total contribute
@@ -727,8 +725,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			asset_0: AssetId,
 			asset_1: AssetId,
-			#[pallet::compact] min_contribution_0: AssetBalance,
-			#[pallet::compact] min_contribution_1: AssetBalance,
 			#[pallet::compact] target_supply_0: AssetBalance,
 			#[pallet::compact] target_supply_1: AssetBalance,
 			#[pallet::compact] capacity_supply_0: AssetBalance,
@@ -739,31 +735,10 @@ pub mod pallet {
 
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 
-			let (
-				min_contribution_0,
-				min_contribution_1,
-				target_supply_0,
-				target_supply_1,
-				capacity_supply_0,
-				capacity_supply_1,
-			) = if pair.0 == asset_0 {
-				(
-					min_contribution_0,
-					min_contribution_1,
-					target_supply_0,
-					target_supply_1,
-					capacity_supply_0,
-					capacity_supply_1,
-				)
+			let (target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1) = if pair.0 == asset_0 {
+				(target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1)
 			} else {
-				(
-					min_contribution_1,
-					min_contribution_0,
-					target_supply_1,
-					target_supply_0,
-					capacity_supply_1,
-					capacity_supply_0,
-				)
+				(target_supply_1, target_supply_0, capacity_supply_1, capacity_supply_0)
 			};
 
 			PairStatuses::<T>::try_mutate(pair, |status| match status {
@@ -771,7 +746,6 @@ pub mod pallet {
 				Bootstrap(params) => {
 					if Self::bootstrap_disable(params) {
 						*status = Bootstrap(BootstrapParameter {
-							min_contribution: (min_contribution_0, min_contribution_1),
 							target_supply: (target_supply_0, target_supply_1),
 							capacity_supply: (capacity_supply_0, capacity_supply_1),
 							accumulated_supply: params.accumulated_supply,
@@ -785,7 +759,6 @@ pub mod pallet {
 				}
 				Disable => {
 					*status = Bootstrap(BootstrapParameter {
-						min_contribution: (min_contribution_0, min_contribution_1),
 						target_supply: (target_supply_0, target_supply_1),
 						capacity_supply: (capacity_supply_0, capacity_supply_1),
 						accumulated_supply: (Zero::zero(), Zero::zero()),
@@ -800,10 +773,10 @@ pub mod pallet {
 				Self::account_id(),
 				pair.0,
 				pair.1,
-				min_contribution_0,
-				min_contribution_1,
 				target_supply_0,
 				target_supply_1,
+				capacity_supply_1,
+				capacity_supply_0,
 				end,
 			));
 			Ok(())
@@ -896,8 +869,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			asset_0: AssetId,
 			asset_1: AssetId,
-			#[pallet::compact] min_contribution_0: AssetBalance,
-			#[pallet::compact] min_contribution_1: AssetBalance,
 			#[pallet::compact] target_supply_0: AssetBalance,
 			#[pallet::compact] target_supply_1: AssetBalance,
 			#[pallet::compact] capacity_supply_0: AssetBalance,
@@ -907,31 +878,10 @@ pub mod pallet {
 			ensure_root(origin)?;
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 
-			let (
-				min_contribution_0,
-				min_contribution_1,
-				target_supply_0,
-				target_supply_1,
-				capacity_supply_0,
-				capacity_supply_1,
-			) = if pair.0 == asset_0 {
-				(
-					min_contribution_0,
-					min_contribution_1,
-					target_supply_0,
-					target_supply_1,
-					capacity_supply_0,
-					capacity_supply_1,
-				)
+			let (target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1) = if pair.0 == asset_0 {
+				(target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1)
 			} else {
-				(
-					min_contribution_1,
-					min_contribution_0,
-					target_supply_1,
-					target_supply_0,
-					capacity_supply_1,
-					capacity_supply_0,
-				)
+				(target_supply_1, target_supply_0, capacity_supply_1, capacity_supply_0)
 			};
 
 			let pair_account = Self::pair_account_id(asset_0, asset_1);
@@ -939,7 +889,6 @@ pub mod pallet {
 				Trading(_) => Err(Error::<T>::PairAlreadyExists),
 				Bootstrap(params) => {
 					*status = Bootstrap(BootstrapParameter {
-						min_contribution: (min_contribution_0, min_contribution_1),
 						target_supply: (target_supply_0, target_supply_1),
 						capacity_supply: (capacity_supply_0, capacity_supply_1),
 						accumulated_supply: params.accumulated_supply,
@@ -953,12 +902,12 @@ pub mod pallet {
 
 			Self::deposit_event(Event::BootstrapUpdate(
 				pair_account,
-				asset_0,
-				asset_1,
-				min_contribution_0,
-				min_contribution_1,
+				pair.0,
+				pair.1,
 				target_supply_0,
 				target_supply_1,
+				capacity_supply_1,
+				capacity_supply_0,
 				end,
 			));
 			Ok(())
