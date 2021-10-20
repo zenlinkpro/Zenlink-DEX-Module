@@ -588,12 +588,6 @@ impl<T: Config> Pallet<T> {
 			(amount_1_contribute, amount_0_contribute)
 		};
 
-		ensure!(
-			amount_0_contribute >= bootstrap_parameter.min_contribution.0
-				|| amount_1_contribute >= bootstrap_parameter.min_contribution.1,
-			Error::<T>::InvalidContributionAmount
-		);
-
 		if amount_0_contribute.saturating_add(bootstrap_parameter.accumulated_supply.0)
 			> bootstrap_parameter.capacity_supply.0
 		{
@@ -611,6 +605,12 @@ impl<T: Config> Pallet<T> {
 				.1
 				.saturating_sub(bootstrap_parameter.accumulated_supply.1);
 		}
+
+		ensure!(
+			amount_0_contribute >= bootstrap_parameter.min_contribution.0
+				|| amount_1_contribute >= bootstrap_parameter.min_contribution.1,
+			Error::<T>::InvalidContributionAmount
+		);
 
 		BootstrapPersonalSupply::<T>::try_mutate((pair, &who), |contribution| {
 			contribution.0 = contribution
