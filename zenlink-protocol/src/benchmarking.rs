@@ -15,19 +15,19 @@ const UNIT: u128 = 1_000_000_000_000;
 const ASSET_0: AssetId = AssetId {
 	chain_id: 2001,
 	asset_type: 2,
-	asset_index: 514,
+	asset_index: 515,
 };
 
 const ASSET_1: AssetId = AssetId {
 	chain_id: 2001,
 	asset_type: 2,
-	asset_index: 515,
+	asset_index: 516,
 };
 
 const ASSET_2: AssetId = AssetId {
 	chain_id: 2001,
 	asset_type: 2,
-	asset_index: 516,
+	asset_index: 518,
 };
 
 pub fn lookup_of_account<T: Config>(
