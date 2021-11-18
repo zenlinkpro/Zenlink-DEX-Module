@@ -44,6 +44,9 @@ mod traits;
 mod transactor;
 mod transfer;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
+
 mod default_weights;
 
 pub use default_weights::WeightInfo;
