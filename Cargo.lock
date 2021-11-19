@@ -7961,6 +7961,7 @@ name = "zenlink-protocol"
 version = "0.4.4"
 dependencies = [
  "cumulus-primitives-core",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
