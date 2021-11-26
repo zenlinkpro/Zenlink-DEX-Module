@@ -5,7 +5,7 @@ use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 
 use super::mock::*;
 use crate::{AssetId, Error, MultiAssetsHandler};
-use sp_runtime::traits::IntegerSquareRoot;
+use sp_core::U256;
 
 const DOT_ASSET_ID: AssetId = AssetId {
 	chain_id: 200,
@@ -70,7 +70,7 @@ fn turn_on_protocol_fee_only_add_liquidity_no_fee_should_work() {
 		let sorted_pair = DexPallet::sort_asset_id(DOT_ASSET_ID, BTC_ASSET_ID);
 
 		assert_ok!(DexPallet::set_fee_receiver(Origin::root(), Some(BOB)));
-		assert_eq!(DexPallet::k_last(sorted_pair), 0);
+		assert_eq!(DexPallet::k_last(sorted_pair), U256::zero());
 
 		// 2. first add_liquidity
 
@@ -99,7 +99,10 @@ fn turn_on_protocol_fee_only_add_liquidity_no_fee_should_work() {
 			lp_of_alice_0
 		);
 		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
-		assert_eq!(DexPallet::k_last(sorted_pair), DOT_UNIT * BTC_UNIT);
+		assert_eq!(
+			DexPallet::k_last(sorted_pair),
+			U256::from(DOT_UNIT) * U256::from(BTC_UNIT)
+		);
 
 		// 3. second add_liquidity
 
@@ -123,7 +126,10 @@ fn turn_on_protocol_fee_only_add_liquidity_no_fee_should_work() {
 			lp_of_alice_1
 		);
 		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
-		assert_eq!(DexPallet::k_last(sorted_pair), 51 * DOT_UNIT * 51 * BTC_UNIT);
+		assert_eq!(
+			DexPallet::k_last(sorted_pair),
+			U256::from(51 * DOT_UNIT) * U256::from(51 * BTC_UNIT)
+		);
 
 		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
 		let balance_btc = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
@@ -158,7 +164,10 @@ fn turn_on_protocol_fee_only_add_liquidity_no_fee_should_work() {
 		);
 		assert_eq!(lp_total, lp_of_alice_2 + lp_of_bob);
 
-		assert_eq!(DexPallet::k_last(sorted_pair), 101 * DOT_UNIT * 101 * BTC_UNIT);
+		assert_eq!(
+			DexPallet::k_last(sorted_pair),
+			U256::from(101 * DOT_UNIT) * U256::from(101 * BTC_UNIT)
+		);
 	});
 }
 
@@ -171,7 +180,7 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 		let sorted_pair = DexPallet::sort_asset_id(DOT_ASSET_ID, BTC_ASSET_ID);
 
 		assert_ok!(DexPallet::set_fee_receiver(Origin::root(), Some(BOB)));
-		assert_eq!(DexPallet::k_last(sorted_pair), 0);
+		assert_eq!(DexPallet::k_last(sorted_pair), U256::zero());
 
 		// 2. first add_liquidity
 
@@ -200,7 +209,10 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 			316227766016
 		);
 		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
-		assert_eq!(DexPallet::k_last(sorted_pair), DOT_UNIT * BTC_UNIT);
+		assert_eq!(
+			DexPallet::k_last(sorted_pair),
+			U256::from(DOT_UNIT) * U256::from(BTC_UNIT)
+		);
 
 		// 3. second add_liquidity
 
@@ -224,7 +236,10 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 			lp_of_alice_1
 		);
 		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
-		assert_eq!(DexPallet::k_last(sorted_pair), 51 * DOT_UNIT * 51 * BTC_UNIT);
+		assert_eq!(
+			DexPallet::k_last(sorted_pair),
+			U256::from(51 * DOT_UNIT) * U256::from(51 * BTC_UNIT)
+		);
 
 		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
 		let balance_btc = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
@@ -257,7 +272,10 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 			lp_of_bob
 		);
 		assert_eq!(lp_total, lp_of_alice_1 - lp_of_alice_0 + lp_of_bob);
-		assert_eq!(DexPallet::k_last(sorted_pair), 50 * DOT_UNIT * 50 * BTC_UNIT);
+		assert_eq!(
+			DexPallet::k_last(sorted_pair),
+			U256::from(50 * DOT_UNIT) * U256::from(50 * BTC_UNIT)
+		);
 	});
 }
 
@@ -271,7 +289,7 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 		assert_ok!(DexPallet::set_fee_receiver(Origin::root(), Some(BOB)));
 		// use default rate: 0.3% * 1 / 6 = 0.0005
 		assert_ok!(DexPallet::set_fee_point(Origin::root(), 5u8));
-		assert_eq!(DexPallet::k_last(sorted_pair), 0);
+		assert_eq!(DexPallet::k_last(sorted_pair), U256::zero());
 
 		// 2. first add_liquidity
 
@@ -301,7 +319,10 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 			lp_of_alice_0
 		);
 		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
-		assert_eq!(DexPallet::k_last(sorted_pair), DOT_UNIT * BTC_UNIT);
+		assert_eq!(
+			DexPallet::k_last(sorted_pair),
+			U256::from(DOT_UNIT) * U256::from(BTC_UNIT)
+		);
 
 		// 3. swap
 
@@ -318,7 +339,10 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 			lp_of_alice_0
 		);
 		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
-		assert_eq!(DexPallet::k_last(sorted_pair), DOT_UNIT * BTC_UNIT);
+		assert_eq!(
+			DexPallet::k_last(sorted_pair),
+			U256::from(DOT_UNIT) * U256::from(BTC_UNIT)
+		);
 
 		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
 		let balance_btc = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
@@ -330,14 +354,16 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 		let k_last = DexPallet::k_last(sorted_pair);
 		let reserve_0 = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
 		let reserve_1 = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
-		let root_k = reserve_0.saturating_mul(reserve_1).integer_sqrt();
+		let root_k = U256::from(reserve_0)
+			.saturating_mul(U256::from(reserve_1))
+			.integer_sqrt();
 		let root_k_last = k_last.integer_sqrt();
 
 		assert!(root_k > root_k_last);
 
 		let lp_total = <Test as Config>::MultiAssetsHandler::total_supply(LP_DOT_BTC);
-		let numerator = lp_total.saturating_mul(root_k.saturating_sub(root_k_last));
-		let denominator = root_k.saturating_mul(5).saturating_add(root_k_last);
+		let numerator = U256::from(lp_total).saturating_mul(root_k.saturating_sub(root_k_last));
+		let denominator = root_k.saturating_mul(U256::from(5u128)).saturating_add(root_k_last);
 		let expect_fee = numerator.checked_div(denominator).unwrap_or_default();
 
 		// 4. second add_liquidity
@@ -360,13 +386,13 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 		);
 
 		let lp_of_bob = 39548424u128;
-		assert_eq!(expect_fee, lp_of_bob);
+		assert_eq!(expect_fee, U256::from(lp_of_bob));
 		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB),
+			U256::from(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB)),
 			expect_fee
 		);
 		assert_eq!(lp_total, lp_of_alice_2 + lp_of_bob);
 
-		assert_eq!(DexPallet::k_last(sorted_pair), 225338007000000000000000);
+		assert_eq!(DexPallet::k_last(sorted_pair), U256::from(225338007000000000000000u128));
 	});
 }
