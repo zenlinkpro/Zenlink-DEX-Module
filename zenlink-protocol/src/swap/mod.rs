@@ -336,7 +336,7 @@ impl<T: Config> Pallet<T> {
 					.saturating_mul(U256::from(reserve_1))
 					.integer_sqrt();
 
-				let root_k_last = U256::from(new_k_last.integer_sqrt());
+				let root_k_last = new_k_last.integer_sqrt();
 				if root_k > root_k_last {
 					let fee_point = Self::fee_meta().1;
 					let fix_fee_point = (30 - fee_point) / fee_point;
@@ -463,8 +463,14 @@ impl<T: Config> Pallet<T> {
 
 			// check K
 			let invariant_before_swap: U256 = U256::from(reserve_0).saturating_mul(U256::from(reserve_1));
-			let invariant_after_swap: U256 = U256::from(reserve_1.saturating_add(amount))
-				.saturating_mul(U256::from(reserve_0.saturating_sub(out_vec[len - 1 - i])));
+			let reserve_1_after_swap = reserve_1.checked_add(amount).ok_or(Error::<T>::Overflow)?;
+			let reserve_0_after_swap = reserve_0
+				.checked_sub(out_vec[len - 1 - i])
+				.ok_or(Error::<T>::Overflow)?;
+
+			let invariant_after_swap: U256 =
+				U256::from(reserve_1_after_swap).saturating_mul(U256::from(reserve_0_after_swap));
+
 			ensure!(
 				invariant_after_swap >= invariant_before_swap,
 				Error::<T>::InvariantCheckFailed,
@@ -501,8 +507,13 @@ impl<T: Config> Pallet<T> {
 
 			// check K
 			let invariant_before_swap: U256 = U256::from(reserve_0).saturating_mul(U256::from(reserve_1));
-			let invariant_after_swap: U256 = U256::from(reserve_0.saturating_add(out_vec[i]))
-				.saturating_mul(U256::from(reserve_1.saturating_sub(amount)));
+
+			let reserve_0_after_swap = reserve_0.checked_add(out_vec[i]).ok_or(Error::<T>::Overflow)?;
+			let reserve_1_after_swap = reserve_1.checked_sub(amount).ok_or(Error::<T>::Overflow)?;
+
+			let invariant_after_swap: U256 =
+				U256::from(reserve_1_after_swap).saturating_mul(U256::from(reserve_0_after_swap));
+
 			ensure!(
 				invariant_after_swap >= invariant_before_swap,
 				Error::<T>::InvariantCheckFailed,
