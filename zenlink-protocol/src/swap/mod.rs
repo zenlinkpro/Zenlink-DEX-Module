@@ -126,8 +126,11 @@ impl<T: Config> Pallet<T> {
 						let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
 						let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
-						// We allow reserve_0.saturating_mul(reserve_1) to overflow
-						Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
+						Self::mutate_k_last(
+							asset_0,
+							asset_1,
+							U256::from(reserve_0).saturating_mul(U256::from(reserve_1)),
+						);
 					}
 				}
 
@@ -202,8 +205,11 @@ impl<T: Config> Pallet<T> {
 						let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
 						let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
-						// We allow reserve_0.saturating_mul(reserve_1) to overflow
-						Self::mutate_k_last(asset_0, asset_1, reserve_0.saturating_mul(reserve_1));
+						Self::mutate_k_last(
+							asset_0,
+							asset_1,
+							U256::from(reserve_0).saturating_mul(U256::from(reserve_1)),
+						);
 					}
 				}
 
@@ -300,7 +306,10 @@ impl<T: Config> Pallet<T> {
 		total_liquidity: AssetBalance,
 	) -> AssetBalance {
 		if total_liquidity == Zero::zero() {
-			amount_0.saturating_mul(amount_1).integer_sqrt()
+			let calculated_liquidity = U256::from(amount_0).saturating_mul(U256::from(amount_1)).integer_sqrt();
+			TryInto::<AssetBalance>::try_into(calculated_liquidity)
+				.ok()
+				.unwrap_or_else(Zero::zero)
 		} else {
 			core::cmp::min(
 				Self::calculate_share_amount(amount_0, reserve_0, total_liquidity),
@@ -322,11 +331,12 @@ impl<T: Config> Pallet<T> {
 		let mut mint_fee: AssetBalance = 0;
 
 		if let Some(_fee_to) = Self::fee_meta().0 {
-			if new_k_last != 0 && Self::fee_meta().1 > 0 {
-				// u128 support integer_sqrt, but U256 not support
-				// thus we allow reserve_0.saturating_mul(reserve_1) to overflow
-				let root_k = U256::from(reserve_0.saturating_mul(reserve_1).integer_sqrt());
-				let root_k_last = U256::from(new_k_last.integer_sqrt());
+			if !new_k_last.is_zero() && Self::fee_meta().1 > 0 {
+				let root_k = U256::from(reserve_0)
+					.saturating_mul(U256::from(reserve_1))
+					.integer_sqrt();
+
+				let root_k_last = new_k_last.integer_sqrt();
 				if root_k > root_k_last {
 					let fee_point = Self::fee_meta().1;
 					let fix_fee_point = (30 - fee_point) / fee_point;
@@ -345,14 +355,14 @@ impl<T: Config> Pallet<T> {
 					}
 				}
 			}
-		} else if new_k_last != 0 {
-			Self::mutate_k_last(asset_0, asset_1, 0)
+		} else if !new_k_last.is_zero() {
+			Self::mutate_k_last(asset_0, asset_1, U256::zero())
 		}
 
 		mint_fee
 	}
 
-	pub(crate) fn mutate_k_last(asset_0: AssetId, asset_1: AssetId, last: AssetBalance) {
+	pub(crate) fn mutate_k_last(asset_0: AssetId, asset_1: AssetId, last: U256) {
 		KLast::<T>::mutate(Self::sort_asset_id(asset_0, asset_1), |k| *k = last)
 	}
 
@@ -453,8 +463,14 @@ impl<T: Config> Pallet<T> {
 
 			// check K
 			let invariant_before_swap: U256 = U256::from(reserve_0).saturating_mul(U256::from(reserve_1));
-			let invariant_after_swap: U256 = U256::from(reserve_1.saturating_add(amount))
-				.saturating_mul(U256::from(reserve_0.saturating_sub(out_vec[len - 1 - i])));
+			let reserve_1_after_swap = reserve_1.checked_add(amount).ok_or(Error::<T>::Overflow)?;
+			let reserve_0_after_swap = reserve_0
+				.checked_sub(out_vec[len - 1 - i])
+				.ok_or(Error::<T>::Overflow)?;
+
+			let invariant_after_swap: U256 =
+				U256::from(reserve_1_after_swap).saturating_mul(U256::from(reserve_0_after_swap));
+
 			ensure!(
 				invariant_after_swap >= invariant_before_swap,
 				Error::<T>::InvariantCheckFailed,
@@ -491,8 +507,13 @@ impl<T: Config> Pallet<T> {
 
 			// check K
 			let invariant_before_swap: U256 = U256::from(reserve_0).saturating_mul(U256::from(reserve_1));
-			let invariant_after_swap: U256 = U256::from(reserve_0.saturating_add(out_vec[i]))
-				.saturating_mul(U256::from(reserve_1.saturating_sub(amount)));
+
+			let reserve_0_after_swap = reserve_0.checked_add(out_vec[i]).ok_or(Error::<T>::Overflow)?;
+			let reserve_1_after_swap = reserve_1.checked_sub(amount).ok_or(Error::<T>::Overflow)?;
+
+			let invariant_after_swap: U256 =
+				U256::from(reserve_1_after_swap).saturating_mul(U256::from(reserve_0_after_swap));
+
 			ensure!(
 				invariant_after_swap >= invariant_before_swap,
 				Error::<T>::InvariantCheckFailed,
@@ -670,6 +691,8 @@ impl<T: Config> Pallet<T> {
 					Zero::zero(),
 				);
 
+				ensure!(total_lp_supply > Zero::zero(), Error::<T>::Overflow);
+
 				let pair_account = Self::pair_account_id(pair.0, pair.1);
 				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
@@ -728,28 +751,43 @@ impl<T: Config> Pallet<T> {
 							!Self::bootstrap_disable(&bootstrap_parameter),
 							Error::<T>::DisableBootstrap
 						);
-						let exact_amount_0 = amount_0_contribute
-							.saturating_mul(bootstrap_parameter.accumulated_supply.1)
-							.saturating_add(
-								amount_1_contribute.saturating_mul(bootstrap_parameter.accumulated_supply.0),
+						let exact_amount_0 = U256::from(amount_0_contribute)
+							.saturating_mul(U256::from(bootstrap_parameter.accumulated_supply.1))
+							.checked_add(
+								U256::from(amount_1_contribute)
+									.saturating_mul(U256::from(bootstrap_parameter.accumulated_supply.0)),
 							)
-							.checked_div(bootstrap_parameter.accumulated_supply.1.saturating_mul(2))
+							.and_then(|r| {
+								r.checked_div(
+									U256::from(bootstrap_parameter.accumulated_supply.1).saturating_mul(U256::from(2)),
+								)
+							})
 							.ok_or(Error::<T>::Overflow)?;
 
-						let exact_amount_1 = amount_1_contribute
-							.saturating_mul(bootstrap_parameter.accumulated_supply.0)
-							.saturating_add(
-								amount_0_contribute.saturating_mul(bootstrap_parameter.accumulated_supply.1),
+						let exact_amount_1 = U256::from(amount_1_contribute)
+							.saturating_mul(U256::from(bootstrap_parameter.accumulated_supply.0))
+							.checked_add(
+								U256::from(amount_0_contribute)
+									.saturating_mul(U256::from(bootstrap_parameter.accumulated_supply.1)),
 							)
-							.checked_div(bootstrap_parameter.accumulated_supply.0.saturating_mul(2))
+							.and_then(|r| {
+								r.checked_div(
+									U256::from(bootstrap_parameter.accumulated_supply.0).saturating_mul(U256::from(2)),
+								)
+							})
 							.ok_or(Error::<T>::Overflow)?;
 
-						let calculated_liquidity = exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt();
+						let calculated = exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt();
+						let liquidity = TryInto::<AssetBalance>::try_into(calculated)
+							.ok()
+							.unwrap_or_else(Zero::zero);
+
+						ensure!(liquidity > Zero::zero(), Error::<T>::Overflow);
 
 						let pair_account = Self::pair_account_id(pair.0, pair.1);
 						let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
-						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, calculated_liquidity)?;
+						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, liquidity)?;
 
 						Self::deposit_event(Event::BootstrapClaim(
 							pair_account,
@@ -759,7 +797,7 @@ impl<T: Config> Pallet<T> {
 							pair.1,
 							amount_0_contribute,
 							amount_1_contribute,
-							calculated_liquidity,
+							liquidity,
 						));
 
 						Ok(())

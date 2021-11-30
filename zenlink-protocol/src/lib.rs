@@ -18,7 +18,7 @@ use frame_support::{
 	PalletId, RuntimeDebug,
 };
 use sp_core::U256;
-use sp_runtime::traits::{AccountIdConversion, Hash, IntegerSquareRoot, One, StaticLookup, Zero};
+use sp_runtime::traits::{AccountIdConversion, Hash, One, StaticLookup, Zero};
 use sp_std::{convert::TryInto, marker::PhantomData, prelude::*};
 
 // -------xcm--------
@@ -48,6 +48,7 @@ mod transfer;
 pub mod benchmarking;
 
 mod default_weights;
+mod migration;
 
 pub use default_weights::WeightInfo;
 pub use multiassets::{MultiAssetsHandler, ZenlinkMultiAssets};
@@ -121,7 +122,7 @@ pub mod pallet {
 	#[pallet::getter(fn k_last)]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
 	/// Last unliquidated protocol fee;
-	pub type KLast<T: Config> = StorageMap<_, Twox64Concat, (AssetId, AssetId), AssetBalance, ValueQuery>;
+	pub type KLast<T: Config> = StorageMap<_, Twox64Concat, (AssetId, AssetId), U256, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn fee_meta)]
@@ -363,7 +364,11 @@ pub mod pallet {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_runtime_upgrade() -> Weight {
+			migration::update_k_value_type_to_u256::<T>()
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
