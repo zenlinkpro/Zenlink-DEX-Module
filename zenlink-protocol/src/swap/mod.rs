@@ -753,24 +753,28 @@ impl<T: Config> Pallet<T> {
 						);
 						let exact_amount_0 = U256::from(amount_0_contribute)
 							.saturating_mul(U256::from(bootstrap_parameter.accumulated_supply.1))
-							.saturating_add(
+							.checked_add(
 								U256::from(amount_1_contribute)
 									.saturating_mul(U256::from(bootstrap_parameter.accumulated_supply.0)),
 							)
-							.checked_div(
-								U256::from(bootstrap_parameter.accumulated_supply.1).saturating_mul(U256::from(2)),
-							)
+							.and_then(|r| {
+								r.checked_div(
+									U256::from(bootstrap_parameter.accumulated_supply.1).saturating_mul(U256::from(2)),
+								)
+							})
 							.ok_or(Error::<T>::Overflow)?;
 
 						let exact_amount_1 = U256::from(amount_1_contribute)
 							.saturating_mul(U256::from(bootstrap_parameter.accumulated_supply.0))
-							.saturating_add(
+							.checked_add(
 								U256::from(amount_0_contribute)
 									.saturating_mul(U256::from(bootstrap_parameter.accumulated_supply.1)),
 							)
-							.checked_div(
-								U256::from(bootstrap_parameter.accumulated_supply.0).saturating_mul(U256::from(2)),
-							)
+							.and_then(|r| {
+								r.checked_div(
+									U256::from(bootstrap_parameter.accumulated_supply.0).saturating_mul(U256::from(2)),
+								)
+							})
 							.ok_or(Error::<T>::Overflow)?;
 
 						let calculated = exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt();
