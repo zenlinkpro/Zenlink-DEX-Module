@@ -459,7 +459,7 @@ fn turn_on_protocol_fee_swap_have_fee_at_should_work() {
 			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
 			lp_of_alice_0
 		);
-		println!("{:#?}", lp_of_alice_0);
+		//println!("{:#?}", lp_of_alice_0);
 		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
 		assert_eq!(
 			DexPallet::k_last(sorted_pair),
