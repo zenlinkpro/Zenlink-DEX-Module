@@ -71,6 +71,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::dispatch::DispatchResult;
 	use frame_system::pallet_prelude::*;
+	use std::collections::BTreeMap;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -163,6 +164,21 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn get_bootstrap_rewards)]
+	pub type BootstrapRewards<T: Config> =
+		StorageMap<_, Twox64Concat, (AssetId, AssetId), BTreeMap<AssetId, AssetBalance>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_bootstrap_limits)]
+	pub type BootstrapLimits<T: Config> =
+		StorageMap<_, Twox64Concat, (AssetId, AssetId), BTreeMap<AssetId, AssetBalance>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_bootstrap_charged)]
+	pub type BootstrapCharged<T: Config> =
+	StorageMap<_, Twox64Concat, (AssetId, AssetId), bool, ValueQuery>;
+	
 	#[pallet::genesis_config]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
 	pub struct GenesisConfig<T: Config> {
@@ -361,6 +377,12 @@ pub mod pallet {
 		DenyRefund,
 		/// Bootstrap is disable
 		DisableBootstrap,
+		/// Not eligible to contribute
+		NotQualifiedAccount,
+		/// Reward of bootstrap already charged
+		AlreadyCharged,
+		/// Reward of bootstrap is not charged
+		NoCharged,
 	}
 
 	#[pallet::hooks]
@@ -738,6 +760,8 @@ pub mod pallet {
 			#[pallet::compact] capacity_supply_0: AssetBalance,
 			#[pallet::compact] capacity_supply_1: AssetBalance,
 			#[pallet::compact] end: T::BlockNumber,
+			rewards: Vec<(AssetId, AssetBalance)>,
+			limits: Vec<(AssetId, AssetBalance)>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -760,6 +784,17 @@ pub mod pallet {
 							end_block_number: end,
 							pair_account: Self::account_id(),
 						});
+
+						BootstrapRewards::<T>::insert(
+							pair,
+							rewards.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>(),
+						);
+
+						BootstrapLimits::<T>::insert(
+							pair,
+							limits.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>(),
+						);
+
 						Ok(())
 					} else {
 						Err(Error::<T>::PairAlreadyExists)
@@ -773,6 +808,14 @@ pub mod pallet {
 						end_block_number: end,
 						pair_account: Self::account_id(),
 					});
+
+					BootstrapRewards::<T>::insert(
+						pair,
+						rewards.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>(),
+					);
+
+					BootstrapLimits::<T>::insert(pair, limits.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>());
+
 					Ok(())
 				}
 			})?;
@@ -810,6 +853,11 @@ pub mod pallet {
 			#[pallet::compact] deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(who)?;
+
+			ensure!(
+				Self::bootstrap_check_limits(asset_0, asset_1, &who),
+				Error::<T>::NotQualifiedAccount
+			);
 
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
@@ -882,6 +930,8 @@ pub mod pallet {
 			#[pallet::compact] capacity_supply_0: AssetBalance,
 			#[pallet::compact] capacity_supply_1: AssetBalance,
 			#[pallet::compact] end: T::BlockNumber,
+			rewards: Vec<(AssetId, AssetBalance)>,
+			limits: Vec<(AssetId, AssetBalance)>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			let pair = Self::sort_asset_id(asset_0, asset_1);
@@ -903,6 +953,14 @@ pub mod pallet {
 						end_block_number: end,
 						pair_account: Self::account_id(),
 					});
+
+					BootstrapRewards::<T>::insert(
+						pair,
+						rewards.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>(),
+					);
+
+					BootstrapLimits::<T>::insert(pair, limits.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>());
+
 					Ok(())
 				}
 				Disable => Err(Error::<T>::NotInBootstrap),
@@ -932,6 +990,51 @@ pub mod pallet {
 		pub fn bootstrap_refund(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_bootstrap_refund(who, asset_0, asset_1)
+		}
+
+		#[pallet::weight(10000)]
+		#[frame_support::transactional]
+		pub fn bootstrap_charge_reward(
+			origin: OriginFor<T>,
+			asset_0: AssetId,
+			asset_1: AssetId,
+		)->DispatchResult{
+			let who = ensure_signed(origin)?;
+
+			let pair = Self::sort_asset_id(asset_0, asset_1);
+
+			ensure!(!Self::get_bootstrap_charged(pair), Error::<T>::AlreadyCharged);
+
+			let rewards = Self::get_bootstrap_rewards(pair);
+
+			for (asset_id, reward_amount) in rewards.into_iter() {
+				T::MultiAssetsHandler::transfer(asset_id, who, owner, owner_reward)?;
+			}
+
+			Ok(())
+		}
+
+		#[pallet::weight(10000)]
+		#[frame_support::transactional]
+		pub fn bootstrap_withdraw_reward(
+			origin: OriginFor<T>,
+			asset_0: AssetId,
+			asset_1: AssetId,
+			recipient: <T::Lookup as StaticLookup>::Source,
+		)->DispatchResult{
+			ensure_root(origin)?;
+
+			ensure!(Self::get_bootstrap_charged(pair), Error::<T>::NoCharged);
+
+			let recipient = T::Lookup::lookup(recipient)?;
+
+
+
+			for (asset_id, reward_amount) in rewards.into_iter() {
+				T::MultiAssetsHandler::transfer(asset_id, who, owner, owner_reward)?;
+			}
+
+			Ok(())
 		}
 	}
 }

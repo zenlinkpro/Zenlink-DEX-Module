@@ -744,7 +744,7 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		match Self::pair_status(pair) {
-			Trading(_) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
+			Trading(trading_status) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
 				if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
 					if let Bootstrap(bootstrap_parameter) = Self::bootstrap_end_status(pair) {
 						ensure!(
@@ -788,6 +788,15 @@ impl<T: Config> Pallet<T> {
 						let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
 						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, liquidity)?;
+
+						Self::bootstrap_distribute_reward(
+							&who,
+							&bootstrap_parameter.pair_account,
+							pair.0,
+							pair.1,
+							liquidity,
+							trading_status.total_supply,
+						)?;
 
 						Self::deposit_event(Event::BootstrapClaim(
 							pair_account,
@@ -872,6 +881,43 @@ impl<T: Config> Pallet<T> {
 			return true;
 		}
 		false
+	}
+
+	pub(crate) fn bootstrap_check_limits(asset_0: AssetId, asset_1: AssetId, account: &T::AccountId) -> bool {
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		let limits = Self::get_bootstrap_limits(pair);
+
+		for (asset_id, limit) in limits.into_iter() {
+			if T::MultiAssetsHandler::balance_of(asset_id, &account) < limit {
+				return false;
+			}
+		}
+
+		true
+	}
+
+	pub(crate) fn bootstrap_distribute_reward(
+		owner: &T::AccountId,
+		reward_holder: &T::AccountId,
+		asset_0: AssetId,
+		asset_1: AssetId,
+		share_lp: AssetBalance,
+		total_lp: AssetBalance,
+	) -> DispatchResult {
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		let rewards = Self::get_bootstrap_rewards(pair);
+
+		for (asset_id, reward_amount) in rewards.into_iter() {
+			let owner_reward = U256::from(share_lp)
+				.saturating_mul(U256::from(reward_amount))
+				.checked_div(U256::from(total_lp))
+				.and_then(|n| TryInto::<AssetBalance>::try_into(n).ok())
+				.ok_or(Error::<T>::Overflow)?;
+
+			T::MultiAssetsHandler::transfer(asset_id, reward_holder, owner, owner_reward)?;
+		}
+
+		Ok(())
 	}
 }
 
