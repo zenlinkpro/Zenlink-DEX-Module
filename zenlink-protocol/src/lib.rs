@@ -19,7 +19,7 @@ use frame_support::{
 };
 use sp_core::U256;
 use sp_runtime::traits::{AccountIdConversion, Hash, One, StaticLookup, Zero};
-use sp_std::{convert::TryInto, marker::PhantomData, prelude::*};
+use sp_std::{convert::TryInto, marker::PhantomData, collections::btree_map::BTreeMap,prelude::*};
 
 // -------xcm--------
 pub use cumulus_primitives_core::ParaId;
@@ -71,7 +71,6 @@ pub mod pallet {
 	use super::*;
 	use frame_support::dispatch::DispatchResult;
 	use frame_system::pallet_prelude::*;
-	use std::collections::BTreeMap;
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
