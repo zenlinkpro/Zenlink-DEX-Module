@@ -888,7 +888,7 @@ impl<T: Config> Pallet<T> {
 		let limits = Self::get_bootstrap_limits(pair);
 
 		for (asset_id, limit) in limits.into_iter() {
-			if T::MultiAssetsHandler::balance_of(asset_id, &account) < limit {
+			if T::MultiAssetsHandler::balance_of(asset_id, account) < limit {
 				return false;
 			}
 		}
