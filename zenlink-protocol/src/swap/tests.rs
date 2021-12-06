@@ -1834,8 +1834,8 @@ fn bootstrap_contribute_below_limits_should_not_work() {
 		));
 
 		// charlie's asset  below limit,
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, 100 * unit));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, 2000 * unit));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, 100 * unit));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &CHARLIE, 2000 * unit));
 
 		assert_noop!(
 			DexPallet::bootstrap_contribute(
@@ -1849,8 +1849,23 @@ fn bootstrap_contribute_below_limits_should_not_work() {
 			Error::<Test>::NotQualifiedAccount
 		);
 
-		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &BOB), 0);
-		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &BOB), 0);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &DexPallet::account_id()),
+			0
+		);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &DexPallet::account_id()),
+			0
+		);
+
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &CHARLIE),
+			100 * unit
+		);
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &CHARLIE),
+			2000 * unit
+		);
 	})
 }
 
