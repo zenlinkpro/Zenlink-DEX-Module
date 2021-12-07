@@ -907,6 +907,7 @@ impl<T: Config> Pallet<T> {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		let rewards = Self::get_bootstrap_rewards(pair);
 
+		let mut distribute_rewards = Vec::<(AssetId, AssetBalance)>::new();
 		for (asset_id, reward_amount) in rewards.into_iter() {
 			let owner_reward = U256::from(share_lp)
 				.saturating_mul(U256::from(reward_amount))
@@ -915,6 +916,17 @@ impl<T: Config> Pallet<T> {
 				.ok_or(Error::<T>::Overflow)?;
 
 			T::MultiAssetsHandler::transfer(asset_id, reward_holder, owner, owner_reward)?;
+
+			distribute_rewards.push((asset_id, owner_reward));
+		}
+
+		if distribute_rewards.len() > 0 {
+			Self::deposit_event(Event::DistributeReward(
+				pair.0,
+				pair.1,
+				reward_holder.clone(),
+				distribute_rewards,
+			));
 		}
 
 		Ok(())

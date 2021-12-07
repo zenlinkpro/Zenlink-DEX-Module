@@ -19,7 +19,7 @@ use frame_support::{
 };
 use sp_core::U256;
 use sp_runtime::traits::{AccountIdConversion, Hash, One, StaticLookup, Zero};
-use sp_std::{convert::TryInto, marker::PhantomData, collections::btree_map::BTreeMap,prelude::*};
+use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, marker::PhantomData, prelude::*};
 
 // -------xcm--------
 pub use cumulus_primitives_core::ParaId;
@@ -308,6 +308,15 @@ pub mod pallet {
 		/// Refund from disable bootstrap pair. \[bootstrap_pair_account, caller, asset_0, asset_1,
 		/// asset_0_refund, asset_1_refund\]
 		BootstrapRefund(T::AccountId, T::AccountId, AssetId, AssetId, AssetBalance, AssetBalance),
+
+		/// Bootstrap distribute some rewards to contributors.
+		DistributeReward(AssetId, AssetId, T::AccountId, Vec<(AssetId, AssetBalance)>),
+
+		/// Charge reward into a bootstrap.
+		ChargeReward(AssetId, AssetId, T::AccountId, Vec<(AssetId, AssetBalance)>),
+
+		/// Withdraw all reward from a bootstrap.
+		WithdrawReward(AssetId, AssetId, T::AccountId),
 	}
 	#[pallet::error]
 	pub enum Error<T> {
@@ -377,7 +386,7 @@ pub mod pallet {
 		AlreadyCharged,
 		/// Reward of bootstrap is not set.
 		NoRewardTokens,
-		///
+		/// Charge bootstrap extrinsic args has error,
 		ChargeRewardParamsError,
 	}
 
@@ -1007,7 +1016,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 			let who = ensure_signed(origin)?;
-
+			let charge_rewards_clone = charge_rewards.clone();
 			BootstrapRewards::<T>::try_mutate(pair, |rewards| -> DispatchResult {
 				ensure!(
 					rewards.len() == charge_rewards.len(),
@@ -1025,6 +1034,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
+			Self::deposit_event(Event::ChargeReward(pair.0, pair.1, who, charge_rewards_clone));
 			Ok(())
 		}
 
@@ -1048,6 +1058,8 @@ pub mod pallet {
 				}
 				Ok(())
 			})?;
+
+			Self::deposit_event(Event::WithdrawReward(pair.0, pair.1, recipient));
 
 			Ok(())
 		}
