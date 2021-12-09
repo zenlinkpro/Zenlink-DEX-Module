@@ -388,6 +388,8 @@ pub mod pallet {
 		NoRewardTokens,
 		/// Charge bootstrap extrinsic args has error,
 		ChargeRewardParamsError,
+		/// Exist some reward in bootstrap,
+		ExistRewardsInBootstrap,
 	}
 
 	#[pallet::hooks]
@@ -964,6 +966,14 @@ pub mod pallet {
 						end_block_number: end,
 						pair_account: Self::account_id(),
 					});
+
+					// must no reward before update.
+					let exist_rewards = BootstrapRewards::<T>::get(pair);
+					for (_, exist_reward) in exist_rewards{
+						if exist_reward != Zero::zero(){
+							return Err(Error::<T>::ExistRewardsInBootstrap);
+						}
+					}
 
 					BootstrapRewards::<T>::insert(
 						pair,
