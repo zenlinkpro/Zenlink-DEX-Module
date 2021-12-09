@@ -1016,14 +1016,14 @@ pub mod pallet {
 		) -> DispatchResult {
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 			let who = ensure_signed(origin)?;
-			let charge_rewards_clone = charge_rewards.clone();
+
 			BootstrapRewards::<T>::try_mutate(pair, |rewards| -> DispatchResult {
 				ensure!(
 					rewards.len() == charge_rewards.len(),
 					Error::<T>::ChargeRewardParamsError
 				);
 
-				for (asset_id, amount) in charge_rewards {
+				for (asset_id, amount) in charge_rewards.clone() {
 					let already_charge_amount = rewards.get(&asset_id).ok_or(Error::<T>::NoRewardTokens)?;
 
 					T::MultiAssetsHandler::transfer(asset_id, &who, &Self::account_id(), amount)?;
@@ -1031,10 +1031,11 @@ pub mod pallet {
 
 					rewards.insert(asset_id, new_charge_amount);
 				}
+				Self::deposit_event(Event::ChargeReward(pair.0, pair.1, who, charge_rewards));
+
 				Ok(())
 			})?;
 
-			Self::deposit_event(Event::ChargeReward(pair.0, pair.1, who, charge_rewards_clone));
 			Ok(())
 		}
 
