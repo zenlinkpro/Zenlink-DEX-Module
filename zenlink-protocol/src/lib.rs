@@ -1023,14 +1023,15 @@ pub mod pallet {
 					Error::<T>::ChargeRewardParamsError
 				);
 
-				for (asset_id, amount) in charge_rewards.clone() {
+				for (asset_id, amount) in &charge_rewards {
 					let already_charge_amount = rewards.get(&asset_id).ok_or(Error::<T>::NoRewardTokens)?;
 
-					T::MultiAssetsHandler::transfer(asset_id, &who, &Self::account_id(), amount)?;
-					let new_charge_amount = already_charge_amount.checked_add(amount).ok_or(Error::<T>::Overflow)?;
+					T::MultiAssetsHandler::transfer(*asset_id, &who, &Self::account_id(), *amount)?;
+					let new_charge_amount = already_charge_amount.checked_add(*amount).ok_or(Error::<T>::Overflow)?;
 
-					rewards.insert(asset_id, new_charge_amount);
+					rewards.insert(*asset_id, new_charge_amount);
 				}
+
 				Self::deposit_event(Event::ChargeReward(pair.0, pair.1, who, charge_rewards));
 
 				Ok(())
