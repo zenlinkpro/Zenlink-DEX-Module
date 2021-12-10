@@ -777,7 +777,7 @@ impl<T: Config> Pallet<T> {
 							})
 							.ok_or(Error::<T>::Overflow)?;
 
-						let liquidity = TryInto::<AssetBalance>::try_into(
+						let claim_liquidity = TryInto::<AssetBalance>::try_into(
 							exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt(),
 						)
 						.map_err(|_| Error::<T>::Overflow)?;
@@ -785,7 +785,7 @@ impl<T: Config> Pallet<T> {
 						let pair_account = Self::pair_account_id(pair.0, pair.1);
 						let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
-						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, liquidity)?;
+						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, claim_liquidity)?;
 
 						let bootstrap_total_liquidity = TryInto::<AssetBalance>::try_into(
 							U256::from(bootstrap_parameter.accumulated_supply.0)
@@ -799,7 +799,7 @@ impl<T: Config> Pallet<T> {
 							&bootstrap_parameter.pair_account,
 							pair.0,
 							pair.1,
-							liquidity,
+							claim_liquidity,
 							bootstrap_total_liquidity,
 						)?;
 
@@ -811,7 +811,7 @@ impl<T: Config> Pallet<T> {
 							pair.1,
 							amount_0_contribute,
 							amount_1_contribute,
-							liquidity,
+							claim_liquidity,
 						));
 
 						Ok(())
