@@ -969,8 +969,8 @@ pub mod pallet {
 
 					// must no reward before update.
 					let exist_rewards = BootstrapRewards::<T>::get(pair);
-					for (_, exist_reward) in exist_rewards{
-						if exist_reward != Zero::zero(){
+					for (_, exist_reward) in exist_rewards {
+						if exist_reward != Zero::zero() {
 							return Err(Error::<T>::ExistRewardsInBootstrap);
 						}
 					}

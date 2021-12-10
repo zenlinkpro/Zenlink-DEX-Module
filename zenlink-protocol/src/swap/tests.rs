@@ -1891,6 +1891,9 @@ fn bootstrap_contribute_exceed_limits_should_work() {
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, 2_000_000 * unit));
 		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, 4_000_000 * unit));
 
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, 2_000_000 * unit));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &CHARLIE, 4_000_000 * unit));
+
 		// alice will charge
 		assert_ok!(DexPallet::foreign_mint(ETH_ASSET_ID, &ALICE, 20_000 * unit));
 		assert_ok!(DexPallet::foreign_mint(KSM_ASSET_ID, &ALICE, 10_000 * unit));
@@ -1932,12 +1935,29 @@ fn bootstrap_contribute_exceed_limits_should_work() {
 			BTC_ASSET_ID
 		));
 
+		assert_ok!(DexPallet::add_liquidity(
+			Origin::signed(CHARLIE),
+			DOT_ASSET_ID,
+			BTC_ASSET_ID,
+			1 * unit,
+			1 * unit,
+			0,
+			0,
+			100
+		));
+
 		assert_ok!(DexPallet::bootstrap_claim(
 			Origin::signed(ALICE),
 			ALICE,
 			DOT_ASSET_ID,
 			BTC_ASSET_ID,
 			1000,
+		));
+
+		let path = vec![BTC_ASSET_ID.clone(), DOT_ASSET_ID.clone()];
+		let amount_in = 1 * unit;
+		assert_ok!(DexPallet::inner_swap_exact_assets_for_assets(
+			&CHARLIE, amount_in, 0, &path, &BOB,
 		));
 
 		assert_ok!(DexPallet::bootstrap_claim(
@@ -1964,10 +1984,8 @@ fn bootstrap_contribute_exceed_limits_should_work() {
 		let bob_lp = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &BOB);
 		assert_eq!(bob_lp, 1767_369_577_951_894_138_582u128);
 
-		// total_lp = 2828427323371633862327510 + 1767369577951894138583 = sqrt(2002000000000000000000000 ×
-		// 4001000000000000000000000)
-		let total_lp = <Test as Config>::MultiAssetsHandler::total_supply(DOT_BTC_LP_ID);
-		assert_eq!(total_lp, 2_830_194_692_949_585_756_466_093);
+		// bootstrap_mint_lp = 2828427323371633862327510 + 1767369577951894138583 =
+		// sqrt(2002000000000000000000000 × 4001000000000000000000000)
 
 		//bob_reward_eth = 1767369577951894138582 * 20000000000000000000000 / (2828427323371633862327510 +
 		// 1767369577951894138583) = 12_489_385_146_220_937_273 bob_reward_ksm = 1767369577951894138582 *

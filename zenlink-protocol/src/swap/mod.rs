@@ -744,7 +744,7 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		match Self::pair_status(pair) {
-			Trading(trading_status) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
+			Trading(_) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
 				if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
 					if let Bootstrap(bootstrap_parameter) = Self::bootstrap_end_status(pair) {
 						ensure!(
@@ -777,17 +777,22 @@ impl<T: Config> Pallet<T> {
 							})
 							.ok_or(Error::<T>::Overflow)?;
 
-						let calculated = exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt();
-						let liquidity = TryInto::<AssetBalance>::try_into(calculated)
-							.ok()
-							.unwrap_or_else(Zero::zero);
-
-						ensure!(liquidity > Zero::zero(), Error::<T>::Overflow);
+						let liquidity = TryInto::<AssetBalance>::try_into(
+							exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt(),
+						)
+						.map_err(|_| Error::<T>::Overflow)?;
 
 						let pair_account = Self::pair_account_id(pair.0, pair.1);
 						let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
 						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, liquidity)?;
+
+						let bootstrap_total_liquidity = TryInto::<AssetBalance>::try_into(
+							U256::from(bootstrap_parameter.accumulated_supply.0)
+								.saturating_mul(U256::from(bootstrap_parameter.accumulated_supply.1))
+								.integer_sqrt(),
+						)
+						.map_err(|_| Error::<T>::Overflow)?;
 
 						Self::bootstrap_distribute_reward(
 							&who,
@@ -795,7 +800,7 @@ impl<T: Config> Pallet<T> {
 							pair.0,
 							pair.1,
 							liquidity,
-							trading_status.total_supply,
+							bootstrap_total_liquidity,
 						)?;
 
 						Self::deposit_event(Event::BootstrapClaim(
