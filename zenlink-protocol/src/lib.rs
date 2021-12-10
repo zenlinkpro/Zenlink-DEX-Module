@@ -382,8 +382,6 @@ pub mod pallet {
 		DisableBootstrap,
 		/// Not eligible to contribute
 		NotQualifiedAccount,
-		/// Reward of bootstrap already charged
-		AlreadyCharged,
 		/// Reward of bootstrap is not set.
 		NoRewardTokens,
 		/// Charge bootstrap extrinsic args has error,
@@ -791,6 +789,14 @@ pub mod pallet {
 							end_block_number: end,
 							pair_account: Self::account_id(),
 						});
+
+						// must no reward before update.
+						let exist_rewards = BootstrapRewards::<T>::get(pair);
+						for (_, exist_reward) in exist_rewards {
+							if exist_reward != Zero::zero() {
+								return Err(Error::<T>::ExistRewardsInBootstrap);
+							}
+						}
 
 						BootstrapRewards::<T>::insert(
 							pair,
