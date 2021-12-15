@@ -1022,7 +1022,7 @@ pub mod pallet {
 			Self::do_bootstrap_refund(who, asset_0, asset_1)
 		}
 
-		#[pallet::weight(10000)]
+		#[pallet::weight(100_000_000)]
 		#[frame_support::transactional]
 		pub fn bootstrap_charge_reward(
 			origin: OriginFor<T>,
@@ -1056,7 +1056,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10000)]
+		#[pallet::weight(100_000_000)]
 		#[frame_support::transactional]
 		pub fn bootstrap_withdraw_reward(
 			origin: OriginFor<T>,
