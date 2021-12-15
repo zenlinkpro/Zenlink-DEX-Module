@@ -777,17 +777,31 @@ impl<T: Config> Pallet<T> {
 							})
 							.ok_or(Error::<T>::Overflow)?;
 
-						let calculated = exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt();
-						let liquidity = TryInto::<AssetBalance>::try_into(calculated)
-							.ok()
-							.unwrap_or_else(Zero::zero);
-
-						ensure!(liquidity > Zero::zero(), Error::<T>::Overflow);
+						let claim_liquidity = TryInto::<AssetBalance>::try_into(
+							exact_amount_0.saturating_mul(exact_amount_1).integer_sqrt(),
+						)
+						.map_err(|_| Error::<T>::Overflow)?;
 
 						let pair_account = Self::pair_account_id(pair.0, pair.1);
 						let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
-						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, liquidity)?;
+						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, claim_liquidity)?;
+
+						let bootstrap_total_liquidity = TryInto::<AssetBalance>::try_into(
+							U256::from(bootstrap_parameter.accumulated_supply.0)
+								.saturating_mul(U256::from(bootstrap_parameter.accumulated_supply.1))
+								.integer_sqrt(),
+						)
+						.map_err(|_| Error::<T>::Overflow)?;
+
+						Self::bootstrap_distribute_reward(
+							&who,
+							&bootstrap_parameter.pair_account,
+							pair.0,
+							pair.1,
+							claim_liquidity,
+							bootstrap_total_liquidity,
+						)?;
 
 						Self::deposit_event(Event::BootstrapClaim(
 							pair_account,
@@ -797,7 +811,7 @@ impl<T: Config> Pallet<T> {
 							pair.1,
 							amount_0_contribute,
 							amount_1_contribute,
-							liquidity,
+							claim_liquidity,
 						));
 
 						Ok(())
@@ -872,6 +886,55 @@ impl<T: Config> Pallet<T> {
 			return true;
 		}
 		false
+	}
+
+	pub(crate) fn bootstrap_check_limits(asset_0: AssetId, asset_1: AssetId, account: &T::AccountId) -> bool {
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		let limits = Self::get_bootstrap_limits(pair);
+
+		for (asset_id, limit) in limits.into_iter() {
+			if T::MultiAssetsHandler::balance_of(asset_id, account) < limit {
+				return false;
+			}
+		}
+
+		true
+	}
+
+	pub(crate) fn bootstrap_distribute_reward(
+		owner: &T::AccountId,
+		reward_holder: &T::AccountId,
+		asset_0: AssetId,
+		asset_1: AssetId,
+		share_lp: AssetBalance,
+		total_lp: AssetBalance,
+	) -> DispatchResult {
+		let pair = Self::sort_asset_id(asset_0, asset_1);
+		let rewards = Self::get_bootstrap_rewards(pair);
+
+		let mut distribute_rewards = Vec::<(AssetId, AssetBalance)>::new();
+		for (asset_id, reward_amount) in rewards.into_iter() {
+			let owner_reward = U256::from(share_lp)
+				.saturating_mul(U256::from(reward_amount))
+				.checked_div(U256::from(total_lp))
+				.and_then(|n| TryInto::<AssetBalance>::try_into(n).ok())
+				.ok_or(Error::<T>::Overflow)?;
+
+			T::MultiAssetsHandler::transfer(asset_id, reward_holder, owner, owner_reward)?;
+
+			distribute_rewards.push((asset_id, owner_reward));
+		}
+
+		if distribute_rewards.len() > 0 {
+			Self::deposit_event(Event::DistributeReward(
+				pair.0,
+				pair.1,
+				reward_holder.clone(),
+				distribute_rewards,
+			));
+		}
+
+		Ok(())
 	}
 }
 
