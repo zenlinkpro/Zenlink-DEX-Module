@@ -8,6 +8,7 @@
 use codec::Codec;
 use sp_std::vec::Vec;
 use zenlink_protocol::{AssetBalance, AssetId, PairInfo};
+use sp_core::{H256};
 
 sp_api::decl_runtime_apis! {
 	 pub trait ZenlinkProtocolApi<AccountId>
