@@ -11,6 +11,7 @@ codec = { package = "parity-scale-codec", version = "2.2.0", default-features = 
 
 sp-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.12" }
 sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.12" }
+sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.12" }
 
 zenlink-protocol = { path = '../..', default-features = false }
 
@@ -23,5 +24,6 @@ std = [
     'codec/std',
     'sp-api/std',
     'sp-std/std',
+    "sp-core/std",
     'zenlink-protocol/std'
 ]
