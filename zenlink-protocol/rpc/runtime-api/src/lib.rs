@@ -39,5 +39,34 @@ sp_api::decl_runtime_apis! {
 			amount_0_min: AssetBalance,
 			amount_1_min: AssetBalance,
 		) -> AssetBalance;
+
+		fn hashes_of_maker(
+			maker: AccountId,
+		 	page:  u64,
+		 	limit: u64,
+	 	)->Vec<H256>;
+
+		fn hashes_of_maker_invert(
+			maker: AccountId,
+		 	page:  u64,
+		 	limit: u64,
+	 	)->Vec<H256>;
+
+		fn hashes_of_from_token(
+		 	maker: AccountId,
+		 	page:  u64,
+		 	limit: u64,
+	 	)->Vec<H256>;
+
+		fn hashes_of_to_token(
+		 	maker: AccountId,
+		 	page:  u64,
+		 	limit: u64,
+	 	) ->Vec<H256>;
+
+		fn all_hashes(
+		 	page : u64,
+		 	limit: u64,
+	 	)-> Vec<H256>;
 	 }
 }

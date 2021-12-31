@@ -4,6 +4,7 @@
 #![allow(clippy::type_complexity)]
 
 use codec::{Decode, Encode};
+use frame_support::traits::Len;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +24,30 @@ pub struct PairInfo<AccountId, AssetBalance> {
 	pub reserve_1: AssetBalance,
 	pub lp_asset_id: AssetId,
 	pub status: u8,
+}
+
+fn paginate(hashes: &[H256], page: u64, limit: u64)->Vec<H256>{
+    let result = Vec::<H256>::with_capacity(limit as usize);
+    for i in 0..limit{
+        if page * limit + i >= hashes.len() as u64 {
+            result[i] = H256::default();
+        }else{
+            result[i] = hashes[page * limit + i]
+        }
+    }
+    result
+}
+
+fn paginate_invert(hashes: &[H256], page: u64, limit: u64) ->Vec<H256>{
+    let result = Vec::<H256>::with_capacity(limit as usize);
+    for i in 0..limit{
+        if page * limit + i >= hashes.len() as u64 {
+            result[i] = H256::default();
+        }else{
+            result[i] = hashes[hashes.len() - (page * limit + i) as usize -1]
+        }
+    }
+    result
 }
 
 impl<T: Config> Pallet<T> {
@@ -111,5 +136,30 @@ impl<T: Config> Pallet<T> {
 				(para_id, account, balance)
 			})
 			.collect::<Vec<_>>()
+	}
+
+	pub fn hashes_of_maker( maker: T::AccountId, page: u64, limit: u64)->Vec<H256>{
+		let hashes = Self::get_order_hash_of_maker(maker);
+		paginate(&hashes, page,limit)
+	}
+
+    pub fn hashes_of_maker_invert(maker: T::AccountId, page:u64, limit: u64) ->Vec<U256>{
+        let hashes = Self::get_order_hash_of_maker(maker);
+        paginate_invert(&hashes, page,limit)
+    }
+
+    pub fn hashes_of_from_token(from_token: AssetId, page: u64, limit: u64)->Vec<U256>{
+		let hashes = Self::get_order_hash_of_from_asset(from_token);
+		paginate(&hashes, page,limit)
+	}
+
+	pub fn hashes_of_to_token(from_token: AssetId, page: u64, limit: u64)->Vec<U256>{
+		let hashes = Self::get_order_hash_of_to_asset(from_token);
+		paginate(&hashes, page,limit)
+	}
+
+	pub fn all_hashes(page :u64, limit: u64)->Vec<H256>{
+		let hashes = Self::get_all_order_hash();
+		paginate(hashes, page, limit)
 	}
 }
