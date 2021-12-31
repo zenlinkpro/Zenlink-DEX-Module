@@ -35,7 +35,6 @@ fn limit_order_0() -> LimitOrder<u64, AccountId32> {
 		recipient: bob(),
 		deadline: 10,
 		create_at: 0,
-		amount_filled_out: 0,
 		signature: vec![
 			10, 84, 151, 19, 56, 162, 25, 244, 152, 246, 6, 114, 171, 14, 158, 106, 136, 196, 88, 245, 246, 245, 171,
 			204, 146, 172, 90, 115, 114, 157, 203, 62, 8, 139, 13, 20, 219, 229, 25, 6, 176, 150, 57, 170, 20, 38, 242,
@@ -294,8 +293,7 @@ fn fill_order_should_work() {
 
 		assert_eq!(DexPallet::get_canceled_of_hash(alice()).get(&order_hash), None);
 		assert_eq!(DexPallet::get_amount_fill_in_of_hash(&order_hash), fill_in_amount);
-		let order_after_filled = DexPallet::get_order_of_hash(order_hash);
-		assert_eq!(order_after_filled.amount_filled_out, bob_test_asset_0_balance)
+		assert_eq!(DexPallet::get_amount_fill_out_of_hash(order_hash), bob_test_asset_0_balance)
 	})
 }
 
@@ -334,8 +332,7 @@ fn fill_already_filed_order_should_not_work() {
 
 		assert_eq!(DexPallet::get_canceled_of_hash(alice()).get(&order_hash), None);
 		assert_eq!(DexPallet::get_amount_fill_in_of_hash(&order_hash), fill_in_amount);
-		let order_after_filled = DexPallet::get_order_of_hash(order_hash);
-		assert_eq!(order_after_filled.amount_filled_out, bob_test_asset_0_balance)
+		assert_eq!(DexPallet::get_amount_fill_out_of_hash(order_hash), bob_test_asset_0_balance)
 	})
 }
 

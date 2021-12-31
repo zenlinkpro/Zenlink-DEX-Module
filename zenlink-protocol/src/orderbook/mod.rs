@@ -32,7 +32,6 @@ pub struct LimitOrder<BlockNumber, AccountId> {
 	pub recipient: AccountId,
 	pub deadline: BlockNumber,
 	pub create_at: u64,
-	pub amount_filled_out: u128,
 	pub signature: Vec<u8>,
 }
 
@@ -159,9 +158,8 @@ impl<T: Config> Pallet<T> {
 			Ok(())
 		})?;
 
-		OrderOfHash::<T>::try_mutate(order_hash, |order| -> DispatchResult {
-			order.amount_filled_out = order
-				.amount_filled_out
+		FilledAmountOutOfHash::<T>::try_mutate(order_hash, |filled_amount_out| -> DispatchResult {
+			*filled_amount_out = filled_amount_out
 				.checked_add(swap_amount_out)
 				.ok_or(Error::<T>::Overflow)?;
 			Ok(())
