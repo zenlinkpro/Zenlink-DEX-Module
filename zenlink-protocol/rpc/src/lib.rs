@@ -13,6 +13,7 @@ use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
+use sp_core::H256;
 
 use zenlink_protocol::{AssetBalance, AssetId, PairInfo};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
@@ -72,7 +73,7 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
         page: u64,
         limit: u64,
         at: Option<BlockHash>,
-    ) -> Vec<H256>;
+    ) -> Result<Vec<H256>>;
 
     #[rpc(name = "zenlinkProtocol_hashesOfMakerInvert")]
     fn hashes_of_maker_invert(
@@ -81,7 +82,7 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
         page: u64,
         limit: u64,
         at: Option<BlockHash>,
-    ) -> Vec<H256>;
+    ) -> Result<Vec<H256>>;
 
     #[rpc(name = "zenlinkProtocol_hashesOfFromToken")]
     fn hashes_of_from_token(
@@ -90,7 +91,7 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
         page: u64,
         limit: u64,
         at: Option<BlockHash>,
-    ) -> Vec<H256>;
+    ) -> Result<Vec<H256>>;
 
     #[rpc(name = "zenlinkProtocol_hashesOfToToken")]
     fn hashes_of_to_token(
@@ -99,15 +100,15 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
         page: u64,
         limit: u64,
         at: Option<BlockHash>,
-    ) -> Vec<H256>;
+    ) -> Result<Vec<H256>>;
 
     #[rpc(name = "zenlinkProtocol_allHashes")]
     fn all_hashes(
         &self,
-        page: u128,
+        page: u64,
         limit: u64,
         at: Option<BlockHash>,
-    ) -> Vec<H256>;
+    ) -> Result<Vec<H256>>;
 }
 
 const RUNTIME_ERROR: i64 = 1;
@@ -135,62 +136,6 @@ impl<C, Block, AccountId> ZenlinkProtocolApi<<Block as BlockT>::Hash, AccountId>
         C: HeaderBackend<Block>,
         C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 {
-    //buy amount asset price
-    fn get_amount_in_price(
-        &self,
-        supply: AssetBalance,
-        path: Vec<AssetId>,
-        at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<NumberOrHex> {
-        let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-
-        api.get_amount_in_price(&at, supply, path)
-            .map(|price| price.into())
-            .map_err(runtime_error_into_rpc_err)
-    }
-
-    //sell amount asset price
-    fn get_amount_out_price(
-        &self,
-        supply: AssetBalance,
-        path: Vec<AssetId>,
-        at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<NumberOrHex> {
-        let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-
-        api.get_amount_out_price(&at, supply, path)
-            .map(|price| price.into())
-            .map_err(runtime_error_into_rpc_err)
-    }
-
-    fn get_estimate_lptoken(
-        &self,
-        asset_0: AssetId,
-        asset_1: AssetId,
-        amount_0_desired: AssetBalance,
-        amount_1_desired: AssetBalance,
-        amount_0_min: AssetBalance,
-        amount_1_min: AssetBalance,
-        at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<NumberOrHex> {
-        let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-
-        api.get_estimate_lptoken(
-            &at,
-            asset_0,
-            asset_1,
-            amount_0_desired,
-            amount_1_desired,
-            amount_0_min,
-            amount_1_min,
-        )
-            .map(|price| price.into())
-            .map_err(runtime_error_into_rpc_err)
-    }
-
     fn get_balance(
         &self,
         asset_id: AssetId,
@@ -249,34 +194,90 @@ impl<C, Block, AccountId> ZenlinkProtocolApi<<Block as BlockT>::Hash, AccountId>
             .map_err(runtime_error_into_rpc_err)
     }
 
-    fn hashes_of_maker(&self,  maker: AccountId, page: u64, limit: u64, at: Option<<Block as BlockT>::Hash>) -> Vec<H256> {
+    //buy amount asset price
+    fn get_amount_in_price(
+        &self,
+        supply: AssetBalance,
+        path: Vec<AssetId>,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<NumberOrHex> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        api.hashes_of_maker(at, maker, page, limit)
+
+        api.get_amount_in_price(&at, supply, path)
+            .map(|price| price.into())
+            .map_err(runtime_error_into_rpc_err)
     }
 
-    fn hashes_of_maker_invert(&self,maker: AccountId, page: u64, limit: u64, at: Option<<Block as BlockT>::Hash>) -> Vec<H256> {
+    //sell amount asset price
+    fn get_amount_out_price(
+        &self,
+        supply: AssetBalance,
+        path: Vec<AssetId>,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<NumberOrHex> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        api.hashes_of_maker_invert(at, maker, page, limit)
+
+        api.get_amount_out_price(&at, supply, path)
+            .map(|price| price.into())
+            .map_err(runtime_error_into_rpc_err)
     }
 
-    fn hashes_of_from_token(&self,from_token: AssetId, page: u64, limit: u64, at: Option<<Block as BlockT>::Hash>) -> Vec<H256> {
+    fn get_estimate_lptoken(
+        &self,
+        asset_0: AssetId,
+        asset_1: AssetId,
+        amount_0_desired: AssetBalance,
+        amount_1_desired: AssetBalance,
+        amount_0_min: AssetBalance,
+        amount_1_min: AssetBalance,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<NumberOrHex> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        api.hashes_of_from_token(at, from_token, page, limit)
+
+        api.get_estimate_lptoken(
+            &at,
+            asset_0,
+            asset_1,
+            amount_0_desired,
+            amount_1_desired,
+            amount_0_min,
+            amount_1_min,
+        )
+            .map(|price| price.into())
+            .map_err(runtime_error_into_rpc_err)
     }
 
-    fn hashes_of_to_token(&self,to_token: AssetId, page: u64, limit: u64, at: Option<<Block as BlockT>::Hash>) -> Vec<H256> {
+    fn hashes_of_maker(&self,  maker: AccountId, page: u64, limit: u64, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<H256>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        api.hashes_of_to_token(at, to_token, page, limit)
+        api.hashes_of_maker(&at, maker, page, limit).map_err(runtime_error_into_rpc_err)
     }
 
-    fn all_hashes(&self, page: u128, limit: u64, at: Option<<Block as BlockT>::Hash>) -> Vec<H256> {
+    fn hashes_of_maker_invert(&self,maker: AccountId, page: u64, limit: u64, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<H256>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-        api.all_hashes(at, maker, page, limit)
+        api.hashes_of_maker_invert(&at, maker, page, limit).map_err(runtime_error_into_rpc_err)
+    }
+
+    fn hashes_of_from_token(&self,from_token: AssetId, page: u64, limit: u64, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<H256>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        api.hashes_of_from_token(&at, from_token, page, limit).map_err(runtime_error_into_rpc_err)
+    }
+
+    fn hashes_of_to_token(&self,to_token: AssetId, page: u64, limit: u64, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<H256>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        api.hashes_of_to_token(&at, to_token, page, limit).map_err(runtime_error_into_rpc_err)
+    }
+
+    fn all_hashes(&self, page: u64, limit: u64, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<H256>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        api.all_hashes(&at, page, limit).map_err(runtime_error_into_rpc_err)
     }
 }
 

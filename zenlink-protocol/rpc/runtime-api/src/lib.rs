@@ -54,13 +54,13 @@ sp_api::decl_runtime_apis! {
 	 	)->Vec<H256>;
 
 		fn hashes_of_from_token(
-		 	maker: AccountId,
+		 	maker: AssetId,
 		 	page:  u64,
 		 	limit: u64,
 	 	)->Vec<H256>;
 
 		fn hashes_of_to_token(
-		 	maker: AccountId,
+		 	maker: AssetId,
 		 	page:  u64,
 		 	limit: u64,
 	 	) ->Vec<H256>;
