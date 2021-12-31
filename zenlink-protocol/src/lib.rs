@@ -204,6 +204,10 @@ pub mod pallet {
 	#[pallet::getter(fn get_amount_fill_in_of_hash)]
 	pub type FilledAmountInOfHash<T: Config> = StorageMap<_, Twox64Concat, H256, AssetBalance, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn get_amount_fill_out_of_hash)]
+	pub type FilledAmountOutOfHash<T: Config> = StorageMap<_, Twox64Concat, H256, AssetBalance, ValueQuery>;
+
 	#[pallet::genesis_config]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
 	pub struct GenesisConfig<T: Config> {
