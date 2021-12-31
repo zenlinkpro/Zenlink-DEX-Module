@@ -237,10 +237,11 @@ impl<T: Config> Pallet<T> {
 		amount_out_min: AssetBalance,
 		path: &[AssetId],
 		recipient: &T::AccountId,
-	) -> DispatchResult {
+	) -> Result<AssetBalance, DispatchError> {
 		let amounts = Self::get_amount_out_by_path(amount_in, path)?;
+		let calculate_amount_out = amounts[amounts.len() - 1];
 		ensure!(
-			amounts[amounts.len() - 1] >= amount_out_min,
+			calculate_amount_out >= amount_out_min,
 			Error::<T>::InsufficientTargetAmount
 		);
 
@@ -256,7 +257,7 @@ impl<T: Config> Pallet<T> {
 			amounts,
 		));
 
-		Ok(())
+		Ok(calculate_amount_out)
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -964,7 +965,8 @@ impl<T: Config> ExportZenlink<T::AccountId> for Pallet<T> {
 		path: &[AssetId],
 		recipient: &T::AccountId,
 	) -> DispatchResult {
-		Self::inner_swap_exact_assets_for_assets(who, amount_in, amount_out_min, path, recipient)
+		Self::inner_swap_exact_assets_for_assets(who, amount_in, amount_out_min, path, recipient)?;
+		Ok(())
 	}
 
 	fn inner_add_liquidity(

@@ -17,7 +17,7 @@ use frame_support::{
 	traits::{Currency, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get, WithdrawReasons},
 	PalletId, RuntimeDebug,
 };
-use sp_core::U256;
+use sp_core::{H256, U256};
 use sp_runtime::traits::{AccountIdConversion, Hash, One, StaticLookup, Zero};
 use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, marker::PhantomData, prelude::*};
 
@@ -37,6 +37,7 @@ use xcm_executor::{
 mod fee;
 mod foreign;
 mod multiassets;
+mod orderbook;
 mod primitives;
 mod rpc;
 mod swap;
@@ -51,6 +52,7 @@ mod default_weights;
 
 pub use default_weights::WeightInfo;
 pub use multiassets::{MultiAssetsHandler, ZenlinkMultiAssets};
+pub use orderbook::{FillOrderArgs, LimitOrder};
 pub use primitives::{
 	AssetBalance, AssetId, BootstrapParameter, PairMetadata, PairStatus,
 	PairStatus::{Bootstrap, Disable, Trading},
@@ -61,6 +63,7 @@ pub use traits::{ExportZenlink, LocalAssetHandler, OtherAssetHandler};
 pub use transactor::{TransactorAdaptor, TrustedParas};
 
 const LOG_TARGET: &str = "zenlink_protocol";
+
 pub fn make_x2_location(para_id: u32) -> MultiLocation {
 	MultiLocation::new(1, Junctions::X1(Junction::Parachain(para_id)))
 }
@@ -98,7 +101,7 @@ pub mod pallet {
 	}
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	/// Foreign foreign storage
@@ -172,6 +175,35 @@ pub mod pallet {
 	pub type BootstrapLimits<T: Config> =
 		StorageMap<_, Twox64Concat, (AssetId, AssetId), BTreeMap<AssetId, AssetBalance>, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn get_all_order_hash)]
+	pub type AllOrderHashes<T: Config> = StorageValue<_, Vec<H256>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_order_hash_of_maker)]
+	pub type HashesOfMaker<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Vec<H256>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_order_hash_of_from_asset)]
+	pub type HashesOfFromAssetId<T: Config> = StorageMap<_, Twox64Concat, AssetId, Vec<H256>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_order_hash_of_to_asset)]
+	pub type HashesOfToAssetId<T: Config> = StorageMap<_, Twox64Concat, AssetId, Vec<H256>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_order_of_hash)]
+	pub type OrderOfHash<T: Config> =
+		StorageMap<_, Twox64Concat, H256, LimitOrder<T::BlockNumber, T::AccountId>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_canceled_of_hash)]
+	pub type CanceledOfHash<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BTreeMap<H256, bool>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_amount_fill_in_of_hash)]
+	pub type FilledAmountInOfHash<T: Config> = StorageMap<_, Twox64Concat, H256, AssetBalance, ValueQuery>;
+
 	#[pallet::genesis_config]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
 	pub struct GenesisConfig<T: Config> {
@@ -221,7 +253,7 @@ pub mod pallet {
 	}
 
 	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Foreign Asset
 
@@ -316,7 +348,14 @@ pub mod pallet {
 
 		/// Withdraw all reward from a bootstrap.
 		WithdrawReward(AssetId, AssetId, T::AccountId),
+
+		OrderFilled(H256, T::AccountId, AssetBalance),
+
+		OrderCreate(H256),
+
+		OrderCanceled(H256),
 	}
+
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Require the admin who can reset the admin and receiver of the protocol fee.
@@ -387,11 +426,14 @@ pub mod pallet {
 		ChargeRewardParamsError,
 		/// Exist some reward in bootstrap,
 		ExistRewardsInBootstrap,
+		/// Signature is invalid in order.
+		InvalidSignature,
+		/// Order already exist in chain.
+		LimitOrderAlreadyExist,
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-	}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -705,7 +747,8 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::inner_swap_exact_assets_for_assets(&who, amount_in, amount_out_min, &path, &recipient)
+			Self::inner_swap_exact_assets_for_assets(&who, amount_in, amount_out_min, &path, &recipient)?;
+			Ok(())
 		}
 
 		/// Buy amount of foreign by path.
@@ -1036,7 +1079,7 @@ pub mod pallet {
 				);
 
 				for (asset_id, amount) in &charge_rewards {
-					let already_charge_amount = rewards.get(&asset_id).ok_or(Error::<T>::NoRewardTokens)?;
+					let already_charge_amount = rewards.get(asset_id).ok_or(Error::<T>::NoRewardTokens)?;
 
 					T::MultiAssetsHandler::transfer(*asset_id, &who, &Self::account_id(), *amount)?;
 					let new_charge_amount = already_charge_amount.checked_add(*amount).ok_or(Error::<T>::Overflow)?;
@@ -1075,6 +1118,36 @@ pub mod pallet {
 
 			Self::deposit_event(Event::WithdrawReward(pair.0, pair.1, recipient));
 
+			Ok(())
+		}
+
+		#[pallet::weight(100_000_000)]
+		#[frame_support::transactional]
+		pub fn create_order(
+			origin: OriginFor<T>,
+			mut order: LimitOrder<T::BlockNumber, T::AccountId>,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+			Self::inner_create_order(&mut order)?;
+			Ok(())
+		}
+
+		#[pallet::weight(100_000_000)]
+		#[frame_support::transactional]
+		pub fn cancel_order(origin: OriginFor<T>, order_hash: H256) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			Self::inner_cancel_order(&who, order_hash)?;
+			Ok(())
+		}
+
+		#[pallet::weight(100_000_000)]
+		#[frame_support::transactional]
+		pub fn filled_order(
+			origin: OriginFor<T>,
+			mut args: FillOrderArgs<T::BlockNumber, T::AccountId>,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+			Self::inner_fill_order(&mut args)?;
 			Ok(())
 		}
 	}
