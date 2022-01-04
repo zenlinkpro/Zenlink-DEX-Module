@@ -100,7 +100,7 @@ impl<T: Config> Pallet<T> {
 
 	pub(crate) fn inner_create_order(order: &mut LimitOrder<T::BlockNumber, T::AccountId>) -> DispatchResult {
 		order.validate()?;
-		let order_hash = order.hash().map_err(|_| Error::<T>::ExistRewardsInBootstrap)?;
+		let order_hash = order.hash()?;
 
 		let separator = Self::domain_separator();
 
