@@ -36,7 +36,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = frame_support::traits::Everything;
 	type Origin = Origin;
 	type Index = u64;
 	type Call = Call;
@@ -81,6 +81,7 @@ impl Config for Test {
 	type SelfParaId = ();
 	type XcmExecutor = ();
 	type Conversion = ();
+	type WeightInfo = ();
 }
 
 pub type DexPallet = Pallet<Test>;
