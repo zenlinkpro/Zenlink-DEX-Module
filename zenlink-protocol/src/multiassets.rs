@@ -37,8 +37,7 @@ where
 			NATIVE if asset_id.is_native(self_chain_id) => {
 				NativeCurrency::free_balance(who).saturated_into::<AssetBalance>()
 			}
-			LIQUIDITY if asset_id.chain_id == self_chain_id => Pallet::<T>::lp_balance_of(asset_id, who),
-			LOCAL if asset_id.chain_id == self_chain_id => Local::local_balance_of(asset_id, who),
+			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id => Local::local_balance_of(asset_id, who),
 			RESERVED if asset_id.chain_id == self_chain_id => Other::other_balance_of(asset_id, who),
 			_ if asset_id.is_foreign(self_chain_id) => Pallet::<T>::foreign_balance_of(asset_id, who),
 			_ => Default::default(),
@@ -51,8 +50,7 @@ where
 			NATIVE if asset_id.is_native(T::SelfParaId::get()) => {
 				NativeCurrency::total_issuance().saturated_into::<AssetBalance>()
 			}
-			LIQUIDITY if asset_id.chain_id == self_chain_id => Pallet::<T>::lp_total_supply(asset_id),
-			LOCAL if asset_id.chain_id == self_chain_id => Local::local_total_supply(asset_id),
+			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id => Local::local_total_supply(asset_id),
 			RESERVED if asset_id.chain_id == self_chain_id => Other::other_total_supply(asset_id),
 			_ if asset_id.is_foreign(self_chain_id) => Pallet::<T>::foreign_total_supply(asset_id),
 			_ => Default::default(),
@@ -63,8 +61,7 @@ where
 		let self_chain_id: u32 = T::SelfParaId::get();
 		match asset_id.asset_type {
 			NATIVE if asset_id.chain_id == self_chain_id => asset_id.is_native(T::SelfParaId::get()),
-			LIQUIDITY if asset_id.chain_id == self_chain_id => Pallet::<T>::lp_is_exists(asset_id),
-			LOCAL if asset_id.chain_id == self_chain_id => Local::local_is_exists(asset_id),
+			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id => Local::local_is_exists(asset_id),
 			RESERVED if asset_id.chain_id == self_chain_id => Other::other_is_exists(asset_id),
 			_ if asset_id.is_foreign(T::SelfParaId::get()) => Pallet::<T>::foreign_is_exists(asset_id),
 			_ => Default::default(),
@@ -84,12 +81,11 @@ where
 					.try_into()
 					.map_err(|_| DispatchError::Other("AmountToBalanceConversionFailed"))?;
 
-				NativeCurrency::transfer(&origin, &target, balance_amount, KeepAlive)
+				NativeCurrency::transfer(origin, target, balance_amount, KeepAlive)
 			}
-			LIQUIDITY if asset_id.chain_id == self_chain_id => {
-				Pallet::<T>::lp_transfer(asset_id, origin, target, amount)
+			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id => {
+				Local::local_transfer(asset_id, origin, target, amount)
 			}
-			LOCAL if asset_id.chain_id == self_chain_id => Local::local_transfer(asset_id, origin, target, amount),
 			RESERVED if asset_id.chain_id == self_chain_id => Other::other_transfer(asset_id, origin, target, amount),
 			_ if asset_id.is_foreign(T::SelfParaId::get()) => {
 				Pallet::<T>::foreign_transfer(asset_id, origin, target, amount)
@@ -114,10 +110,7 @@ where
 
 				Ok(amount)
 			}
-			LIQUIDITY if asset_id.chain_id == self_chain_id => {
-				Pallet::<T>::lp_mint(asset_id, target, amount).map(|_| amount)
-			}
-			LOCAL if asset_id.chain_id == self_chain_id => Local::local_deposit(asset_id, target, amount),
+			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id => Local::local_deposit(asset_id, target, amount),
 			RESERVED if asset_id.chain_id == self_chain_id => Other::other_deposit(asset_id, target, amount),
 			_ if asset_id.is_foreign(T::SelfParaId::get()) => {
 				Pallet::<T>::foreign_mint(asset_id, target, amount).map(|_| amount)
@@ -139,7 +132,7 @@ where
 					.map_err(|_| DispatchError::Other("AmountToBalanceConversionFailed"))?;
 
 				let _ = NativeCurrency::withdraw(
-					&origin,
+					origin,
 					balance_amount,
 					WithdrawReasons::TRANSFER,
 					ExistenceRequirement::AllowDeath,
@@ -147,10 +140,7 @@ where
 
 				Ok(amount)
 			}
-			LIQUIDITY if asset_id.chain_id == self_chain_id => {
-				Pallet::<T>::lp_burn(asset_id, origin, amount).map(|_| amount)
-			}
-			LOCAL if asset_id.chain_id == self_chain_id => Local::local_withdraw(asset_id, origin, amount),
+			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id => Local::local_withdraw(asset_id, origin, amount),
 			RESERVED if asset_id.chain_id == self_chain_id => Other::other_withdraw(asset_id, origin, amount),
 			_ if asset_id.is_foreign(T::SelfParaId::get()) => {
 				Pallet::<T>::foreign_burn(asset_id, origin, amount).map(|_| amount)

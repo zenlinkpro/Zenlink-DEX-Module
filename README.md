@@ -6,9 +6,9 @@ It should at least work until the following commits
 
 -   rustc 1.53.0-nightly (673d0db5e 2021-03-23)
 -   polkadot.js.org (apps v0.95.2-28)
--   Polkadot release-v0.9.9 @ `67d539dd74768096cbe024dce2577560729b2341`
--   Cumulus polkadot-v0.9.9 @ `fd80849dde5c209c20a996cfcc5aaacd4666dcbe`
--   Substrate polkadot-v0.9.9 @ `91061a7d925b5bc597804293da283477512ba4ff`
+-   Polkadot release-v0.9.13 
+-   Cumulus polkadot-v0.9.13 
+-   Substrate polkadot-v0.9.13 
 
 
 ## Precondition
@@ -201,23 +201,117 @@ Transaction type
 
 ```
 {
+   "AccountData": {
+      "free": "Balance",
+      "reserved": "Balance",
+      "frozen": "Balance"
+   },
+  "Currency": "CurrencyIdOf",
+  "CurrencyIdOf": "CurrencyId",
+  "AmountOf": "Balance",
+  "Amount": "AmountOf",
+  "TransferOriginType": {
+    "_enum": {
+      "FromSelf": 0,
+      "FromRelayChain": 1,
+      "FromSiblingParaChain": 2
+    }
+  },
+  "TokenSymbol": {
+    "_enum": {
+      "ASG": 0,
+      "BNC": 1,
+      "KUSD": 2,
+      "DOT": 3,
+      "KSM": 4,
+      "ETH": 5
+    }
+  },
+  "CurrencyId": {
+    "_enum": {
+      "Native": "TokenSymbol",
+      "VToken": "TokenSymbol",
+      "Token": "TokenSymbol",
+      "Stable": "TokenSymbol",
+      "VSToken": "TokenSymbol",
+      "VSBond": "(TokenSymbol, ParaId, LeasePeriod, LeasePeriod)",
+      "LPToken": "(TokenSymbol, u8, TokenSymbol, u8)"
+    }
+  },
+  "TAssetBalance": "Balance",
+  "PalletBalanceOf": "Balance",
+  "BlockNumberFor": "BlockNumber",
+  "NumberOrHex": {
+    "_enum": {
+      "Number": "u64",
+      "Hex": "U256"
+    }
+  },
+  "IsExtended": "bool",
+  "SystemPalletId": "PalletId",
+  "RewardRecord": {
+    "account_id": "AccountId",
+    "record_amount": "Balance"
+  },
+  "MaxLocksOf": "u32",
+  "VestingInfo": {
+    "locked": "Balance",
+    "per_block": "Balance",
+    "starting_block": "BlockNumber"
+  },
+  "OrderId": "u64",
+  "OrderInfo": {
+    "owner": "AccountIdOf",
+    "currency_sold": "CurrencyIdOf",
+    "amount_sold": "BalanceOf",
+    "currency_expected": "CurrencyIdOf",
+    "amount_expected": "BalanceOf",
+    "order_id": "OrderId",
+    "order_state": "OrderState"
+  },
+  "OrderState": {
+    "_enum": [
+      "InTrade",
+      "Revoked",
+      "Clinchd"
+    ]
+  },
   "AssetId": {
     "chain_id": "u32",
     "asset_type": "u8",
-    "asset_index": "u32"
+    "asset_index": "u64"
+  },
+  "ZenlinkAssetBalance": "u128",
+  "PairInfo": {
+    "asset0": "AssetId",
+    "asset1": "AssetId",
+    "account": "AccountId",
+    "totalLiquidity": "ZenlinkAssetBalance",
+    "holdingLiquidity": "ZenlinkAssetBalance",
+    "reserve0": "ZenlinkAssetBalance",
+    "reserve1": "ZenlinkAssetBalance",
+    "lpAssetId": "AssetId"
+  },
+  "PairMetadata": {
+    "pair_account": "AccountId",
+    "target_supply": "AssetBalance"
   },
   "AssetBalance": "u128",
-  "PairInfo": {
-    "asset_0": "AssetId",
-    "asset_1": "AssetId",
-    "account": "AccountId",
-    "total_liquidity": "AssetBalance",
-    "holding_liquidity": "AssetBalance",
-    "reserve_0": "AssetBalance",
-    "reserve_1": "AssetBalance",
-    "lp_asset_id": "AssetId"
+  "BootstrapParamter": {
+    "min_contribution": "(AssetBalance, AssetBalance)",
+    "target_supply": "(AssetBalance, AssetBalance)",
+    "accumulated_supply": "(AssetBalance, AssetBalance)",
+    "end_block_number": "BlockNumber",
+    "pair_account": "AccountId"
   },
-}
+  "PairStatus": {
+    "_enum": {
+      "Trading": "PairMetadata",
+      "Bootstrap": "BootstrapParamter",
+      "Disable": null
+    }
+  }
+}`
 ```
 
 Switch to 'Settings' -> 'Developer', input the above json, then save.

@@ -8,23 +8,18 @@
 #![allow(unused_variables)]
 
 use super::*;
+use xcm::v1::{AssetId as XcmAssetId, Fungibility, MultiAsset};
 
 /// Asset transaction errors.
 enum Error {
 	/// `MultiLocation` to `AccountId` Conversion failed.
 	AccountIdConversionFailed,
-	/// Zenlink only use X4 format xcm
-	XcmNotX4Format,
-	/// Zenlink only use MultiAssetHandler::ConcreteFungible
-	XcmNotConcreteFungible,
 }
 
 impl From<Error> for XcmError {
 	fn from(e: Error) -> Self {
 		match e {
 			Error::AccountIdConversionFailed => XcmError::FailedToTransactAsset("AccountIdConversionFailed"),
-			Error::XcmNotX4Format => XcmError::FailedToTransactAsset("XcmNotX4Format"),
-			Error::XcmNotConcreteFungible => XcmError::FailedToTransactAsset("XcmNotConcreteFungible"),
 		}
 	}
 }
@@ -62,18 +57,20 @@ impl<
 
 		let who = AccountIdConverter::convert_ref(who).map_err(|()| Error::AccountIdConversionFailed)?;
 
-		match asset {
-			MultiAsset::ConcreteFungible { id, amount } => {
-				if let Some(asset_id) = multilocation_to_asset(id) {
-					ZenlinkAssets::deposit(asset_id, &who, *amount)
-						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+		match &asset.id {
+			XcmAssetId::Concrete(location) => {
+				if let Fungibility::Fungible(amount) = asset.fun {
+					let asset_id =
+						multilocation_to_asset(location).ok_or(XcmError::FailedToTransactAsset("unKnown asset"))?;
 
-					Ok(())
+					ZenlinkAssets::deposit(asset_id, &who, amount)
+						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 				} else {
-					Err(XcmError::from(Error::XcmNotX4Format))
+					return Err(XcmError::AssetNotFound.into());
 				}
+				Ok(())
 			}
-			_ => Err(XcmError::from(Error::XcmNotConcreteFungible)),
+			_ => Err(XcmError::AssetNotFound.into()),
 		}
 	}
 
@@ -87,33 +84,38 @@ impl<
 
 		let who = AccountIdConverter::convert_ref(who).map_err(|()| Error::AccountIdConversionFailed)?;
 
-		match asset {
-			MultiAsset::ConcreteFungible { id, amount } => {
-				if let Some(asset_id) = multilocation_to_asset(id) {
-					ZenlinkAssets::withdraw(asset_id, &who, *amount)
-						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+		match &asset.id {
+			XcmAssetId::Concrete(location) => {
+				if let Fungibility::Fungible(amount) = asset.fun {
+					let asset_id =
+						multilocation_to_asset(location).ok_or(XcmError::FailedToTransactAsset("unKnown asset"))?;
 
+					ZenlinkAssets::withdraw(asset_id, &who, amount)
+						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 					Ok(asset.clone().into())
 				} else {
-					Err(XcmError::from(Error::XcmNotX4Format))
+					Err(XcmError::NotWithdrawable.into())
 				}
 			}
-			_ => Err(XcmError::from(Error::XcmNotConcreteFungible)),
+			_ => Err(XcmError::NotWithdrawable.into()),
 		}
 	}
 }
 
 fn multilocation_to_asset(location: &MultiLocation) -> Option<AssetId> {
-	match location {
-		MultiLocation::X4(
-			Junction::Parent,
+	if location.parents != 1 {
+		return None;
+	}
+
+	match location.interior {
+		Junctions::X3(
 			Junction::Parachain(chain_id),
 			Junction::PalletInstance(asset_type),
-			Junction::GeneralIndex { id: asset_index },
+			Junction::GeneralIndex(asset_index),
 		) => Some(AssetId {
-			chain_id: *chain_id,
-			asset_type: *asset_type,
-			asset_index: (*asset_index) as u32,
+			chain_id,
+			asset_type,
+			asset_index: asset_index as u64,
 		}),
 		_ => None,
 	}
