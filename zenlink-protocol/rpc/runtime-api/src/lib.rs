@@ -15,10 +15,15 @@ sp_api::decl_runtime_apis! {
 		AccountId: Codec,
 		AssetBalance: Codec
 	 {
+		fn get_assets() -> Vec<AssetId>;
 
 		fn get_balance(asset_id: AssetId, owner: AccountId) -> AssetBalance;
 
 		fn get_sovereigns_info(asset_id: AssetId) -> Vec<(u32, AccountId, AssetBalance)>;
+
+		fn get_all_pairs() -> Vec<PairInfo<AccountId, AssetBalance>>;
+
+		fn get_owner_pairs(owner: AccountId) -> Vec<PairInfo<AccountId, AssetBalance>>;
 
 		fn get_pair_by_asset_id(
 			asset_0: AssetId,

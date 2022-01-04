@@ -9,7 +9,7 @@
   - {"chain_id":200,"asset_type":1,"asset_index":0}: ParaId=300, Liquidity Asset
 
   ```
-  curl -H "Content-Type: application/json" http://localhost:31200 -d \
+  curl -H "Content-Type: application/json" http://localhost:11111 -d \
     '{
       "jsonrpc":"2.0",
       "id":1,

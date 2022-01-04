@@ -19,17 +19,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod currency;
-mod traits;
-
 pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	MultiSignature,
 };
-
-pub use currency::{CurrencyId, TokenSymbol};
 
 /// Opaque block header type.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -65,5 +60,3 @@ pub type Hash = sp_core::H256;
 
 /// Digest item type.
 pub type DigestItem = generic::DigestItem<Hash>;
-
-pub type Amount = i128;

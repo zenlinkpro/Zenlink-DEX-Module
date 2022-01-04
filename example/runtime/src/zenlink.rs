@@ -1,23 +1,16 @@
 // Copyright 2020-2021 Zenlink
 // Licensed under GPL-3.0.
 
-use sp_std::{convert::TryInto, marker::PhantomData};
-
-use frame_support::dispatch::{DispatchError, DispatchResult};
-use orml_traits::MultiCurrency;
+pub use zenlink_protocol::{
+	make_x2_location, AssetBalance, AssetId, MultiAssetsHandler, PairInfo, TransactorAdaptor, TrustedParas,
+	ZenlinkMultiAssets,
+};
 
 use super::{
-	parameter_types, vec, AccountId, AccountId32, AccountId32Aliases, Balances, Currencies, Event, Get, MultiLocation,
-	NetworkId, PalletId, Parachain, ParachainInfo, Runtime, ShouldExecute, Sibling, SiblingParachainConvertsVia, Vec,
-	Weight, Xcm, XcmConfig, XcmExecutor, ZenlinkProtocol, X1,
+	parameter_types, vec, AccountId, AccountId32, AccountId32Aliases, Balances, Event, Get, MultiLocation, NetworkId,
+	PalletId, Parachain, ParachainInfo, Parent, Runtime, ShouldExecute, Sibling, SiblingParachainConvertsVia, Vec,
+	Weight, Xcm, XcmConfig, XcmExecutor, ZenlinkProtocol, X1, X2,
 };
-
-pub use zenlink_protocol::{
-	make_x2_location, AssetBalance, AssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo, TransactorAdaptor,
-	TrustedParas, ZenlinkMultiAssets, LIQUIDITY, LOCAL,
-};
-
-use dev_parachain_primitives::CurrencyId;
 
 parameter_types! {
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
@@ -57,9 +50,9 @@ where
 	) -> Result<(), ()> {
 		frame_support::log::info!("zenlink_protocol: ZenlinkAllowUnpaid = {:?}", origin);
 
-		match &origin.interior {
+		match origin {
 			X1(AccountId32 { network, .. }) if *network == NetworkId::Any => Ok(()),
-			X1(Parachain(id)) => {
+			X2(Parent, Parachain(id)) => {
 				match RegisteredChains::get()
 					.iter()
 					.find(|(location, _)| *location == make_x2_location(*id))
@@ -80,32 +73,28 @@ pub type ZenlinkLocationToAccountId = (
 	AccountId32Aliases<AnyNetwork, AccountId>,
 );
 
-pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+use super::Assets;
+use frame_support::dispatch::{DispatchError, DispatchResult};
+use pallet_assets::ExternalAssetHandler;
+use sp_std::marker::PhantomData;
+use zenlink_protocol::LocalAssetHandler;
 
-// fn asset_id_to_currency_id(asset_id: AssetId) -> Result<CurrencyId, ()> {
-// 	asset_id.try_into()
-// }
+pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
 impl<Local> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
 where
-	Local: MultiCurrency<AccountId, Balance = u128, CurrencyId = CurrencyId>,
+	Local: ExternalAssetHandler<u32, AccountId, u128>,
 {
 	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
-		asset_id.try_into().map_or(AssetBalance::default(), |currency_id| {
-			Local::free_balance(currency_id, who)
-		})
+		Local::balance(asset_id.asset_index, who.clone())
 	}
 
 	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
-		asset_id.try_into().map_or(AssetBalance::default(), |currency_id| {
-			Local::total_issuance(currency_id)
-		})
+		Local::total_supply(asset_id.asset_index)
 	}
 
 	fn local_is_exists(asset_id: AssetId) -> bool {
-		asset_id.try_into().map_or(false, |currency_id| {
-			Local::total_issuance(currency_id) > AssetBalance::default()
-		})
+		Local::contains(asset_id.asset_index)
 	}
 
 	fn local_transfer(
@@ -114,11 +103,7 @@ where
 		target: &AccountId,
 		amount: AssetBalance,
 	) -> DispatchResult {
-		asset_id
-			.try_into()
-			.map_or(Err(DispatchError::CannotLookup), |currency_id| {
-				Local::transfer(currency_id, origin, target, amount)
-			})
+		Local::transfer(asset_id.asset_index, origin.clone(), target.clone(), amount)
 	}
 
 	fn local_deposit(
@@ -126,9 +111,9 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		asset_id.try_into().map_or(Ok(AssetBalance::default()), |currency_id| {
-			Local::deposit(currency_id, origin, amount).map(|_| amount)
-		})
+		let _ = Local::deposit(asset_id.asset_index, origin.clone(), amount)?;
+
+		Ok(amount)
 	}
 
 	fn local_withdraw(
@@ -136,13 +121,13 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		asset_id.try_into().map_or(Ok(AssetBalance::default()), |currency_id| {
-			Local::withdraw(currency_id, origin, amount).map(|_| amount)
-		})
+		let _ = Local::withdraw(asset_id.asset_index, origin.clone(), amount)?;
+
+		Ok(amount)
 	}
 }
 
-pub type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+pub type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Assets>>;
 
 impl zenlink_protocol::Config for Runtime {
 	type Event = Event;

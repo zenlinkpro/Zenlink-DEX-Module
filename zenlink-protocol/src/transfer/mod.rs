@@ -2,7 +2,6 @@
 // Licensed under GPL-3.0.
 
 use super::*;
-use xcm::v1::{AssetId as XcmAssetId, Fungibility, MultiAssets, WildMultiAsset::All};
 
 impl<T: Config> Pallet<T> {
 	// Check the native currency must be more than ExistentialDeposit,
@@ -17,9 +16,8 @@ impl<T: Config> Pallet<T> {
 	// Make the deposit foreign order
 	fn make_deposit_asset_order(recipient: MultiLocation) -> Order<()> {
 		Order::DepositAsset {
-			assets: All.into(),
-			max_assets: u32::max_value(),
-			beneficiary: recipient,
+			assets: vec![MultiAsset::All],
+			dest: recipient,
 		}
 	}
 
@@ -31,13 +29,9 @@ impl<T: Config> Pallet<T> {
 		amount: AssetBalance,
 	) -> Xcm<T::Call> {
 		Xcm::WithdrawAsset {
-			assets: MultiAssets::from(MultiAsset::from((
-				XcmAssetId::Concrete(location),
-				Fungibility::Fungible(amount),
-			))),
+			assets: vec![MultiAsset::ConcreteFungible { id: location, amount }],
 			effects: vec![Order::DepositReserveAsset {
-				assets: All.into(),
-				max_assets: u32::max_value(),
+				assets: vec![MultiAsset::All],
 				dest: make_x2_location(para_id.into()),
 				effects: vec![Self::make_deposit_asset_order(recipient)],
 			}],
@@ -52,19 +46,15 @@ impl<T: Config> Pallet<T> {
 		amount: AssetBalance,
 	) -> Xcm<T::Call> {
 		Xcm::WithdrawAsset {
-			assets: MultiAssets::from(MultiAsset::from((
-				XcmAssetId::Concrete(location),
-				Fungibility::Fungible(amount),
-			))),
+			assets: vec![MultiAsset::ConcreteFungible { id: location, amount }],
 			effects: vec![Order::InitiateReserveWithdraw {
-				assets: All.into(),
+				assets: vec![MultiAsset::All],
 				reserve: make_x2_location(reserve_chain.into()),
 				effects: vec![if para_id == reserve_chain {
 					Self::make_deposit_asset_order(recipient)
 				} else {
 					Order::DepositReserveAsset {
-						assets: All.into(),
-						max_assets: u32::max_value(),
+						assets: vec![MultiAsset::All],
 						dest: make_x2_location(para_id.into()),
 						effects: vec![Self::make_deposit_asset_order(recipient)],
 					}
@@ -83,15 +73,13 @@ impl<T: Config> Pallet<T> {
 			return Err(XcmError::FailedToTransactAsset("Invalid AssetId"));
 		}
 
-		let asset_location = MultiLocation::new(
-			1,
-			Junctions::X3(
-				Junction::Parachain(asset_id.chain_id),
-				Junction::PalletInstance(asset_id.asset_type),
-				Junction::GeneralIndex {
-					0: asset_id.asset_index as u128,
-				},
-			),
+		let asset_location = MultiLocation::X4(
+			Junction::Parent,
+			Junction::Parachain(asset_id.chain_id),
+			Junction::PalletInstance(asset_id.asset_type),
+			Junction::GeneralIndex {
+				id: asset_id.asset_index as u128,
+			},
 		);
 
 		let seld_chain_id: u32 = T::SelfParaId::get();
