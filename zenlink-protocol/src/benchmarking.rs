@@ -109,7 +109,7 @@ benchmarks! {
 			RawOrigin::Signed(caller.clone()).into(),
 			ASSET_0,
 			ASSET_1,
-			[(ASSET_0, 100 * UNIT), (ASSET_1, 200 * UNIT)].to_vec()
+			[(ASSET_0, 100 * UNIT)].to_vec()
 		));
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(
