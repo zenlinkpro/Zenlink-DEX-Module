@@ -196,7 +196,7 @@ benchmarks! {
 			10*UNIT,
 			10*UNIT,
 			99u128.saturated_into()
-			[ASSET_0, ASSET_1].to_vec(),
+			[ASSET_0].to_vec(),
 			[(ASSET_0, 2 * UNIT)].to_vec()
 		));
 
