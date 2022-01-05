@@ -196,8 +196,8 @@ benchmarks! {
 			10*UNIT,
 			10*UNIT,
 			99u128.saturated_into()
-			[].to_vec(),
-			[].to_vec(),
+			[ASSET_0, ASSET_1].to_vec(),
+			[(ASSET_0, 2 * UNIT)].to_vec()
 		));
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(
