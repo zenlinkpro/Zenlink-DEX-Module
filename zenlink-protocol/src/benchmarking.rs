@@ -15,7 +15,7 @@ const UNIT: u128 = 1_000_000_000_000;
 const ASSET_0: AssetId = AssetId {
 	chain_id: 2001,
 	asset_type: 2,
-	asset_index: 517,
+	asset_index: 770,
 };
 
 const ASSET_1: AssetId = AssetId {
