@@ -79,10 +79,10 @@ benchmarks! {
 			1000,
 			1000_000_000,
 			1000_000_000,
-			100u128.saturated_into()),
+			100u128.saturated_into(),
 			[ASSET_0].to_vec(),
 			[(ASSET_0, 2 * UNIT), (ASSET_1, 1 * UNIT)].to_vec(),
-		);
+		));
 
 	}: _(RawOrigin::Signed(caller.clone()), ASSET_0, ASSET_1, UNIT, UNIT, 100u128.saturated_into())
 
@@ -110,7 +110,7 @@ benchmarks! {
 			ASSET_0,
 			ASSET_1,
 			[(ASSET_0, 100 * UNIT), (ASSET_1, 200 * UNIT)].to_vec()
-		))
+		));
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(
 			RawOrigin::Signed(caller.clone()).into(),
@@ -145,7 +145,9 @@ benchmarks! {
 			1000,
 			10*UNIT,
 			10*UNIT,
-			99u128.saturated_into()
+			99u128.saturated_into(),
+			[].to_vec(),
+			[].to_vec()
 		));
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(
@@ -194,6 +196,8 @@ benchmarks! {
 			10*UNIT,
 			10*UNIT,
 			99u128.saturated_into()
+			[].to_vec(),
+			[].to_vec(),
 		));
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(
