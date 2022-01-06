@@ -195,7 +195,7 @@ impl<T: Config> Pallet<T> {
 		// Check if everything is good or not.
 		match signature.verify(message, &public_key) {
 			true => Ok(()),
-			false => Err(Error::<T>::InvalidSignature)?,
+			false => Err(Error::<T>::InvalidSignature.into()),
 		}
 	}
 
