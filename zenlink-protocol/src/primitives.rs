@@ -16,8 +16,8 @@ pub const LOCAL: u8 = 2;
 pub const RESERVED: u8 = 3;
 
 /// AssetId use to locate assets in framed base chain.
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Default))]
+#[derive(Encode, Decode, Default, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct AssetId {
 	pub chain_id: u32,
 	pub asset_type: u8,
