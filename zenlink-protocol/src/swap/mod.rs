@@ -786,17 +786,13 @@ impl<T: Config> Pallet<T> {
 							.and_then(|n| {
 								n.checked_add(
 									U256::from(amount_1_contribute)
-										.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.0))
-										.ok_or(Error::<T>::Overflow)
-										.ok()?,
+										.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.0))?,
 								)
 							})
 							.and_then(|r| {
 								r.checked_div(
 									U256::from(bootstrap_parameter.accumulated_supply.1)
-										.checked_mul(U256::from(2u128))
-										.ok_or(Error::<T>::Overflow)
-										.ok()?,
+										.checked_mul(U256::from(2u128))?,
 								)
 							})
 							.ok_or(Error::<T>::Overflow)?;
@@ -806,17 +802,13 @@ impl<T: Config> Pallet<T> {
 							.and_then(|n| {
 								n.checked_add(
 									U256::from(amount_0_contribute)
-										.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.1))
-										.ok_or(Error::<T>::Overflow)
-										.ok()?,
+										.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.1))?,
 								)
 							})
 							.and_then(|r| {
 								r.checked_div(
 									U256::from(bootstrap_parameter.accumulated_supply.0)
-										.checked_mul(U256::from(2u128))
-										.ok_or(Error::<T>::Overflow)
-										.ok()?,
+										.checked_mul(U256::from(2u128))?,
 								)
 							})
 							.ok_or(Error::<T>::Overflow)?;
