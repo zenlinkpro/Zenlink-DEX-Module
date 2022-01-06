@@ -29,10 +29,13 @@ impl<T: Config> Pallet<T> {
 		let owner_balance = <ForeignLedger<T>>::get((&id, owner));
 		ensure!(owner_balance >= amount, Error::<T>::InsufficientAssetBalance);
 
-		let new_balance = owner_balance.saturating_sub(amount);
+		let new_balance = owner_balance.checked_sub(amount).ok_or(Error::<T>::Overflow)?;
 
 		<ForeignLedger<T>>::mutate((id, owner), |balance| *balance = new_balance);
-		<ForeignLedger<T>>::mutate((id, target), |balance| *balance = balance.saturating_add(amount));
+		<ForeignLedger<T>>::try_mutate((id, target), |balance| -> DispatchResult {
+			*balance = balance.checked_add(amount).ok_or(Error::<T>::Overflow)?;
+			Ok(())
+		})?;
 
 		Self::deposit_event(Event::Transferred(id, owner.clone(), target.clone(), amount));
 
@@ -46,7 +49,9 @@ impl<T: Config> Pallet<T> {
 			<ForeignList<T>>::mutate(|assets| assets.push(id));
 		}
 
-		let new_balance = <ForeignLedger<T>>::get((id, owner)).saturating_add(amount);
+		let new_balance = <ForeignLedger<T>>::get((id, owner))
+			.checked_add(amount)
+			.ok_or(Error::<T>::Overflow)?;
 
 		<ForeignLedger<T>>::try_mutate::<_, _, Error<T>, _>((id, owner), |balance| {
 			*balance = new_balance;
@@ -55,7 +60,7 @@ impl<T: Config> Pallet<T> {
 		})?;
 
 		<ForeignMeta<T>>::try_mutate::<_, _, Error<T>, _>(id, |supply| {
-			*supply = supply.saturating_add(amount);
+			*supply = supply.checked_add(amount).ok_or(Error::<T>::Overflow)?;
 
 			Ok(())
 		})?;
@@ -74,9 +79,10 @@ impl<T: Config> Pallet<T> {
 
 		<ForeignLedger<T>>::mutate((id, owner), |balance| *balance = new_balance);
 
-		<ForeignMeta<T>>::mutate(id, |supply| {
-			*supply = supply.saturating_sub(amount);
-		});
+		<ForeignMeta<T>>::try_mutate(id, |supply| -> DispatchResult {
+			*supply = supply.checked_sub(amount).ok_or(Error::<T>::Overflow)?;
+			Ok(())
+		})?;
 
 		Self::deposit_event(Event::Burned(id, owner.clone(), amount));
 
