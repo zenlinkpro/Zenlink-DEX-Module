@@ -66,11 +66,11 @@ impl<
 					ZenlinkAssets::deposit(asset_id, &who, amount)
 						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 				} else {
-					return Err(XcmError::AssetNotFound.into());
+					return Err(XcmError::AssetNotFound);
 				}
 				Ok(())
 			}
-			_ => Err(XcmError::AssetNotFound.into()),
+			_ => Err(XcmError::AssetNotFound),
 		}
 	}
 
@@ -94,10 +94,10 @@ impl<
 						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 					Ok(asset.clone().into())
 				} else {
-					Err(XcmError::NotWithdrawable.into())
+					Err(XcmError::NotWithdrawable)
 				}
 			}
-			_ => Err(XcmError::NotWithdrawable.into()),
+			_ => Err(XcmError::NotWithdrawable),
 		}
 	}
 }
