@@ -184,8 +184,8 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 
 		// 2. first add_liquidity
 
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, 10000 * DOT_UNIT));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, 10000 * BTC_UNIT));
 
 		let total_supply_dot: u128 = 1 * DOT_UNIT;
 		let total_supply_btc: u128 = 1 * BTC_UNIT;
@@ -293,9 +293,9 @@ fn turn_on_protocol_fee_swap_have_fee_should_work() {
 
 		// 2. first add_liquidity
 
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, u128::MAX));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, DOT_UNIT * 1000));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, BTC_UNIT * 1000));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, DOT_UNIT * 1000));
 
 		assert_ok!(DexPallet::create_pair(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID,));
 
@@ -411,14 +411,14 @@ fn turn_on_protocol_fee_swap_have_fee_at_should_work() {
 
 		// 2. first add_liquidity
 
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, u128::MAX));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, 100_000_000 * DOT_UNIT));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, 100_000_000 * BTC_UNIT));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, 100_000_000 * DOT_UNIT));
 
 		assert_ok!(DexPallet::create_pair(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID,));
 
-		let total_supply_dot: u128 = u128::MAX - 10 * DOT_UNIT;
-		let total_supply_btc: u128 = u128::MAX - 10 * BTC_UNIT;
+		let total_supply_dot: u128 = 1_000_000 * DOT_UNIT;
+		let total_supply_btc: u128 = 1_000_000 * BTC_UNIT;
 
 		assert_ok!(DexPallet::add_liquidity(
 			Origin::signed(ALICE),
@@ -466,15 +466,13 @@ fn turn_on_protocol_fee_swap_have_fee_at_should_work() {
 			U256::from(total_supply_btc) * U256::from(total_supply_dot)
 		);
 
-		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
-		let balance_btc = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
-
-		assert_eq!(balance_dot, total_supply_dot + 1 * DOT_UNIT);
-		assert_eq!(balance_btc, total_supply_btc - 997000000000000);
-
 		let k_last = DexPallet::k_last(sorted_pair);
 		let reserve_0 = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
 		let reserve_1 = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
+
+		assert_eq!(reserve_0, total_supply_dot + 1 * DOT_UNIT);
+		assert_eq!(reserve_1, total_supply_btc - 99699900);
+
 		let root_k = U256::from(reserve_0)
 			.saturating_mul(U256::from(reserve_1))
 			.integer_sqrt();
@@ -486,6 +484,9 @@ fn turn_on_protocol_fee_swap_have_fee_at_should_work() {
 		let numerator = U256::from(lp_total).saturating_mul(root_k.saturating_sub(root_k_last));
 		let denominator = root_k.saturating_mul(U256::from(5u128)).saturating_add(root_k_last);
 		let expect_fee = numerator.checked_div(denominator).unwrap_or_default();
+
+		let (added_btc, _) =
+			DexPallet::calculate_added_amount(1 * BTC_UNIT, 1 * DOT_UNIT, 0, 0, reserve_1, reserve_0).unwrap();
 
 		// // 4. second add_liquidity
 		assert_ok!(DexPallet::add_liquidity(
@@ -499,7 +500,10 @@ fn turn_on_protocol_fee_swap_have_fee_at_should_work() {
 			100
 		));
 
-		let alice_lp_add = (U256::from(lp_of_alice_0) * U256::from(1 * BTC_UNIT) / U256::from(reserve_1)).as_u128();
+		let lp_fee = <Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB);
+
+		let alice_lp_add =
+			(U256::from(lp_of_alice_0 + lp_fee) * U256::from(added_btc) / U256::from(reserve_1)).as_u128();
 
 		let lp_total = <Test as Config>::MultiAssetsHandler::total_supply(LP_DOT_BTC);
 		assert_eq!(

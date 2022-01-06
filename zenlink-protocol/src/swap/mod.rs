@@ -128,7 +128,7 @@ impl<T: Config> Pallet<T> {
 
 						let last_k_value = U256::from(reserve_0)
 							.checked_mul(U256::from(reserve_1))
-							.ok_or_else(|| Error::<T>::Overflow)?;
+							.ok_or(Error::<T>::Overflow)?;
 						Self::mutate_k_last(asset_0, asset_1, last_k_value);
 					}
 				}
@@ -206,7 +206,7 @@ impl<T: Config> Pallet<T> {
 
 						let last_k_value = U256::from(reserve_0)
 							.checked_mul(U256::from(reserve_1))
-							.ok_or_else(|| Error::<T>::Overflow)?;
+							.ok_or(Error::<T>::Overflow)?;
 						Self::mutate_k_last(asset_0, asset_1, last_k_value);
 					}
 				}
@@ -306,7 +306,7 @@ impl<T: Config> Pallet<T> {
 		if total_liquidity == Zero::zero() {
 			U256::from(amount_0)
 				.checked_mul(U256::from(amount_1))
-				.and_then(|n| Some(n.integer_sqrt()))
+				.map(|n| n.integer_sqrt())
 				.and_then(|n| TryInto::<AssetBalance>::try_into(n).ok())
 				.unwrap_or_else(Zero::zero)
 		} else {
@@ -333,7 +333,7 @@ impl<T: Config> Pallet<T> {
 			if !new_k_last.is_zero() && Self::fee_meta().1 > 0 {
 				let root_k = U256::from(reserve_0)
 					.checked_mul(U256::from(reserve_1))
-					.and_then(|n| Some(n.integer_sqrt()))
+					.map(|n| n.integer_sqrt())
 					.ok_or(Error::<T>::Overflow)?;
 
 				let root_k_last = new_k_last.integer_sqrt();
@@ -346,7 +346,8 @@ impl<T: Config> Pallet<T> {
 
 					let denominator = root_k
 						.checked_mul(U256::from(fix_fee_point))
-						.and_then(|n|n.checked_add(root_k_last)).ok_or(Error::<T>::Overflow)?;
+						.and_then(|n| n.checked_add(root_k_last))
+						.ok_or(Error::<T>::Overflow)?;
 
 					let liquidity = numerator
 						.checked_div(denominator)
@@ -407,17 +408,17 @@ impl<T: Config> Pallet<T> {
 		let numerator = U256::from(input_reserve)
 			.checked_mul(U256::from(output_amount))
 			.and_then(|n| n.checked_mul(U256::from(1000u128)))
-			.ok_or_else(|| Error::<T>::Overflow)?;
+			.ok_or(Error::<T>::Overflow)?;
 
 		let denominator = (U256::from(output_reserve).checked_sub(U256::from(output_amount)))
 			.and_then(|n| n.checked_mul(U256::from(997u128)))
-			.ok_or_else(|| Error::<T>::Overflow)?;
+			.ok_or(Error::<T>::Overflow)?;
 
 		let amount_in = numerator
 			.checked_div(denominator)
 			.and_then(|r| r.checked_add(U256::one()))
 			.and_then(|n| TryInto::<AssetBalance>::try_into(n).ok())
-			.ok_or_else(|| Error::<T>::Overflow)?;
+			.ok_or(Error::<T>::Overflow)?;
 
 		Ok(amount_in)
 	}
@@ -435,21 +436,21 @@ impl<T: Config> Pallet<T> {
 
 		let input_amount_with_fee = U256::from(input_amount)
 			.checked_mul(U256::from(997u128))
-			.ok_or_else(|| Error::<T>::Overflow)?;
+			.ok_or(Error::<T>::Overflow)?;
 
 		let numerator = input_amount_with_fee
 			.checked_mul(U256::from(output_reserve))
-			.ok_or_else(|| Error::<T>::Overflow)?;
+			.ok_or(Error::<T>::Overflow)?;
 
 		let denominator = U256::from(input_reserve)
 			.checked_mul(U256::from(1000u128))
 			.and_then(|n| n.checked_add(input_amount_with_fee))
-			.ok_or_else(|| Error::<T>::Overflow)?;
+			.ok_or(Error::<T>::Overflow)?;
 
 		let amount_out = numerator
 			.checked_div(denominator)
 			.and_then(|n| TryInto::<AssetBalance>::try_into(n).ok())
-			.ok_or_else(|| Error::<T>::Overflow)?;
+			.ok_or(Error::<T>::Overflow)?;
 		Ok(amount_out)
 	}
 
@@ -821,7 +822,7 @@ impl<T: Config> Pallet<T> {
 
 						let claim_liquidity = exact_amount_0
 							.checked_mul(exact_amount_1)
-							.and_then(|n| Some(n.integer_sqrt()))
+							.map(|n| n.integer_sqrt())
 							.and_then(|r| TryInto::<AssetBalance>::try_into(r).ok())
 							.ok_or(Error::<T>::Overflow)?;
 
@@ -832,7 +833,7 @@ impl<T: Config> Pallet<T> {
 
 						let bootstrap_total_liquidity = U256::from(bootstrap_parameter.accumulated_supply.0)
 							.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.1))
-							.and_then(|n| Some(n.integer_sqrt()))
+							.map(|n| n.integer_sqrt())
 							.and_then(|r| TryInto::<AssetBalance>::try_into(r).ok())
 							.ok_or(Error::<T>::Overflow)?;
 
@@ -976,7 +977,7 @@ impl<T: Config> Pallet<T> {
 			distribute_rewards.push((asset_id, owner_reward));
 		}
 
-		if distribute_rewards.len() > 0 {
+		if !distribute_rewards.is_empty() {
 			Self::deposit_event(Event::DistributeReward(
 				pair.0,
 				pair.1,
