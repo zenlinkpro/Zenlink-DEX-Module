@@ -59,6 +59,9 @@ pub trait WeightInfo {
 	fn remove_liquidity() -> Weight;
 	fn swap_exact_assets_for_assets() -> Weight;
 	fn swap_assets_for_exact_assets() -> Weight;
+	fn create_order()->Weight;
+	fn filled_order()->Weight;
+	fn cancel_order()->Weight;
 }
 
 /// Weights for zenlink_protocol using the Substrate node and recommended hardware.
@@ -229,6 +232,24 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			.saturating_add(T::DbWeight::get().reads(15 as Weight))
 			.saturating_add(T::DbWeight::get().writes(8 as Weight))
 	}
+
+	fn create_order() -> Weight {
+		(406_875_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(5 as Weight))
+			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+	}
+
+	fn filled_order() -> Weight {
+		(358_839_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(12 as Weight))
+			.saturating_add(T::DbWeight::get().writes(6 as Weight))
+	}
+
+	fn cancel_order() -> Weight {
+		(8_941_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
 }
 
 // For backwards compatibility and tests
@@ -397,5 +418,35 @@ impl WeightInfo for () {
 		(192_004_000 as Weight)
 			.saturating_add(RocksDbWeight::get().reads(15 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
+	}
+	// Storage: ZenlinkProtocol OrderOfHash (r:1 w:1)
+	// Storage: ZenlinkProtocol AllOrderHashes (r:1 w:1)
+	// Storage: ZenlinkProtocol HashesOfMaker (r:1 w:1)
+	// Storage: ZenlinkProtocol HashesOfFromAssetId (r:1 w:1)
+	// Storage: ZenlinkProtocol HashesOfToAssetId (r:1 w:1)
+	fn create_order() -> Weight {
+		(406_875_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(5 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+	}
+	// Storage: ZenlinkProtocol OrderOfHash (r:1 w:0)
+	// Storage: ZenlinkProtocol CanceledOfHash (r:1 w:0)
+	// Storage: ZenlinkProtocol FilledAmountInOfHash (r:1 w:1)
+	// Storage: ParachainInfo ParachainId (r:1 w:0)
+	// Storage: Tokens Accounts (r:4 w:4)
+	// Storage: System Account (r:2 w:0)
+	// Storage: ZenlinkProtocol PairStatuses (r:1 w:0)
+	// Storage: ZenlinkProtocol FilledAmountOutOfHash (r:1 w:1)
+	fn filled_order() -> Weight {
+		(358_839_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(6 as Weight))
+	}
+	// Storage: ZenlinkProtocol OrderOfHash (r:1 w:0)
+	// Storage: ZenlinkProtocol CanceledOfHash (r:1 w:1)
+	fn cancel_order() -> Weight {
+		(8_941_000 as Weight)
+			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
 }

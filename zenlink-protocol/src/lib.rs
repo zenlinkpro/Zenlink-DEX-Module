@@ -1125,7 +1125,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(100_000_000)]
+		#[pallet::weight(T::WeightInfo::create_order())]
 		#[frame_support::transactional]
 		pub fn create_order(
 			origin: OriginFor<T>,
@@ -1136,7 +1136,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(100_000_000)]
+		#[pallet::weight(T::WeightInfo::cancel_order())]
 		#[frame_support::transactional]
 		pub fn cancel_order(origin: OriginFor<T>, order_hash: H256) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -1144,7 +1144,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(100_000_000)]
+		#[pallet::weight(T::WeightInfo::filled_order())]
 		#[frame_support::transactional]
 		pub fn filled_order(
 			origin: OriginFor<T>,
