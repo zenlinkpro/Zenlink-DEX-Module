@@ -9,8 +9,8 @@ license = "GPL-3.0-only"
 # alias "parity-scale-code" to "codec"
 codec = { package = "parity-scale-codec", version = "2.2.0", default-features = false }
 
-sp-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.12" }
-sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.12" }
+sp-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.15" }
+sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.15" }
 
 zenlink-protocol = { path = '../..', default-features = false }
 
