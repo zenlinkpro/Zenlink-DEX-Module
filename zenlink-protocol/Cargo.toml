@@ -26,8 +26,8 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "pol
 pallet-balances = { git = 'https://github.com/paritytech/substrate', default-features = false, branch = 'polkadot-v0.9.15' }
 
 # Polkadot
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12", default-features = false }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.15", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.15", default-features = false }
 
 # Cumulus
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.15" }
