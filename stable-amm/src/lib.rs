@@ -6,9 +6,6 @@
 
 mod traits;
 
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime, transactional, PalletId};
 use sp_arithmetic::traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero};
@@ -122,7 +119,18 @@ pub mod pallet {
 		TokenExchange(T::PoolId, T::AccountId, u32, T::Balance, u32, T::Balance),
 		RemoveLiquidity(T::PoolId, T::AccountId, Vec<T::Balance>, Vec<T::Balance>, T::Balance),
 		RemoveLiquidityOneCurrency(T::PoolId, T::AccountId, u32, T::Balance, T::Balance),
-		RemoveLiquidityImbalance(T::PoolId,T::AccountId, Vec<T::Balance>, Vec<T::Balance>, T::Balance, T::Balance)
+		RemoveLiquidityImbalance(
+			T::PoolId,
+			T::AccountId,
+			Vec<T::Balance>,
+			Vec<T::Balance>,
+			T::Balance,
+			T::Balance,
+		),
+		NewFee(T::PoolId, T::Balance, T::Balance),
+		RampA(T::PoolId, T::Balance, T::Balance, u64, u64),
+		StopRampA(T::PoolId, T::Balance, u64),
+		CollectProtocolFee(T::PoolId, T::CurrencyId, T::Balance),
 	}
 
 	#[pallet::error]
@@ -142,22 +150,16 @@ pub mod pallet {
 		CurrencyIndexOutRange,
 		InsufficientLpReserve,
 		TokenNotFound,
+		ExceedThreshold,
+		RampADelay,
+		MinRampTime,
+		ExceedMaxAChange,
+		AlreadyStopedRampA,
+		NoFeeReceiver,
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(1_000_000)]
-		#[transactional]
-		pub fn update_fee_receiver(
-			origin: OriginFor<T>,
-			fee_receiver: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResult {
-			ensure_root(origin)?;
-			let account = T::Lookup::lookup(fee_receiver)?;
-			FeeReceiver::<T>::mutate(|receiver| (*receiver = Some(account)));
-			Ok(())
-		}
-
 		#[pallet::weight(1_000_000)]
 		#[transactional]
 		pub fn create_pool(
@@ -350,6 +352,176 @@ pub mod pallet {
 			Self::inner_remove_liquidity_imbalance(&who, pool_id, &amounts, max_burn_amount)?;
 
 			Ok(())
+		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn update_fee_receiver(
+			origin: OriginFor<T>,
+			fee_receiver: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			let account = T::Lookup::lookup(fee_receiver)?;
+			FeeReceiver::<T>::mutate(|receiver| (*receiver = Some(account)));
+			Ok(())
+		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn update_fee(
+			origin: OriginFor<T>,
+			pool_id: T::PoolId,
+			new_swap_fee: T::Balance,
+			new_admin_fee: T::Balance,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
+				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
+				ensure!(
+					new_swap_fee <= T::Balance::from(MAX_SWAP_FEE),
+					Error::<T>::ExceedThreshold
+				);
+				ensure!(
+					new_admin_fee <= T::Balance::from(MAX_ADMIN_FEE),
+					Error::<T>::ExceedThreshold
+				);
+
+				pool.admin_fee = new_admin_fee;
+				pool.fee = new_swap_fee;
+
+				Self::deposit_event(Event::NewFee(pool_id, new_swap_fee, new_admin_fee));
+				Ok(())
+			})
+		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn ramp_a(
+			origin: OriginFor<T>,
+			pool_id: T::PoolId,
+			future_a: T::Balance,
+			future_a_time: u64,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+			let timestamp = T::TimeProvider::now().as_secs();
+			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
+				let now = T::Balance::try_from(timestamp).map_err(|_| Error::<T>::Arithmetic)?;
+
+				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
+
+				ensure!(
+					now >= pool
+						.initial_a_time
+						.checked_add(&T::Balance::from(DAY))
+						.ok_or(Error::<T>::Arithmetic)?,
+					Error::<T>::RampADelay
+				);
+
+				ensure!(
+					T::Balance::from(future_a_time)
+						< now
+							.checked_add(&T::Balance::from(MIN_RAMP_TIME))
+							.ok_or(Error::<T>::Arithmetic)?,
+					Error::<T>::MinRampTime
+				);
+
+				ensure!(
+					future_a > Zero::zero() && future_a < T::Balance::from(MAX_A),
+					Error::<T>::ExceedThreshold
+				);
+
+				let (initial_a_precise, future_a_precise) = Self::get_a_precise(pool)
+					.and_then(|initial_a_precise| -> Option<(T::Balance, T::Balance)> {
+						let future_a_precise = future_a.checked_mul(&T::Balance::from(A_PRECISION))?;
+						Some((initial_a_precise, future_a_precise))
+					})
+					.ok_or(Error::<T>::Arithmetic)?;
+
+				let max_a_change = T::Balance::from(MAX_A_CHANGE);
+
+				if future_a_precise < initial_a_precise {
+					ensure!(
+						future_a_precise
+							.checked_mul(&max_a_change)
+							.ok_or(Error::<T>::Arithmetic)?
+							>= initial_a_precise,
+						Error::<T>::ExceedMaxAChange
+					);
+				} else {
+					ensure!(
+						future_a_precise
+							<= initial_a_precise
+								.checked_mul(&max_a_change)
+								.ok_or(Error::<T>::Arithmetic)?,
+						Error::<T>::ExceedMaxAChange
+					);
+				}
+
+				pool.initial_a = initial_a_precise;
+				pool.future_a = future_a_precise;
+				pool.initial_a_time = now;
+				pool.future_a_time = T::Balance::from(future_a_time);
+
+				Self::deposit_event(Event::RampA(
+					pool_id,
+					initial_a_precise,
+					future_a_precise,
+					timestamp,
+					future_a_time,
+				));
+
+				Ok(())
+			})
+		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn stop_ramp_a(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
+			ensure_signed(origin)?;
+			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
+				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
+				let timestamp = T::TimeProvider::now().as_secs();
+				let now = T::Balance::try_from(timestamp).map_err(|_| Error::<T>::Arithmetic)?;
+				ensure!(pool.future_a_time > now, Error::<T>::AlreadyStopedRampA);
+
+				let current_a = Self::get_a_precise(pool).ok_or(Error::<T>::Arithmetic)?;
+
+				pool.initial_a = current_a;
+				pool.future_a = current_a;
+				pool.initial_a_time = now;
+				pool.future_a_time = now;
+
+				Self::deposit_event(Event::StopRampA(pool_id, current_a, timestamp));
+				Ok(())
+			})
+		}
+
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn withdraw_admin_fee(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let receiver = Self::fee_receiver().ok_or(Error::<T>::NoFeeReceiver)?;
+
+			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
+				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
+				for (i, reserve) in pool.balances.iter().enumerate() {
+					let balance = T::MultiCurrency::free_balance(pool.pooled_currency_ids[i], &pool.pool_account)
+						.checked_sub(reserve)
+						.ok_or(Error::<T>::Arithmetic)?;
+
+					if !balance.is_zero() {
+						T::MultiCurrency::transfer(
+							pool.pooled_currency_ids[i],
+							&pool.pool_account,
+							&receiver,
+							balance,
+						)?;
+					}
+					Self::deposit_event(Event::CollectProtocolFee(pool_id, pool.pooled_currency_ids[i], balance));
+				}
+				Ok(())
+			})
 		}
 	}
 }
@@ -592,7 +764,7 @@ impl<T: Config> Pallet<T> {
 				amounts.to_vec(),
 				fees,
 				d1,
-				total_supply - burn_amount
+				total_supply - burn_amount,
 			));
 
 			Ok(())
