@@ -14,9 +14,9 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	pallet_prelude::GenesisBuild,
 	parameter_types,
+	traits::ConstU32,
 	traits::Contains,
 	PalletId,
-	traits::{ConstU32}
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -35,7 +35,7 @@ use orml_traits::{parameter_type_with_key, MultiCurrency};
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug,PartialOrd, MaxEncodedLen,Ord, TypeInfo)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, MaxEncodedLen, Ord, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	Token(u8),

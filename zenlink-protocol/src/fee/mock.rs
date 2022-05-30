@@ -14,9 +14,9 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	pallet_prelude::GenesisBuild,
 	parameter_types,
+	traits::ConstU32,
 	traits::Contains,
 	PalletId,
-	traits::{ConstU32}
 };
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 use sp_core::H256;

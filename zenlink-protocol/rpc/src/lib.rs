@@ -7,7 +7,7 @@
 
 use codec::Codec;
 use jsonrpsee::{
-	core::{Error as JsonRpseeError,RpcResult},
+	core::{Error as JsonRpseeError, RpcResult},
 	proc_macros::rpc,
 	types::error::{CallError, ErrorObject},
 };
@@ -227,6 +227,7 @@ fn runtime_error_into_rpc_err(err: impl std::fmt::Display) -> JsonRpseeError {
 	CallError::Custom(ErrorObject::owned(
 		Error::RuntimeError.into(),
 		"error in zenlink pallet",
-		Some(err.to_string())
-	)).into()
+		Some(err.to_string()),
+	))
+	.into()
 }
