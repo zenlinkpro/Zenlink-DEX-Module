@@ -16,6 +16,7 @@ use frame_support::{
 	parameter_types,
 	traits::Contains,
 	PalletId,
+	traits::{ConstU32}
 };
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 use sp_core::H256;
@@ -103,6 +104,8 @@ impl Contains<AccountId> for MockDustRemovalWhitelist {
 	}
 }
 
+pub type ReserveIdentifier = [u8; 8];
+
 impl orml_tokens::Config for Test {
 	type Event = Event;
 	type Balance = u128;
@@ -113,6 +116,8 @@ impl orml_tokens::Config for Test {
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
 	type DustRemovalWhitelist = MockDustRemovalWhitelist;
+	type ReserveIdentifier = ReserveIdentifier;
+	type MaxReserves = ConstU32<100_000>;
 }
 
 impl pallet_balances::Config for Test {
