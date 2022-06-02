@@ -6,9 +6,17 @@
 
 mod traits;
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime, transactional, PalletId};
-use sp_arithmetic::traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero};
+use sp_arithmetic::traits::{
+	checked_pow, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, Zero,
+};
 use sp_runtime::traits::{AccountIdConversion, StaticLookup};
 
 use orml_traits::MultiCurrency;
@@ -21,21 +29,20 @@ type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
 const FEE_DENOMINATOR: u32 = 1e10f64 as u32;
 const A_PRECISION: u32 = 100;
 const MAX_ITERATION: u32 = 255; // the number of iterations to sum d and y
-const POOL_TOKEN_COMMON_DECIMALS: u32 = 18;
+pub const POOL_TOKEN_COMMON_DECIMALS: u8 = 18;
 
 /// Some thresholds when setting the pool
 const DAY: u32 = 24 * 60 * 60;
 const MIN_RAMP_TIME: u32 = DAY;
 const MAX_A: u32 = 1e6f32 as u32;
 const MAX_A_CHANGE: u32 = 10u32;
-const MAX_ADMIN_FEE: u32 = 1e10f64 as u32;
+pub const MAX_ADMIN_FEE: u32 = 1e10f64 as u32;
 const MAX_SWAP_FEE: u32 = 1e8f64 as u32;
 
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug, TypeInfo)]
 pub struct Pool<CurrencyId, Balance, AccountId> {
 	pub pooled_currency_ids: Vec<CurrencyId>,
 	pub lp_currency_id: CurrencyId,
-	/// token i multiplier to reach POOL_TOKEN_COMMON_DECIMALS
 	pub token_multipliers: Vec<Balance>,
 	pub balances: Vec<Balance>,
 	pub fee: Balance,
@@ -50,9 +57,9 @@ pub struct Pool<CurrencyId, Balance, AccountId> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::traits::traits::ValidateCurrency;
 	use frame_support::dispatch::{Codec, DispatchResult};
 	use frame_system::pallet_prelude::*;
+	use traits::ValidateCurrency;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -69,10 +76,8 @@ pub mod pallet {
 			+ MaybeSerializeDeserialize
 			+ MaxEncodedLen
 			+ TypeInfo
-			+ From<usize>
 			+ From<u64>
-			+ From<u32>
-			+ Into<u32>;
+			+ From<u32>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = Self::CurrencyId, Balance = Self::Balance>;
 
@@ -99,6 +104,10 @@ pub mod pallet {
 	#[pallet::getter(fn pools)]
 	pub type Pools<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::PoolId, Pool<T::CurrencyId, T::Balance, T::AccountId>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn lp_currencies)]
+	pub type LpCurrencies<T: Config> = StorageMap<_, Blake2_128Concat, T::CurrencyId, T::PoolId>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn fee_receiver)]
@@ -154,8 +163,13 @@ pub mod pallet {
 		RampADelay,
 		MinRampTime,
 		ExceedMaxAChange,
-		AlreadyStopedRampA,
+		AlreadyStoppedRampA,
 		NoFeeReceiver,
+		MismatchParameter,
+		ExceedMaxFee,
+		ExceedMaxA,
+		LpCurrencyAlreadyUsed,
+		TXX,
 	}
 
 	#[pallet::call]
@@ -165,7 +179,7 @@ pub mod pallet {
 		pub fn create_pool(
 			origin: OriginFor<T>,
 			currency_ids: Vec<T::CurrencyId>,
-			currency_decimals: Vec<u32>,
+			currency_decimals: Vec<u8>,
 			lp_currency_id: T::CurrencyId,
 			a: T::Balance,
 			fee: T::Balance,
@@ -181,17 +195,18 @@ pub mod pallet {
 				T::EnsurePoolAsset::validate_pool_lp_currency(lp_currency_id),
 				Error::<T>::InvalidLpCurrency
 			);
+			ensure!(
+				Self::lp_currencies(lp_currency_id).is_none(),
+				Error::<T>::LpCurrencyAlreadyUsed
+			);
 
 			ensure!(
 				currency_ids.len() == currency_decimals.len(),
-				Error::<T>::InvalidParameter
+				Error::<T>::MismatchParameter
 			);
-			ensure!(a < T::Balance::from(MAX_A), Error::<T>::InvalidParameter);
-			ensure!(fee < T::Balance::from(MAX_SWAP_FEE), Error::<T>::InvalidParameter);
-			ensure!(
-				admin_fee < T::Balance::from(MAX_ADMIN_FEE),
-				Error::<T>::InvalidParameter
-			);
+			ensure!(a < T::Balance::from(MAX_A), Error::<T>::ExceedMaxA);
+			ensure!(fee < T::Balance::from(MAX_SWAP_FEE), Error::<T>::ExceedMaxFee);
+			ensure!(admin_fee < T::Balance::from(MAX_ADMIN_FEE), Error::<T>::ExceedMaxFee);
 
 			let mut rate = Vec::new();
 
@@ -200,10 +215,12 @@ pub mod pallet {
 					currency_decimals[i] <= POOL_TOKEN_COMMON_DECIMALS,
 					Error::<T>::InvalidCurrencyDecimal
 				);
-				let r = 10u32
-					.checked_pow(POOL_TOKEN_COMMON_DECIMALS - currency_decimals[i])
-					.ok_or(Error::<T>::Arithmetic)?
-					.into();
+				let r = checked_pow(
+					T::Balance::from(10u32),
+					(POOL_TOKEN_COMMON_DECIMALS - currency_decimals[i]) as usize,
+				)
+				.ok_or(Error::<T>::Arithmetic)?
+				.into();
 				rate.push(r)
 			}
 
@@ -235,6 +252,8 @@ pub mod pallet {
 
 					Ok(())
 				})?;
+
+				LpCurrencies::<T>::insert(lp_currency_id, *next_pool_id);
 
 				*next_pool_id = next_pool_id.checked_add(&One::one()).ok_or(Error::<T>::Arithmetic)?;
 
@@ -482,7 +501,7 @@ pub mod pallet {
 				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 				let timestamp = T::TimeProvider::now().as_secs();
 				let now = T::Balance::try_from(timestamp).map_err(|_| Error::<T>::Arithmetic)?;
-				ensure!(pool.future_a_time > now, Error::<T>::AlreadyStopedRampA);
+				ensure!(pool.future_a_time > now, Error::<T>::AlreadyStoppedRampA);
 
 				let current_a = Self::get_a_precise(pool).ok_or(Error::<T>::Arithmetic)?;
 
@@ -772,7 +791,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn calculate_fee_per_token(pool: &Pool<T::CurrencyId, T::Balance, T::AccountId>) -> Option<T::Balance> {
-		let n_pooled_currency = T::Balance::from(pool.pooled_currency_ids.len());
+		let n_pooled_currency = T::Balance::from(pool.pooled_currency_ids.len() as u64);
 
 		pool.fee
 			.checked_mul(&n_pooled_currency)?
@@ -956,7 +975,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn get_d(balances: &[T::Balance], amp: T::Balance) -> Option<T::Balance> {
-		let n_currencies = T::Balance::from(balances.len());
+		let n_currencies = T::Balance::from(balances.len() as u64);
 		let sum = Self::sum_of(balances)?;
 		if sum == T::Balance::default() {
 			return Some(T::Balance::default());
@@ -1003,7 +1022,7 @@ impl<T: Config> Pallet<T> {
 		normalize_balances: &[T::Balance],
 	) -> Option<T::Balance> {
 		let pool_currencies_len = pool.pooled_currency_ids.len();
-		let n_currencies = T::Balance::from(pool_currencies_len);
+		let n_currencies = T::Balance::from(pool_currencies_len as u64);
 		let amp = Self::get_a_precise(pool)?;
 		let ann = T::Balance::from(n_currencies).checked_mul(&amp)?;
 		let d = Self::get_d(normalize_balances, amp)?;
@@ -1062,7 +1081,7 @@ impl<T: Config> Pallet<T> {
 		if currencies_len as u32 <= index {
 			return None;
 		}
-		let n_currencies = T::Balance::from(currencies_len);
+		let n_currencies = T::Balance::from(currencies_len as u64);
 		let ann = a * n_currencies;
 		let mut c = d;
 		let mut s = T::Balance::default();
