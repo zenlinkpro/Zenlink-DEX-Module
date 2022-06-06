@@ -129,7 +129,7 @@ pub mod pallet {
 		InsufficientSupply,
 		InsufficientReserve,
 		CheckDFailed,
-		BalanceSlippage,
+		AmountSlippage,
 		SwapSameCurrency,
 		CurrencyIndexOutRange,
 		InsufficientLpReserve,
@@ -576,7 +576,7 @@ impl<T: Config> Pallet<T> {
 				.ok_or(Error::<T>::Arithmetic)?;
 			}
 
-			ensure!(min_mint_amount <= mint_amount, Error::<T>::BalanceSlippage);
+			ensure!(min_mint_amount <= mint_amount, Error::<T>::AmountSlippage);
 
 			T::MultiCurrency::deposit(pool.lp_currency_id, &who, mint_amount)?;
 
@@ -610,7 +610,7 @@ impl<T: Config> Pallet<T> {
 			let in_amount = Self::do_transfer_in(pool.pooled_currency_ids[i], who, &pool.pool_account, in_amount)?;
 
 			let (dy, admin_fee) = Self::calculate_swap_amount(pool, i, j, in_amount).ok_or(Error::<T>::Arithmetic)?;
-			ensure!(dy >= out_min_amount, Error::<T>::BalanceSlippage);
+			ensure!(dy >= out_min_amount, Error::<T>::AmountSlippage);
 
 			pool.balances[i] = pool.balances[i].checked_add(in_amount).ok_or(Error::<T>::Arithmetic)?;
 			pool.balances[j] = pool.balances[j]
@@ -644,11 +644,14 @@ impl<T: Config> Pallet<T> {
 			ensure!(lp_total_supply >= lp_amount, Error::<T>::InsufficientReserve);
 
 			let currencies_length = pool.pooled_currency_ids.len();
+			let min_amounts_length = min_amounts.len();
+			ensure!(currencies_length == min_amounts_length, Error::<T>::InvalidParameter);
+
 			let fees: Vec<Balance> = vec![Zero::zero(); currencies_length];
 			let amounts = Self::calculate_removed_liquidity(pool, lp_amount).ok_or(Error::<T>::Arithmetic)?;
 
 			for (i, amount) in amounts.iter().enumerate() {
-				ensure!(*amount >= min_amounts[i], Error::<T>::BalanceSlippage);
+				ensure!(*amount >= min_amounts[i], Error::<T>::AmountSlippage);
 				pool.balances[i] = pool.balances[i].checked_sub(*amount).ok_or(Error::<T>::Arithmetic)?;
 				T::MultiCurrency::transfer(pool.pooled_currency_ids[i], &pool.pool_account, &who, *amount)?;
 			}
@@ -685,7 +688,7 @@ impl<T: Config> Pallet<T> {
 			let (dy, dy_fee) = Self::calculate_remove_liquidity_one_token(pool, lp_amount, index, total_supply)
 				.ok_or(Error::<T>::Arithmetic)?;
 
-			ensure!(dy >= min_amount, Error::<T>::BalanceSlippage);
+			ensure!(dy >= min_amount, Error::<T>::AmountSlippage);
 			let fee_denominator = FEE_DENOMINATOR;
 
 			pool.balances[index as usize] = dy_fee
@@ -729,7 +732,7 @@ impl<T: Config> Pallet<T> {
 				.ok_or(Error::<T>::Arithmetic)?;
 			ensure!(
 				burn_amount > Zero::zero() && burn_amount <= max_burn_amount,
-				Error::<T>::BalanceSlippage
+				Error::<T>::AmountSlippage
 			);
 
 			T::MultiCurrency::withdraw(pool.lp_currency_id, &who, burn_amount)?;
@@ -812,8 +815,8 @@ impl<T: Config> Pallet<T> {
 		Some((dy, admin_fee))
 	}
 
-	fn calculate_removed_liquidity(
-		pool: &mut Pool<T::CurrencyId, T::AccountId>,
+	pub fn calculate_removed_liquidity(
+		pool: &Pool<T::CurrencyId, T::AccountId>,
 		amount: Balance,
 	) -> Option<Vec<Balance>> {
 		let lp_total_supply = T::MultiCurrency::total_issuance(pool.lp_currency_id);
@@ -898,7 +901,7 @@ impl<T: Config> Pallet<T> {
 		}
 
 		let d1 = Self::get_d(&Self::xp(&new_balances, &pool.token_multipliers)?, amp)?;
-		let burn_amount = d0.checked_sub(d1)?.checked_mul(total_supply)?;
+		let burn_amount = d0.checked_sub(d1)?.checked_mul(total_supply)?.checked_div(d0)?;
 
 		Some((burn_amount, fees, d1))
 	}
