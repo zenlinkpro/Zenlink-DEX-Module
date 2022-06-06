@@ -37,7 +37,6 @@ parameter_type_with_key! {
 }
 
 pub type AccountId = u128;
-pub type Balance = u128;
 pub type TokenSymbol = u8;
 pub type PoolId = u32;
 
@@ -138,7 +137,6 @@ impl pallet_timestamp::Config for Test {
 impl Config for Test {
 	type Event = Event;
 	type CurrencyId = CurrencyId;
-	type Balance = u128;
 	type MultiCurrency = Tokens;
 	type PoolId = PoolId;
 	type EnsurePoolAsset = EnsurePoolAssetImpl<Tokens>;
@@ -191,20 +189,21 @@ frame_support::construct_runtime!(
 pub type StableAmm = Pallet<Test>;
 
 pub const ALICE: u128 = 1;
-// pub const BOB: u128 = 2;
+pub const BOB: u128 = 2;
+pub const CHARLIE: u128 = 3;
 
 pub const TOKEN1_SYMBOL: u8 = 1;
 pub const TOKEN2_SYMBOL: u8 = 2;
 pub const TOKEN3_SYMBOL: u8 = 3;
 pub const TOKEN4_SYMBOL: u8 = 4;
 
-pub const TOKEN1_DECIMAL: u8 = 6;
-pub const TOKEN2_DECIMAL: u8 = 10;
+pub const TOKEN1_DECIMAL: u8 = 18;
+pub const TOKEN2_DECIMAL: u8 = 18;
 pub const TOKEN3_DECIMAL: u8 = 12;
 pub const TOKEN4_DECIMAL: u8 = 18;
 
-pub const TOKEN1_UNIT: u128 = 1_000_000;
-pub const TOKEN2_UNIT: u128 = 10_000_000_000;
+pub const TOKEN1_UNIT: u128 = 1_000_000_000_000_000_000;
+pub const TOKEN2_UNIT: u128 = 1_000_000_000_000_000_000;
 pub const TOKEN3_UNIT: u128 = 1_000_000_000_000;
 pub const TOKEN4_UNIT: u128 = 1_000_000_000_000_000_000;
 
@@ -225,6 +224,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			(ALICE, CurrencyId::Token(TOKEN2_SYMBOL), TOKEN2_UNIT * 1_00_000_000),
 			(ALICE, CurrencyId::Token(TOKEN3_SYMBOL), TOKEN3_UNIT * 1_00_000_000),
 			(ALICE, CurrencyId::Token(TOKEN4_SYMBOL), TOKEN4_UNIT * 1_00_000_000),
+			(BOB, CurrencyId::Token(TOKEN1_SYMBOL), TOKEN1_UNIT * 1_00_000_000),
+			(BOB, CurrencyId::Token(TOKEN2_SYMBOL), TOKEN2_UNIT * 1_00_000_000),
+			(BOB, CurrencyId::Token(TOKEN3_SYMBOL), TOKEN3_UNIT * 1_00_000_000),
+			(BOB, CurrencyId::Token(TOKEN4_SYMBOL), TOKEN4_UNIT * 1_00_000_000),
 		],
 	}
 	.assimilate_storage(&mut t)
