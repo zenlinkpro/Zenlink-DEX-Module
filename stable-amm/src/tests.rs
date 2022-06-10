@@ -1,5 +1,6 @@
 use frame_support::{assert_noop, assert_ok};
 use sp_runtime::DispatchError::BadOrigin;
+use std::u64;
 
 use super::{
 	mock::{CurrencyId::*, PoolToken::Token as pool_token, PoolType::*, *},
@@ -712,6 +713,40 @@ fn remove_liquidity_with_expired_deadline_should_not_work() {
 }
 
 #[test]
+fn remove_liquidity_imbalance_with_mismatch_amounts_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		assert_noop!(
+			StableAmm::remove_liquidity_imbalance(
+				Origin::signed(ALICE),
+				pool_id,
+				vec![1e18 as Balance],
+				Balance::MAX,
+				u64::MAX
+			),
+			Error::<Test>::InvalidParameter
+		);
+	})
+}
+
+#[test]
+fn remove_liquidity_imbalance_when_withdraw_more_than_available_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		assert_noop!(
+			StableAmm::remove_liquidity_imbalance(
+				Origin::signed(ALICE),
+				pool_id,
+				vec![Balance::MAX, Balance::MAX],
+				1,
+				u64::MAX
+			),
+			Error::<Test>::Arithmetic
+		);
+	})
+}
+
+#[test]
 fn remove_liquidity_imbalance_with_max_burn_lp_token_amount_range_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, lp_currency_id) = setup_test_pool();
@@ -724,11 +759,12 @@ fn remove_liquidity_imbalance_with_max_burn_lp_token_amount_range_should_work() 
 		));
 
 		// calculates amount of pool token to be burned
-		let max_pool_token_amount_to_be_burned = StableAmm::calculate_token_amount(pool_id, vec![1e18 as Balance, 1e16 as Balance], false).unwrap();
+		let max_pool_token_amount_to_be_burned =
+			StableAmm::calculate_token_amount(pool_id, vec![1e18 as Balance, 1e16 as Balance], false).unwrap();
 		assert_eq!(1000688044155287276, max_pool_token_amount_to_be_burned);
 
-		let max_pool_token_amount_to_be_burned_negative_slippage = max_pool_token_amount_to_be_burned *1001/1000;
-		let max_pool_token_amount_to_be_burned_positive_slippage = max_pool_token_amount_to_be_burned *999/1000;
+		let max_pool_token_amount_to_be_burned_negative_slippage = max_pool_token_amount_to_be_burned * 1001 / 1000;
+		let max_pool_token_amount_to_be_burned_positive_slippage = max_pool_token_amount_to_be_burned * 999 / 1000;
 		let balance_before =
 			get_user_token_balances(&[Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), lp_currency_id], &BOB);
 
@@ -746,10 +782,552 @@ fn remove_liquidity_imbalance_with_max_burn_lp_token_amount_range_should_work() 
 		// Check the actual returned token amounts match the requested amounts
 		assert_eq!(balance_after[0] - balance_before[0], 1e18 as Balance);
 		assert_eq!(balance_after[1] - balance_before[1], 1e16 as Balance);
-		let actual_pool_token_burned =balance_before[2] - balance_after[2];
+		let actual_pool_token_burned = balance_before[2] - balance_after[2];
 		assert_eq!(actual_pool_token_burned, 1000934178112841888);
 
 		assert!(actual_pool_token_burned > max_pool_token_amount_to_be_burned_positive_slippage);
 		assert!(actual_pool_token_burned < max_pool_token_amount_to_be_burned_negative_slippage);
 	})
 }
+
+#[test]
+fn remove_liquidity_imbalance_exceed_own_lp_token_amount_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, lp_currency_id) = setup_test_pool();
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![2e18 as Balance, 1e16 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		let current_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
+		assert_eq!(current_balance, 1996275270169644725);
+
+		assert_noop!(
+			StableAmm::remove_liquidity_imbalance(
+				Origin::signed(BOB),
+				pool_id,
+				vec![2e18 as Balance, 1e16 as Balance],
+				current_balance + 1,
+				u64::MAX
+			),
+			Error::<Test>::AmountSlippage
+		);
+	})
+}
+
+#[test]
+fn remove_liquidity_imbalance_when_min_amounts_of_underlying_tokens_not_reached_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![2e18 as Balance, 1e16 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		let max_pool_token_amount_to_be_burned =
+			StableAmm::calculate_token_amount(pool_id, vec![1e18 as Balance, 1e16 as Balance], false).unwrap();
+
+		let max_pool_token_amount_to_be_burned_negative_slippage = max_pool_token_amount_to_be_burned * 1001 / 1000;
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(CHARLIE),
+			pool_id,
+			vec![1e16 as Balance, 2e20 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		assert_noop!(
+			StableAmm::remove_liquidity_imbalance(
+				Origin::signed(BOB),
+				pool_id,
+				vec![1e18 as Balance, 1e16 as Balance],
+				max_pool_token_amount_to_be_burned_negative_slippage,
+				u64::MAX
+			),
+			Error::<Test>::Arithmetic
+		);
+	})
+}
+
+#[test]
+fn remove_liquidity_imbalance_with_expired_deadline_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, lp_currency_id) = setup_test_pool();
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![2e18 as Balance, 1e16 as Balance],
+			0,
+			u64::MAX,
+		));
+		let current_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
+		System::set_block_number(100);
+
+		assert_noop!(
+			StableAmm::remove_liquidity_imbalance(
+				Origin::signed(BOB),
+				pool_id,
+				vec![1e18 as Balance, 1e16 as Balance],
+				current_balance,
+				99
+			),
+			Error::<Test>::Deadline
+		);
+	})
+}
+
+#[test]
+fn remove_liquidity_one_currency_with_currency_index_out_range_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		let pool = StableAmm::pools(pool_id).unwrap();
+		assert_eq!(StableAmm::calculate_remove_liquidity_one_token(&pool, 1, 5), None);
+	})
+}
+
+#[test]
+fn remove_liquidity_one_currency_calculation_should_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, lp_currency_id) = setup_test_pool();
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![2e18 as Balance, 1e16 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		let pool_token_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
+		assert_eq!(pool_token_balance, 1996275270169644725);
+		let pool = StableAmm::pools(pool_id).unwrap();
+		assert_eq!(
+			StableAmm::calculate_remove_liquidity_one_token(&pool, 2 * pool_token_balance, 0)
+				.unwrap()
+				.0,
+			2999998601797183633
+		);
+	})
+}
+
+#[test]
+fn remove_liquidity_one_currency_calculated_amount_as_min_amount_should_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, lp_currency_id) = setup_test_pool();
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![2e18 as Balance, 1e16 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		let pool_token_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
+		assert_eq!(pool_token_balance, 1996275270169644725);
+		let pool = StableAmm::pools(pool_id).unwrap();
+		let calculated_first_token_amount =
+			StableAmm::calculate_remove_liquidity_one_token(&pool, pool_token_balance, 0).unwrap();
+		assert_eq!(calculated_first_token_amount.0, 2008990034631583696);
+
+		let before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
+
+		assert_ok!(StableAmm::remove_liquidity_one_currency(
+			Origin::signed(BOB),
+			pool_id,
+			pool_token_balance,
+			0,
+			calculated_first_token_amount.0,
+			u64::MAX
+		));
+
+		let after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
+		assert_eq!(after - before, 2008990034631583696);
+	})
+}
+
+#[test]
+fn remove_liquidity_one_currency_with_lp_token_amount_exceed_own_should_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, lp_currency_id) = setup_test_pool();
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![2e18 as Balance, 1e16 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		let pool_token_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
+		assert_eq!(pool_token_balance, 1996275270169644725);
+
+		assert_noop!(
+			StableAmm::remove_liquidity_one_currency(
+				Origin::signed(BOB),
+				pool_id,
+				pool_token_balance + 1,
+				0,
+				0,
+				u64::MAX
+			),
+			Error::<Test>::InsufficientSupply
+		);
+	})
+}
+
+#[test]
+fn remove_liquidity_one_currency_with_min_amount_not_reached_due_to_front_running_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, lp_currency_id) = setup_test_pool();
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![2e18 as Balance, 1e16 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		let pool_token_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
+		assert_eq!(pool_token_balance, 1996275270169644725);
+
+		let pool = StableAmm::pools(pool_id).unwrap();
+		let calculated_first_token_amount =
+			StableAmm::calculate_remove_liquidity_one_token(&pool, pool_token_balance, 0).unwrap();
+		assert_eq!(calculated_first_token_amount.0, 2008990034631583696);
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(CHARLIE),
+			pool_id,
+			vec![1e16 as Balance, 1e20 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		assert_noop!(
+			StableAmm::remove_liquidity_one_currency(
+				Origin::signed(BOB),
+				pool_id,
+				pool_token_balance,
+				0,
+				calculated_first_token_amount.0,
+				u64::MAX
+			),
+			Error::<Test>::AmountSlippage
+		);
+	})
+}
+
+#[test]
+fn remove_liquidity_one_currency_with_expired_deadline_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, lp_currency_id) = setup_test_pool();
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![2e18 as Balance, 1e16 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		let pool_token_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
+
+		System::set_block_number(100);
+
+		assert_noop!(
+			StableAmm::remove_liquidity_one_currency(Origin::signed(BOB), pool_id, pool_token_balance, 0, 0, 99),
+			Error::<Test>::Deadline
+		);
+	})
+}
+
+#[test]
+fn swap_with_currency_index_out_of_index_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		let pool = StableAmm::pools(pool_id).unwrap();
+		assert_eq!(StableAmm::calculate_swap_amount(&pool, 0, 9, 1e17 as Balance), None);
+	})
+}
+
+#[test]
+fn swap_with_currency_amount_exceed_own_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		assert_noop!(
+			StableAmm::swap(Origin::signed(BOB), pool_id, 0, 1, Balance::MAX, 0, u64::MAX),
+			Error::<Test>::InsufficientReserve
+		);
+	})
+}
+
+#[test]
+fn swap_with_expected_amounts_should_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		let pool = StableAmm::pools(pool_id).unwrap();
+
+		let calculated_swap_return = StableAmm::calculate_swap_amount(&pool, 0, 1, 1e17 as Balance).unwrap();
+		assert_eq!(calculated_swap_return, 99702611562565289);
+
+		let token_from_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
+		let token_to_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &BOB);
+
+		assert_ok!(StableAmm::swap(
+			Origin::signed(BOB),
+			pool_id,
+			0,
+			1,
+			1e17 as Balance,
+			calculated_swap_return,
+			u64::MAX
+		));
+		let token_from_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
+		let token_to_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &BOB);
+
+		assert_eq!(token_from_balance_before - token_from_balance_after, 1e17 as Balance);
+		assert_eq!(token_to_balance_after - token_to_balance_before, calculated_swap_return);
+	})
+}
+
+#[test]
+fn swap_when_min_amount_receive_not_reached_due_to_front_running_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		let pool = StableAmm::pools(pool_id).unwrap();
+		let calculated_swap_return = StableAmm::calculate_swap_amount(&pool, 0, 1, 1e17 as Balance).unwrap();
+		assert_eq!(calculated_swap_return, 99702611562565289);
+
+		assert_ok!(StableAmm::swap(
+			Origin::signed(CHARLIE),
+			pool_id,
+			0,
+			1,
+			1e17 as Balance,
+			calculated_swap_return,
+			u64::MAX
+		));
+
+		assert_noop!(
+			StableAmm::swap(
+				Origin::signed(BOB),
+				pool_id,
+				0,
+				1,
+				1e17 as Balance,
+				calculated_swap_return,
+				u64::MAX
+			),
+			Error::<Test>::AmountSlippage
+		);
+	})
+}
+
+#[test]
+fn swap_with_lower_min_dy_when_transaction_is_front_ran_should_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		let pool = StableAmm::pools(pool_id).unwrap();
+
+		let token_from_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
+		let token_to_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &BOB);
+
+		// BOB calculates how much token to receive with 1% slippage
+		let calculated_swap_return = StableAmm::calculate_swap_amount(&pool, 0, 1, 1e17 as Balance).unwrap();
+		assert_eq!(calculated_swap_return, 99702611562565289);
+		let calculated_swap_return_with_negative_slippage = calculated_swap_return * 99 / 100;
+
+		// CHARLIE swaps before User 1 does
+		assert_ok!(StableAmm::swap(
+			Origin::signed(CHARLIE),
+			pool_id,
+			0,
+			1,
+			1e17 as Balance,
+			0,
+			u64::MAX
+		));
+
+		// BOB swap with slippage
+		assert_ok!(StableAmm::swap(
+			Origin::signed(BOB),
+			pool_id,
+			0,
+			1,
+			1e17 as Balance,
+			calculated_swap_return_with_negative_slippage,
+			u64::MAX
+		));
+
+		let token_from_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
+		let token_to_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &BOB);
+
+		assert_eq!(token_from_balance_before - token_from_balance_after, 1e17 as Balance);
+
+		let actual_received_amount = token_to_balance_after - token_to_balance_before;
+		assert_eq!(actual_received_amount, 99286252365528551);
+		assert!(actual_received_amount > calculated_swap_return_with_negative_slippage);
+		assert!(actual_received_amount < calculated_swap_return);
+	})
+}
+
+#[test]
+fn swap_with_expired_deadline_should_not_work() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+
+		System::set_block_number(100);
+
+		assert_noop!(
+			StableAmm::swap(Origin::signed(BOB), pool_id, 0, 1, 1e17 as Balance, 0, 99),
+			Error::<Test>::Deadline
+		);
+	})
+}
+
+#[test]
+fn calculate_virtual_price_should_work(){
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
+	})
+}
+
+#[test]
+fn calculate_virtual_price_after_swap_should_work(){
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		assert_ok!(StableAmm::swap(
+			Origin::signed(BOB),
+			pool_id,
+			0,
+			1,
+			1e17 as Balance,
+			0,
+			u64::MAX
+		));
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000050005862349911 as Balance));
+
+		assert_ok!(StableAmm::swap(
+			Origin::signed(BOB),
+			pool_id,
+			1,
+			0,
+			1e17 as Balance,
+			0,
+			u64::MAX
+		));
+
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000100104768517937 as Balance));
+	})
+}
+
+#[test]
+fn calculate_virtual_price_after_imbalanced_withdrawal_should_work(){
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![1e18 as Balance, 1e18 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(CHARLIE),
+			pool_id,
+			vec![1e18 as Balance, 1e18 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
+
+		assert_ok!(StableAmm::remove_liquidity_imbalance(
+			Origin::signed(BOB),
+			pool_id,
+			vec![1e18 as Balance, 0],
+			2e18 as Balance,
+			u64::MAX
+		));
+
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000100094088440633 as Balance));
+
+		assert_ok!(StableAmm::remove_liquidity_imbalance(
+			Origin::signed(CHARLIE),
+			pool_id,
+			vec![0, 1e18 as Balance],
+			2e18 as Balance,
+			u64::MAX
+		));
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000200154928939884 as Balance));
+	})
+}
+
+#[test]
+fn calculate_virtual_price_value_unchanged_after_deposits_should_work(){
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		// pool is 1:1 ratio
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(CHARLIE),
+			pool_id,
+			vec![1e18 as Balance, 1e18 as Balance],
+			0,
+			u64::MAX,
+		));
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
+
+		// pool change 2:1 ratio, virtual_price also change
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(CHARLIE),
+			pool_id,
+			vec![2e18 as Balance, 0],
+			0,
+			u64::MAX,
+		));
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000167146429977312 as Balance));
+
+		// keep 2:1 ratio after deposit, virtual not change.
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![2e18 as Balance, 1e18 as Balance],
+			0,
+			u64::MAX,
+		));
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000167146429977312 as Balance));
+	})
+}
+
+#[test]
+fn calculate_virtual_price_value_not_change_after_balanced_withdrawal_should_not_work(){
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			vec![1e18 as Balance, 1e18 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::remove_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			1e18 as Balance,
+			vec![0,0],
+			u64::MAX
+		));
+
+		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
+	})
+}
+

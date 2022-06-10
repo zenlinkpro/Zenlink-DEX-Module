@@ -609,15 +609,47 @@ impl<T: Config> Pallet<T> {
 
 			let in_amount = Self::do_transfer_in(pool.pooled_currency_ids[i], who, &pool.pool_account, in_amount)?;
 
-			let (dy, admin_fee) = Self::calculate_swap_amount(pool, i, j, in_amount).ok_or(Error::<T>::Arithmetic)?;
-			ensure!(dy >= out_min_amount, Error::<T>::AmountSlippage);
+			let normalize_balances = Self::xp(&pool.balances, &pool.token_multipliers).ok_or(Error::<T>::Arithmetic)?;
 
-			pool.balances[i] = pool.balances[i].checked_add(in_amount).ok_or(Error::<T>::Arithmetic)?;
-			pool.balances[j] = pool.balances[j]
-				.checked_sub(dy.checked_add(admin_fee).ok_or(Error::<T>::Arithmetic)?)
+			let x = in_amount
+				.checked_mul(pool.token_multipliers[i])
+				.and_then(|n| n.checked_add(normalize_balances[i]))
 				.ok_or(Error::<T>::Arithmetic)?;
 
-			T::MultiCurrency::transfer(pool.pooled_currency_ids[j], &pool.pool_account, &who, dy)?;
+			let y = Self::get_y(pool, i, j, x, &normalize_balances).ok_or(Error::<T>::Arithmetic)?;
+
+			let mut dy = normalize_balances[j]
+				.checked_sub(y)
+				.and_then(|n| n.checked_sub(One::one()))
+				.ok_or(Error::<T>::Arithmetic)?;
+
+			let dy_fee = dy
+				.checked_mul(pool.fee)
+				.and_then(|n| n.checked_div(FEE_DENOMINATOR))
+				.ok_or(Error::<T>::Arithmetic)?;
+
+			dy = dy
+				.checked_sub(dy_fee)
+				.and_then(|n| n.checked_div(pool.token_multipliers[j]))
+				.ok_or(Error::<T>::Arithmetic)?;
+
+			ensure!(dy >= out_min_amount, Error::<T>::AmountSlippage);
+
+			let admin_fee = dy_fee
+				.checked_mul(pool.admin_fee)
+				.and_then(|n| n.checked_div(FEE_DENOMINATOR))
+				.and_then(|n| n.checked_div(pool.token_multipliers[j]))
+				.ok_or(Error::<T>::Arithmetic)?;
+
+			//update pool balance
+			pool.balances[i] = pool.balances[i].checked_add(in_amount).ok_or(Error::<T>::Arithmetic)?;
+			pool.balances[j] = pool.balances[j]
+				.checked_sub(dy)
+				.and_then(|n| n.checked_sub(admin_fee))
+				.ok_or(Error::<T>::Arithmetic)?;
+
+			T::MultiCurrency::transfer(pool.pooled_currency_ids[j], &pool.pool_account, who, dy)
+				.map_err(|_| Error::<T>::InsufficientReserve)?;
 
 			Self::deposit_event(Event::TokenExchange(
 				pool_id,
@@ -627,6 +659,7 @@ impl<T: Config> Pallet<T> {
 				j as u32,
 				dy,
 			));
+
 			Ok(())
 		})
 	}
@@ -685,21 +718,22 @@ impl<T: Config> Pallet<T> {
 			);
 			ensure!(index < pool.pooled_currency_ids.len() as u32, Error::<T>::TokenNotFound);
 
-			let (dy, dy_fee) = Self::calculate_remove_liquidity_one_token(pool, lp_amount, index, total_supply)
-				.ok_or(Error::<T>::Arithmetic)?;
+			let (dy, dy_fee) =
+				Self::calculate_remove_liquidity_one_token(pool, lp_amount, index).ok_or(Error::<T>::Arithmetic)?;
 
 			ensure!(dy >= min_amount, Error::<T>::AmountSlippage);
-			let fee_denominator = FEE_DENOMINATOR;
+			let fee_denominator = U256::from(FEE_DENOMINATOR);
 
-			pool.balances[index as usize] = dy_fee
-				.checked_mul(pool.admin_fee)
+			pool.balances[index as usize] = U256::from(dy_fee)
+				.checked_mul(U256::from(pool.admin_fee))
 				.and_then(|n| n.checked_div(fee_denominator))
-				.and_then(|admin_fee| pool.balances[index as usize].checked_sub(admin_fee))
+				.and_then(|admin_fee| U256::from(pool.balances[index as usize]).checked_sub(admin_fee))
+				.and_then(|n| TryInto::<Balance>::try_into(n).ok())
 				.ok_or(Error::<T>::Arithmetic)?;
 
 			T::MultiCurrency::withdraw(pool.lp_currency_id, &who, lp_amount)?;
 
-			T::MultiCurrency::transfer(pool.lp_currency_id, &pool.pool_account, &who, dy)?;
+			T::MultiCurrency::transfer(pool.pooled_currency_ids[index as usize], &pool.pool_account, &who, dy)?;
 
 			Self::deposit_event(Event::RemoveLiquidityOneCurrency(
 				pool_id,
@@ -773,46 +807,70 @@ impl<T: Config> Pallet<T> {
 		amp: Balance,
 		total_supply: Balance,
 	) -> Option<(Balance, Vec<Balance>)> {
-		let mut diff: Balance;
+		let mut diff: U256;
 		let n_currencies = pool.pooled_currency_ids.len();
-		let fee_denominator = FEE_DENOMINATOR;
+		let fee_denominator = U256::from(FEE_DENOMINATOR);
 		let mut fees = vec![Zero::zero(); n_currencies];
 
 		for i in 0..n_currencies {
-			diff = Self::distance(d1.checked_mul(pool.balances[i])?.checked_div(d0)?, new_balances[i]);
-			fees[i] = fee.checked_mul(diff)?.checked_div(fee_denominator)?;
-			pool.balances[i] =
-				new_balances[i].checked_sub(fees[i].checked_mul(pool.admin_fee)?.checked_div(fee_denominator)?)?;
+			diff = Self::distance(
+				U256::from(*d1)
+					.checked_mul(U256::from(pool.balances[i]))
+					.and_then(|n| n.checked_div(U256::from(d0)))?,
+				U256::from(new_balances[i]),
+			);
+
+			fees[i] = U256::from(fee)
+				.checked_mul(diff)
+				.and_then(|n| n.checked_div(fee_denominator))
+				.and_then(|n| TryInto::<Balance>::try_into(n).ok())?;
+
+			pool.balances[i] = new_balances[i].checked_sub(
+				U256::from(fees[i])
+					.checked_mul(U256::from(pool.admin_fee))
+					.and_then(|n| n.checked_div(fee_denominator))
+					.and_then(|n| TryInto::<Balance>::try_into(n).ok())?,
+			)?;
+
 			new_balances[i] = new_balances[i].checked_sub(fees[i])?;
 		}
 		*d1 = Self::get_d(&Self::xp(new_balances, &pool.token_multipliers)?, amp)?;
 
-		let mint_amount = total_supply.checked_mul(d1.checked_sub(d0)?)?.checked_div(d0)?;
+		let mint_amount = U256::from(total_supply)
+			.checked_mul(U256::from(*d1).checked_sub(U256::from(d0))?)?
+			.checked_div(U256::from(d0))
+			.and_then(|n| TryInto::<Balance>::try_into(n).ok())?;
+
 		Some((mint_amount, fees))
 	}
 
-	fn calculate_swap_amount(
-		pool: &mut Pool<T::CurrencyId, T::AccountId>,
+	pub fn calculate_swap_amount(
+		pool: &Pool<T::CurrencyId, T::AccountId>,
 		i: usize,
 		j: usize,
 		in_balance: Balance,
-	) -> Option<(Balance, Balance)> {
+	) -> Option<Balance> {
+		let n_currencies = pool.pooled_currency_ids.len();
+		if i >= n_currencies || j >= n_currencies {
+			return None;
+		}
+
 		let fee_denominator = FEE_DENOMINATOR;
 
 		let normalize_balances = Self::xp(&pool.balances, &pool.token_multipliers)?;
-		let x = normalize_balances[i].checked_add(in_balance.checked_mul(pool.token_multipliers[i])?)?;
-		let y = Self::get_y(pool, i, j, x, &normalize_balances)?;
+		let new_in_balance = normalize_balances[i].checked_add(in_balance.checked_mul(pool.token_multipliers[i])?)?;
 
-		let mut dy = normalize_balances[j].checked_sub(y)?.checked_sub(One::one())?;
-		let dy_fee = dy.checked_mul(pool.fee)?.checked_div(fee_denominator)?;
-		dy = dy.checked_sub(dy_fee)?.checked_div(pool.token_multipliers[i])?;
-
-		let admin_fee = dy_fee
-			.checked_mul(pool.admin_fee)?
-			.checked_div(fee_denominator)?
+		let out_balance = Self::get_y(pool, i, j, new_in_balance, &normalize_balances)?;
+		let mut out_amount = normalize_balances[j]
+			.checked_sub(out_balance)?
+			.checked_sub(One::one())?
 			.checked_div(pool.token_multipliers[j])?;
 
-		Some((dy, admin_fee))
+		let fee = out_amount.checked_mul(pool.fee)?.checked_div(fee_denominator)?;
+
+		out_amount = out_amount.checked_sub(fee)?;
+
+		Some(out_amount)
 	}
 
 	pub fn calculate_removed_liquidity(
@@ -825,38 +883,64 @@ impl<T: Config> Pallet<T> {
 		}
 		let mut amounts = Vec::new();
 		for b in pool.balances.iter() {
-			amounts.push((*b).checked_mul(amount)?.checked_div(lp_total_supply)?);
+			amounts.push(
+				U256::from(*b)
+					.checked_mul(U256::from(amount))?
+					.checked_div(U256::from(lp_total_supply))
+					.and_then(|n| TryInto::<Balance>::try_into(n).ok())?,
+			);
 		}
 		Some(amounts)
 	}
 
 	fn calculate_remove_liquidity_one_token(
-		pool: &mut Pool<T::CurrencyId, T::AccountId>,
+		pool: &Pool<T::CurrencyId, T::AccountId>,
 		token_amount: Balance,
 		index: u32,
-		total_supply: Balance,
 	) -> Option<(Balance, Balance)> {
-		if index < pool.pooled_currency_ids.len() as u32 {
+		if index > pool.pooled_currency_ids.len() as u32 {
 			return None;
 		}
+		let total_supply = T::MultiCurrency::total_issuance(pool.lp_currency_id);
+
 		let amp = Self::get_a_precise(pool)?;
 		let xp = Self::xp(&pool.balances, &pool.token_multipliers)?;
 		let d0 = Self::get_d(&pool.balances, amp)?;
-		let d1 = d0.checked_sub(token_amount.checked_mul(d0)?.checked_div(total_supply)?)?;
+
+		let d1 = U256::from(d0)
+			.checked_sub(
+				U256::from(token_amount)
+					.checked_mul(U256::from(d0))?
+					.checked_div(U256::from(total_supply))?,
+			)
+			.and_then(|n| TryInto::<Balance>::try_into(n).ok())?;
+
 		let new_y = Self::get_yd(pool, amp, index, &xp, d1)?;
+
 		let mut reduce_xp = xp.clone();
-		let fee_pre_token = Self::calculate_fee_per_token(pool)?;
-		let fee_denominator = FEE_DENOMINATOR;
+		let fee_pre_token = U256::from(Self::calculate_fee_per_token(pool)?);
+		let fee_denominator = U256::from(FEE_DENOMINATOR);
 
 		for (i, x) in xp.iter().enumerate() {
-			let expected_dx: Balance;
+			let expected_dx: U256;
 			if i as u32 == index {
-				expected_dx = (*x).checked_mul(d1)?.checked_div(d0)?.checked_sub(new_y)?;
+				expected_dx = U256::from(*x)
+					.checked_mul(U256::from(d1))?
+					.checked_div(U256::from(d0))?
+					.checked_sub(U256::from(new_y))?;
 			} else {
-				expected_dx = (*x).checked_sub((*x).checked_mul(d1)?.checked_div(d0)?)?;
+				expected_dx = U256::from(*x).checked_sub(
+					U256::from(*x)
+						.checked_mul(U256::from(d1))?
+						.checked_div(U256::from(d0))?,
+				)?;
 			}
-			reduce_xp[i] =
-				reduce_xp[i].checked_sub(fee_pre_token.checked_mul(expected_dx)?.checked_div(fee_denominator)?)?;
+			reduce_xp[i] = reduce_xp[i].checked_sub(
+				fee_pre_token
+					.checked_mul(expected_dx)?
+					.checked_div(fee_denominator)
+					.and_then(|n| TryInto::<Balance>::try_into(n).ok())?,
+			)?;
 		}
 		let mut dy = reduce_xp[index as usize].checked_sub(Self::get_yd(pool, amp, index, &reduce_xp, d1)?)?;
 		dy = dy
@@ -890,7 +974,6 @@ impl<T: Config> Pallet<T> {
 		let d1 = Self::get_d(&Self::xp(&new_balances, &pool.token_multipliers)?, amp)?;
 		let mut fees = vec![Balance::default(); currencies_len];
 		let fee_denominator = FEE_DENOMINATOR;
-
 		for (i, balance) in pool.balances.iter_mut().enumerate() {
 			let ideal_balance = d1.checked_mul(*balance)?.checked_div(d0)?;
 			let diff = Self::distance(new_balances[i], ideal_balance);
@@ -1002,12 +1085,12 @@ impl<T: Config> Pallet<T> {
 		normalize_balances: &[Balance],
 	) -> Option<Balance> {
 		let pool_currencies_len = pool.pooled_currency_ids.len();
-		let n_currencies = Balance::from(pool_currencies_len as u64);
+		let n_currencies = U256::from(pool_currencies_len as u64);
 		let amp = Self::get_a_precise(pool)?;
-		let ann = Balance::from(n_currencies).checked_mul(amp)?;
-		let d = Self::get_d(normalize_balances, amp)?;
-		let mut c = d;
-		let mut sum = Balance::default();
+		let ann = U256::from(n_currencies).checked_mul(U256::from(amp))?;
+		let d = U256::from(Self::get_d(normalize_balances, amp)?);
+		let mut c = U256::from(d);
+		let mut sum = U256::default();
 
 		for i in 0..pool_currencies_len {
 			if i == out_index {
@@ -1019,29 +1102,30 @@ impl<T: Config> Pallet<T> {
 			} else {
 				x = normalize_balances[i];
 			}
-			sum = sum.checked_add(x)?;
+			sum = sum.checked_add(U256::from(x))?;
 
-			c = c.checked_mul(d)?.checked_div(ann.checked_div(n_currencies)?)?;
+			c = c
+				.checked_mul(d)?
+				.checked_div(U256::from(x).checked_mul(n_currencies)?)?;
 		}
-
-		let a_percision = A_PRECISION;
+		let a_percision = U256::from(A_PRECISION);
 		c = c
 			.checked_mul(d)?
 			.checked_mul(a_percision)?
 			.checked_div(ann.checked_mul(n_currencies)?)?;
 
-		let b = sum.checked_add(d.checked_mul(a_percision)?)?.checked_div(ann)?;
+		let b = sum.checked_add(d.checked_mul(a_percision)?.checked_div(ann)?)?;
 
-		let mut last_y: Balance;
+		let mut last_y: U256;
 		let mut y = d;
 		for _i in 0..MAX_ITERATION {
 			last_y = y;
 			y = y
 				.checked_mul(y)?
 				.checked_add(c)?
-				.checked_div(Balance::from(2u32).checked_mul(y)?.checked_add(b)?.checked_sub(d)?)?;
-			if Self::distance(last_y, y) <= One::one() {
-				return Some(y);
+				.checked_div(U256::from(2u32).checked_mul(y)?.checked_add(b)?.checked_sub(d)?)?;
+			if Self::distance(last_y, y) <= U256::from(1) {
+				return TryInto::<Balance>::try_into(y).ok();
 			}
 		}
 
@@ -1056,40 +1140,46 @@ impl<T: Config> Pallet<T> {
 		d: Balance,
 	) -> Option<Balance> {
 		let currencies_len = pool.pooled_currency_ids.len();
-		if currencies_len as u32 <= index {
+		if index >= currencies_len as u32 {
 			return None;
 		}
-		let n_currencies = Balance::from(currencies_len as u64);
-		let ann = a * n_currencies;
-		let mut c = d;
-		let mut s = Balance::default();
-		let _x: Balance;
-		let mut y_prev: Balance;
+
+		let n_currencies = U256::from(currencies_len as u64);
+		let ann = U256::from(a) * n_currencies;
+		let mut c = U256::from(d);
+		let mut s = U256::default();
+		let _x: U256;
+		let mut y_prev: U256;
 
 		for (i, x) in xp.iter().enumerate() {
 			if i as u32 == index {
 				continue;
 			}
-			s = s.checked_add(*x)?;
-			c = c.checked_mul(d)?.checked_div((*x).checked_mul(n_currencies)?)?;
+			s = s.checked_add(U256::from(*x))?;
+			c = c
+				.checked_mul(U256::from(d))?
+				.checked_div(U256::from(*x).checked_mul(U256::from(n_currencies))?)?;
 		}
-		let a_precision = A_PRECISION;
+
+		let a_precision = U256::from(A_PRECISION);
 		c = c
-			.checked_mul(d)?
+			.checked_mul(U256::from(d))?
 			.checked_mul(a_precision)?
 			.checked_div(ann.checked_mul(n_currencies)?)?;
-		let b = s.checked_add(d.checked_mul(a_precision)?.checked_div(ann)?)?;
-		let mut y = d;
+		let b = s.checked_add(U256::from(d).checked_mul(a_precision)?.checked_div(ann)?)?;
+		let mut y = U256::from(d);
 
 		for _i in 0..MAX_ITERATION {
 			y_prev = y;
-			y = y
-				.checked_mul(y)?
-				.checked_add(c)?
-				.checked_div(Balance::from(2u32).checked_mul(y)?.checked_add(b)?.checked_sub(d)?)?;
+			y = y.checked_mul(y)?.checked_add(c)?.checked_div(
+				U256::from(2u32)
+					.checked_mul(y)?
+					.checked_add(b)?
+					.checked_sub(U256::from(d))?,
+			)?;
 
-			if Self::distance(y, y_prev) <= One::one() {
-				return Some(y);
+			if Self::distance(y, y_prev) <= U256::from(1) {
+				return TryInto::<Balance>::try_into(y).ok();
 			}
 		}
 
@@ -1180,4 +1270,28 @@ impl<T: Config> Pallet<T> {
 			Err(Error::<T>::InvalidPoolId.into())
 		}
 	}
+
+	pub fn calculate_virtual_price(pool_id: T::PoolId) -> Option<Balance> {
+		if let Some(pool) = Self::pools(pool_id) {
+			let d = Self::get_d(
+				&Self::xp(&pool.balances, &pool.token_multipliers)?,
+				Self::get_a_precise(&pool)?,
+			)?;
+
+			let total_supply = T::MultiCurrency::total_issuance(pool.lp_currency_id);
+
+			if total_supply > Zero::zero() {
+				return U256::from(10)
+					.checked_pow(U256::from(POOL_TOKEN_COMMON_DECIMALS))
+					.and_then(|n| n.checked_mul(U256::from(d)))
+					.and_then(|n| n.checked_div(U256::from(total_supply)))
+					.and_then(|n| TryInto::<Balance>::try_into(n).ok());
+			}
+			None
+		} else {
+			None
+		}
+	}
 }
+
+
