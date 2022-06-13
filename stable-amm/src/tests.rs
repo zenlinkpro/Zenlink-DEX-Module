@@ -1834,7 +1834,7 @@ fn stop_ramp_a_should_work() {
 		mine_block();
 
 		let end_timestamp = Timestamp::now() + 14 * DAYS + 100;
-		assert_ok!(StableAmm::ramp_a(Origin::root(), pool_id,100, end_timestamp));
+		assert_ok!(StableAmm::ramp_a(Origin::root(), pool_id, 100, end_timestamp));
 
 		mine_block_with_timestamp(Timestamp::now() + 100000);
 
@@ -1852,13 +1852,13 @@ fn stop_ramp_a_should_work() {
 }
 
 #[test]
-fn stop_ramp_a_repeat_should_not_work(){
+fn stop_ramp_a_repeat_should_not_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_pool();
 		mine_block();
 
 		let end_timestamp = Timestamp::now() + 14 * DAYS + 100;
-		assert_ok!(StableAmm::ramp_a(Origin::root(), pool_id,100, end_timestamp));
+		assert_ok!(StableAmm::ramp_a(Origin::root(), pool_id, 100, end_timestamp));
 
 		mine_block_with_timestamp(Timestamp::now() + 100000);
 
@@ -1869,12 +1869,15 @@ fn stop_ramp_a_repeat_should_not_work(){
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5413));
 
-		assert_noop!(StableAmm::stop_ramp_a(Origin::root(), pool_id), Error::<Test>::AlreadyStoppedRampA);
+		assert_noop!(
+			StableAmm::stop_ramp_a(Origin::root(), pool_id),
+			Error::<Test>::AlreadyStoppedRampA
+		);
 	})
 }
 
 #[test]
-fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_increasing_a(){
+fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_increasing_a() {
 	new_test_ext().execute_with(|| {
 		mine_block();
 
@@ -1893,7 +1896,7 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000167146429977312));
 
 		let end_timestamp = Timestamp::now() + 14 * DAYS + 100;
-		assert_ok!(StableAmm::ramp_a(Origin::root(), pool_id,100, end_timestamp));
+		assert_ok!(StableAmm::ramp_a(Origin::root(), pool_id, 100, end_timestamp));
 
 		// Malicious miner skips 900 seconds
 		Timestamp::set_timestamp(Timestamp::now() + 900);
@@ -1905,7 +1908,7 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 }
 
 #[test]
-fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_decreasing_a(){
+fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_decreasing_a() {
 	new_test_ext().execute_with(|| {
 		mine_block();
 
@@ -1924,7 +1927,7 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000167146429977312));
 
 		let end_timestamp = Timestamp::now() + 14 * DAYS + 100;
-		assert_ok!(StableAmm::ramp_a(Origin::root(), pool_id,25, end_timestamp));
+		assert_ok!(StableAmm::ramp_a(Origin::root(), pool_id, 25, end_timestamp));
 
 		// Malicious miner skips 900 seconds
 		Timestamp::set_timestamp(Timestamp::now() + 900);
@@ -1932,5 +1935,348 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(4999));
 		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000166907487883089));
+	})
+}
+
+struct AttackContext {
+	pub initial_attacker_balances: Vec<Balance>,
+	pub initial_pool_balances: Vec<Balance>,
+	pub pool_currencies: Vec<CurrencyId>,
+	pub attacker: AccountId,
+	pub pool_id: PoolId,
+}
+
+fn prepare_attack_context(new_a: Balance) -> AttackContext {
+	mine_block();
+
+	let (pool_id, _) = setup_test_pool();
+	let attacker = BOB;
+	let pool = StableAmm::pools(pool_id).unwrap();
+
+	let mut attack_balances = Vec::new();
+	for currency_id in pool.pooled_currency_ids.iter() {
+		attack_balances.push(<Test as Config>::MultiCurrency::free_balance(*currency_id, &attacker));
+	}
+
+	assert_ok!(StableAmm::ramp_a(
+		Origin::root(),
+		pool_id,
+		new_a,
+		Timestamp::now() + 14 * DAYS
+	));
+
+	assert_eq!(attack_balances[0], 1e20 as Balance);
+	assert_eq!(attack_balances[1], 1e20 as Balance);
+
+	assert_eq!(pool.balances[0], 1e18 as Balance);
+	assert_eq!(pool.balances[1], 1e18 as Balance);
+
+	AttackContext {
+		initial_attacker_balances: attack_balances,
+		initial_pool_balances: pool.balances.clone(),
+		pool_currencies: pool.pooled_currency_ids.clone(),
+		attacker,
+		pool_id,
+	}
+}
+
+#[test]
+fn check_when_ramp_a_upwards_and_tokens_price_equally() {
+	new_test_ext().execute_with(|| {
+		let context = prepare_attack_context(100);
+
+		// Swap 1e18 of firstToken to secondToken, causing massive imbalance in the pool
+		assert_ok!(StableAmm::swap(
+			Origin::signed(context.attacker),
+			context.pool_id,
+			0,
+			1,
+			1e18 as Balance,
+			0,
+			u64::MAX
+		));
+		let second_token_output =
+			<Test as Config>::MultiCurrency::free_balance(context.pool_currencies[1], &context.attacker)
+				- context.initial_attacker_balances[1];
+
+		assert_eq!(second_token_output, 908591742545002306);
+
+		// Pool is imbalanced! Now trades from secondToken -> firstToken may be profitable in small sizes
+		let pool = StableAmm::pools(context.pool_id).unwrap();
+		assert_eq!(pool.balances[0], 2e18 as Balance);
+		assert_eq!(pool.balances[1], 91408257454997694);
+
+		// Malicious miner skips 900 seconds
+		Timestamp::set_timestamp(Timestamp::now() + 900);
+
+		assert_eq!(StableAmm::get_a_precise(&pool), Some(5003));
+
+		let balances_before = get_user_token_balances(&context.pool_currencies, &context.attacker);
+
+		assert_ok!(StableAmm::swap(
+			Origin::signed(context.attacker),
+			context.pool_id,
+			1,
+			0,
+			second_token_output,
+			0,
+			u64::MAX
+		));
+
+		let first_token_output =
+			<Test as Config>::MultiCurrency::free_balance(context.pool_currencies[0], &context.attacker)
+				- balances_before[0];
+		assert_eq!(first_token_output, 997214696574405737);
+
+		let final_attacker_balances = get_user_token_balances(&context.pool_currencies, &context.attacker);
+
+		assert!(final_attacker_balances[0] < context.initial_attacker_balances[0]);
+		assert_eq!(final_attacker_balances[1], context.initial_attacker_balances[1]);
+		assert_eq!(
+			context.initial_attacker_balances[0] - final_attacker_balances[0],
+			2785303425594263
+		);
+		assert_eq!(context.initial_attacker_balances[1] - final_attacker_balances[1], 0);
+
+		// checked pool balance,
+		let pool = StableAmm::pools(context.pool_id).unwrap();
+		assert!(pool.balances[0] > context.initial_pool_balances[0]);
+		assert_eq!(pool.balances[1], context.initial_pool_balances[1]);
+
+		assert_eq!(pool.balances[0] - context.initial_pool_balances[0], 2785303425594263);
+		assert_eq!(pool.balances[1] - context.initial_pool_balances[1], 0);
+	})
+}
+
+#[test]
+fn check_when_ramp_a_upwards_and_tokens_price_unequally() {
+	new_test_ext().execute_with(|| {
+		let mut context = prepare_attack_context(100);
+
+		// Set up pool to be imbalanced prior to the attack
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			context.pool_id,
+			vec![0, 2e18 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		let pool = StableAmm::pools(context.pool_id).unwrap();
+		assert_eq!(pool.balances[0], 1e18 as Balance);
+		assert_eq!(pool.balances[1], 3e18 as Balance);
+
+		// rewrite pool balances
+		context.initial_pool_balances = pool.balances.clone();
+
+		// Swap 1e18 of firstToken to secondToken, resolving imbalance in the pool
+		assert_ok!(StableAmm::swap(
+			Origin::signed(context.attacker),
+			context.pool_id,
+			0,
+			1,
+			1e18 as Balance,
+			0,
+			u64::MAX
+		));
+		let second_token_output =
+			<Test as Config>::MultiCurrency::free_balance(context.pool_currencies[1], &context.attacker)
+				- context.initial_attacker_balances[1];
+
+		assert_eq!(second_token_output, 1011933251060681353);
+
+		// Pool is imbalanced! Now trades from secondToken -> firstToken may be profitable in small sizes
+		let pool = StableAmm::pools(context.pool_id).unwrap();
+		assert_eq!(pool.balances[0], 2e18 as Balance);
+		assert_eq!(pool.balances[1], 1988066748939318647);
+
+		// Malicious miner skips 900 seconds
+		Timestamp::set_timestamp(Timestamp::now() + 900);
+		assert_eq!(StableAmm::get_a_precise(&pool), Some(5003));
+
+		let balances_before = get_user_token_balances(&context.pool_currencies, &context.attacker);
+
+		assert_ok!(StableAmm::swap(
+			Origin::signed(context.attacker),
+			context.pool_id,
+			1,
+			0,
+			second_token_output,
+			0,
+			u64::MAX
+		));
+
+		let first_token_output =
+			<Test as Config>::MultiCurrency::free_balance(context.pool_currencies[0], &context.attacker)
+				- balances_before[0];
+		assert_eq!(first_token_output, 998017518949630644);
+
+		let final_attacker_balances = get_user_token_balances(&context.pool_currencies, &context.attacker);
+
+		assert!(final_attacker_balances[0] < context.initial_attacker_balances[0]);
+		assert_eq!(final_attacker_balances[1], context.initial_attacker_balances[1]);
+		assert_eq!(
+			context.initial_attacker_balances[0] - final_attacker_balances[0],
+			1982481050369356
+		);
+		assert_eq!(context.initial_attacker_balances[1] - final_attacker_balances[1], 0);
+
+		// checked pool balance,
+		let pool = StableAmm::pools(context.pool_id).unwrap();
+		assert!(pool.balances[0] > context.initial_pool_balances[0]);
+		assert_eq!(pool.balances[1], context.initial_pool_balances[1]);
+
+		assert_eq!(pool.balances[0] - context.initial_pool_balances[0], 1982481050369356);
+		assert_eq!(pool.balances[1] - context.initial_pool_balances[1], 0);
+	})
+}
+
+#[test]
+fn check_when_ramp_a_downwards_and_tokens_price_equally() {
+	new_test_ext().execute_with(|| {
+		let context = prepare_attack_context(25);
+		// Swap 1e18 of firstToken to secondToken, causing massive imbalance in the pool
+		assert_ok!(StableAmm::swap(
+			Origin::signed(context.attacker),
+			context.pool_id,
+			0,
+			1,
+			1e18 as Balance,
+			0,
+			u64::MAX
+		));
+		let second_token_output =
+			<Test as Config>::MultiCurrency::free_balance(context.pool_currencies[1], &context.attacker)
+				- context.initial_attacker_balances[1];
+
+		assert_eq!(second_token_output, 908591742545002306);
+
+		// Pool is imbalanced! Now trades from secondToken -> firstToken may be profitable in small sizes
+		let pool = StableAmm::pools(context.pool_id).unwrap();
+		assert_eq!(pool.balances[0], 2e18 as Balance);
+		assert_eq!(pool.balances[1], 91408257454997694);
+
+		// Malicious miner skips 900 seconds
+		Timestamp::set_timestamp(Timestamp::now() + 900);
+
+		assert_eq!(StableAmm::get_a_precise(&pool), Some(4999));
+
+		let balances_before = get_user_token_balances(&context.pool_currencies, &context.attacker);
+
+		assert_ok!(StableAmm::swap(
+			Origin::signed(context.attacker),
+			context.pool_id,
+			1,
+			0,
+			second_token_output,
+			0,
+			u64::MAX
+		));
+
+		let first_token_output =
+			<Test as Config>::MultiCurrency::free_balance(context.pool_currencies[0], &context.attacker)
+				- balances_before[0];
+		assert_eq!(first_token_output, 997276754500361021);
+
+		let final_attacker_balances = get_user_token_balances(&context.pool_currencies, &context.attacker);
+
+		assert!(final_attacker_balances[0] < context.initial_attacker_balances[0]);
+		assert_eq!(final_attacker_balances[1], context.initial_attacker_balances[1]);
+		assert_eq!(
+			context.initial_attacker_balances[0] - final_attacker_balances[0],
+			2723245499638979
+		);
+		assert_eq!(context.initial_attacker_balances[1] - final_attacker_balances[1], 0);
+
+		// checked pool balance,
+		let pool = StableAmm::pools(context.pool_id).unwrap();
+		assert!(pool.balances[0] > context.initial_pool_balances[0]);
+		assert_eq!(pool.balances[1], context.initial_pool_balances[1]);
+
+		assert_eq!(pool.balances[0] - context.initial_pool_balances[0], 2723245499638979);
+		assert_eq!(pool.balances[1] - context.initial_pool_balances[1], 0);
+	})
+}
+
+#[test]
+fn check_when_ramp_a_downwards_and_tokens_price_unequally() {
+	new_test_ext().execute_with(|| {
+		let mut context = prepare_attack_context(25);
+
+		// Set up pool to be imbalanced prior to the attack
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			context.pool_id,
+			vec![0, 2e18 as Balance],
+			0,
+			u64::MAX,
+		));
+
+		let pool = StableAmm::pools(context.pool_id).unwrap();
+		assert_eq!(pool.balances[0], 1e18 as Balance);
+		assert_eq!(pool.balances[1], 3e18 as Balance);
+
+		// rewrite pool balances
+		context.initial_pool_balances = pool.balances.clone();
+
+		// Swap 1e18 of firstToken to secondToken, resolving imbalance in the pool
+		assert_ok!(StableAmm::swap(
+			Origin::signed(context.attacker),
+			context.pool_id,
+			0,
+			1,
+			1e18 as Balance,
+			0,
+			u64::MAX
+		));
+		let second_token_output =
+			<Test as Config>::MultiCurrency::free_balance(context.pool_currencies[1], &context.attacker)
+				- context.initial_attacker_balances[1];
+
+		assert_eq!(second_token_output, 1011933251060681353);
+
+		// Pool is imbalanced! Now trades from secondToken -> firstToken may be profitable in small sizes
+		let pool = StableAmm::pools(context.pool_id).unwrap();
+		assert_eq!(pool.balances[0], 2e18 as Balance);
+		assert_eq!(pool.balances[1], 1988066748939318647);
+
+		// Malicious miner skips 900 seconds
+		Timestamp::set_timestamp(Timestamp::now() + 900);
+		assert_eq!(StableAmm::get_a_precise(&pool), Some(4999));
+
+		let balances_before = get_user_token_balances(&context.pool_currencies, &context.attacker);
+
+		assert_ok!(StableAmm::swap(
+			Origin::signed(context.attacker),
+			context.pool_id,
+			1,
+			0,
+			second_token_output,
+			0,
+			u64::MAX
+		));
+
+		let first_token_output =
+			<Test as Config>::MultiCurrency::free_balance(context.pool_currencies[0], &context.attacker)
+				- balances_before[0];
+		assert_eq!(first_token_output, 998007711333645455);
+
+		let final_attacker_balances = get_user_token_balances(&context.pool_currencies, &context.attacker);
+
+		assert!(final_attacker_balances[0] < context.initial_attacker_balances[0]);
+		assert_eq!(final_attacker_balances[1], context.initial_attacker_balances[1]);
+		assert_eq!(
+			context.initial_attacker_balances[0] - final_attacker_balances[0],
+			1992288666354545
+		);
+		assert_eq!(context.initial_attacker_balances[1] - final_attacker_balances[1], 0);
+
+		// checked pool balance,
+		let pool = StableAmm::pools(context.pool_id).unwrap();
+		assert!(pool.balances[0] > context.initial_pool_balances[0]);
+		assert_eq!(pool.balances[1], context.initial_pool_balances[1]);
+
+		assert_eq!(pool.balances[0] - context.initial_pool_balances[0], 1992288666354545);
+		assert_eq!(pool.balances[1] - context.initial_pool_balances[1], 0);
 	})
 }
