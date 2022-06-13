@@ -99,10 +99,6 @@ pub mod pallet {
 	#[pallet::getter(fn lp_currencies)]
 	pub type LpCurrencies<T: Config> = StorageMap<_, Blake2_128Concat, T::CurrencyId, T::PoolId>;
 
-	// #[pallet::storage]
-	// #[pallet::getter(fn fee_receiver)]
-	// pub type FeeReceiver<T: Config> = StorageValue<_, Option<T::AccountId>, ValueQuery>;
-
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -151,6 +147,7 @@ pub mod pallet {
 		NoFeeReceiver,
 		MismatchParameter,
 		ExceedMaxFee,
+		ExceedMaxAdminFee,
 		ExceedMaxA,
 		LpCurrencyAlreadyUsed,
 		RequireAllCurrencies,
@@ -160,6 +157,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(1_000_000)]
 		#[transactional]
+		#[allow(clippy::too_many_arguments)]
 		pub fn create_pool(
 			origin: OriginFor<T>,
 			currency_ids: Vec<T::CurrencyId>,
@@ -190,8 +188,8 @@ pub mod pallet {
 				Error::<T>::MismatchParameter
 			);
 			ensure!(a < MAX_A, Error::<T>::ExceedMaxA);
-			ensure!(fee < MAX_SWAP_FEE, Error::<T>::ExceedMaxFee);
-			ensure!(admin_fee < MAX_ADMIN_FEE, Error::<T>::ExceedMaxFee);
+			ensure!(fee <= MAX_SWAP_FEE, Error::<T>::ExceedMaxFee);
+			ensure!(admin_fee <= MAX_ADMIN_FEE, Error::<T>::ExceedMaxAdminFee);
 
 			let mut rate = Vec::new();
 
@@ -236,7 +234,7 @@ pub mod pallet {
 					Ok(())
 				})?;
 
-				LpCurrencies::<T>::insert(lp_currency_id, *next_pool_id);
+				LpCurrencies::<T>::insert(lp_currency_id, pool_id);
 
 				*next_pool_id = next_pool_id.checked_add(&One::one()).ok_or(Error::<T>::Arithmetic)?;
 
@@ -406,10 +404,8 @@ pub mod pallet {
 			future_a_time: u64,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			let timestamp = T::TimeProvider::now().as_millis();
+			let now = T::TimeProvider::now().as_millis();
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
-				let now = Balance::try_from(timestamp).map_err(|_| Error::<T>::Arithmetic)?;
-
 				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 
 				ensure!(
@@ -466,7 +462,7 @@ pub mod pallet {
 					pool_id,
 					initial_a_precise,
 					future_a_precise,
-					timestamp,
+					now,
 					future_a_time,
 				));
 
@@ -537,12 +533,12 @@ impl<T: Config> Pallet<T> {
 			let n_currencies = pool.pooled_currency_ids.len();
 			ensure!(n_currencies == amounts.len(), Error::<T>::InvalidParameter);
 			let mut fees = Vec::new();
-			let fee_per_token = Self::calculate_fee_per_token(&pool).ok_or(Error::<T>::Arithmetic)?;
+			let fee_per_token = Self::calculate_fee_per_token(pool).ok_or(Error::<T>::Arithmetic)?;
 
 			let lp_total_supply = T::MultiCurrency::total_issuance(pool.lp_currency_id);
 
 			let mut d0 = Balance::default();
-			let amp = Self::get_a_precise(&pool).ok_or(Error::<T>::Arithmetic)?;
+			let amp = Self::get_a_precise(pool).ok_or(Error::<T>::Arithmetic)?;
 			if lp_total_supply > Zero::zero() {
 				d0 = Self::get_d(
 					&Self::xp(&pool.balances, &pool.token_multipliers).ok_or(Error::<T>::Arithmetic)?,
@@ -560,7 +556,7 @@ impl<T: Config> Pallet<T> {
 				new_balances[i] = new_balances[i]
 					.checked_add(Self::do_transfer_in(
 						pool.pooled_currency_ids[i],
-						&who,
+						who,
 						&pool.pool_account,
 						amounts[i],
 					)?)
@@ -594,7 +590,7 @@ impl<T: Config> Pallet<T> {
 
 			ensure!(min_mint_amount <= mint_amount, Error::<T>::AmountSlippage);
 
-			T::MultiCurrency::deposit(pool.lp_currency_id, &who, mint_amount)?;
+			T::MultiCurrency::deposit(pool.lp_currency_id, who, mint_amount)?;
 
 			Self::deposit_event(Event::AddLiquidity(
 				pool_id,
@@ -702,10 +698,10 @@ impl<T: Config> Pallet<T> {
 			for (i, amount) in amounts.iter().enumerate() {
 				ensure!(*amount >= min_amounts[i], Error::<T>::AmountSlippage);
 				pool.balances[i] = pool.balances[i].checked_sub(*amount).ok_or(Error::<T>::Arithmetic)?;
-				T::MultiCurrency::transfer(pool.pooled_currency_ids[i], &pool.pool_account, &who, *amount)?;
+				T::MultiCurrency::transfer(pool.pooled_currency_ids[i], &pool.pool_account, who, *amount)?;
 			}
 
-			T::MultiCurrency::withdraw(pool.lp_currency_id, &who, lp_amount)?;
+			T::MultiCurrency::withdraw(pool.lp_currency_id, who, lp_amount)?;
 			Self::deposit_event(Event::RemoveLiquidity(
 				pool_id,
 				who.clone(),
@@ -747,9 +743,9 @@ impl<T: Config> Pallet<T> {
 				.and_then(|n| TryInto::<Balance>::try_into(n).ok())
 				.ok_or(Error::<T>::Arithmetic)?;
 
-			T::MultiCurrency::withdraw(pool.lp_currency_id, &who, lp_amount)?;
+			T::MultiCurrency::withdraw(pool.lp_currency_id, who, lp_amount)?;
 
-			T::MultiCurrency::transfer(pool.pooled_currency_ids[index as usize], &pool.pool_account, &who, dy)?;
+			T::MultiCurrency::transfer(pool.pooled_currency_ids[index as usize], &pool.pool_account, who, dy)?;
 
 			Self::deposit_event(Event::RemoveLiquidityOneCurrency(
 				pool_id,
@@ -785,11 +781,11 @@ impl<T: Config> Pallet<T> {
 				Error::<T>::AmountSlippage
 			);
 
-			T::MultiCurrency::withdraw(pool.lp_currency_id, &who, burn_amount)?;
+			T::MultiCurrency::withdraw(pool.lp_currency_id, who, burn_amount)?;
 
 			for (i, balance) in amounts.iter().enumerate() {
 				if *balance > Zero::zero() {
-					T::MultiCurrency::transfer(pool.pooled_currency_ids[i], &pool.pool_account, &who, *balance)?;
+					T::MultiCurrency::transfer(pool.pooled_currency_ids[i], &pool.pool_account, who, *balance)?;
 				}
 			}
 
@@ -938,19 +934,18 @@ impl<T: Config> Pallet<T> {
 		let fee_denominator = U256::from(FEE_DENOMINATOR);
 
 		for (i, x) in xp.iter().enumerate() {
-			let expected_dx: U256;
-			if i as u32 == index {
-				expected_dx = U256::from(*x)
+			let expected_dx = if i as u32 == index {
+				U256::from(*x)
 					.checked_mul(U256::from(d1))?
 					.checked_div(U256::from(d0))?
-					.checked_sub(U256::from(new_y))?;
+					.checked_sub(U256::from(new_y))?
 			} else {
-				expected_dx = U256::from(*x).checked_sub(
+				U256::from(*x).checked_sub(
 					U256::from(*x)
 						.checked_mul(U256::from(d1))?
 						.checked_div(U256::from(d0))?,
-				)?;
-			}
+				)?
+			};
 			reduce_xp[i] = reduce_xp[i].checked_sub(
 				fee_pre_token
 					.checked_mul(expected_dx)?
@@ -1006,7 +1001,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn get_a_precise(pool: &Pool<T::CurrencyId, T::AccountId>) -> Option<Balance> {
-		let now = Balance::from(T::TimeProvider::now().as_millis());
+		let now = T::TimeProvider::now().as_millis();
 
 		if now >= pool.future_a_time {
 			return Some(pool.future_a);
@@ -1094,21 +1089,21 @@ impl<T: Config> Pallet<T> {
 		let pool_currencies_len = pool.pooled_currency_ids.len();
 		let n_currencies = U256::from(pool_currencies_len as u64);
 		let amp = Self::get_a_precise(pool)?;
-		let ann = U256::from(n_currencies).checked_mul(U256::from(amp))?;
+		let ann = n_currencies.checked_mul(U256::from(amp))?;
 		let d = U256::from(Self::get_d(normalize_balances, amp)?);
-		let mut c = U256::from(d);
+		let mut c = d;
 		let mut sum = U256::default();
 
-		for i in 0..pool_currencies_len {
+		for (i, normalize_balance) in normalize_balances.iter().enumerate().take(pool_currencies_len) {
 			if i == out_index {
 				continue;
 			}
-			let x: Balance;
-			if i == in_index {
-				x = in_balance;
+			let x: Balance = if i == in_index {
+				in_balance
 			} else {
-				x = normalize_balances[i];
-			}
+				*normalize_balance
+			};
+
 			sum = sum.checked_add(U256::from(x))?;
 
 			c = c
@@ -1165,7 +1160,7 @@ impl<T: Config> Pallet<T> {
 			s = s.checked_add(U256::from(*x))?;
 			c = c
 				.checked_mul(U256::from(d))?
-				.checked_div(U256::from(*x).checked_mul(U256::from(n_currencies))?)?;
+				.checked_div(U256::from(*x).checked_mul(n_currencies)?)?;
 		}
 
 		let a_precision = U256::from(A_PRECISION);
@@ -1260,11 +1255,10 @@ impl<T: Config> Pallet<T> {
 				return Ok(d1); // first depositor take it all
 			}
 
-			let diff: Balance;
-			if deposit {
-				diff = d1.checked_sub(d0).ok_or(Error::<T>::Arithmetic)?;
+			let diff: Balance = if deposit {
+				d1.checked_sub(d0).ok_or(Error::<T>::Arithmetic)?
 			} else {
-				diff = d0.checked_sub(d1).ok_or(Error::<T>::Arithmetic)?;
+				d0.checked_sub(d1).ok_or(Error::<T>::Arithmetic)?
 			};
 
 			let amount = diff

@@ -195,7 +195,7 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
 				lp_currency_id,
 				0,
-				MAX_SWAP_FEE.into(),
+				(MAX_SWAP_FEE + 1).into(),
 				0,
 				ALICE
 			),
@@ -204,7 +204,7 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 		assert_eq!(StableAmm::next_pool_id(), 0);
 		assert_eq!(StableAmm::pools(0), None);
 
-		// exceed max fee
+		// exceed max admin fee
 		assert_noop!(
 			StableAmm::create_pool(
 				Origin::root(),
@@ -217,11 +217,11 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
 				lp_currency_id,
 				0,
-				(MAX_SWAP_FEE - 1).into(),
-				MAX_ADMIN_FEE.into(),
+				(MAX_SWAP_FEE).into(),
+				(MAX_ADMIN_FEE + 1).into(),
 				ALICE
 			),
-			Error::<Test>::ExceedMaxFee
+			Error::<Test>::ExceedMaxAdminFee
 		);
 		assert_eq!(StableAmm::next_pool_id(), 0);
 		assert_eq!(StableAmm::pools(0), None);
