@@ -25,7 +25,7 @@ orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", default-features = false }
-pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19"}
 
 [features]
 default = ["std"]

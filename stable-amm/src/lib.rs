@@ -54,6 +54,7 @@ pub struct Pool<CurrencyId, AccountId> {
 	pub initial_a_time: Balance,
 	pub future_a_time: Balance,
 	pub pool_account: AccountId,
+	pub admin_fee_receiver: AccountId,
 }
 
 #[frame_support::pallet]
@@ -98,21 +99,29 @@ pub mod pallet {
 	#[pallet::getter(fn lp_currencies)]
 	pub type LpCurrencies<T: Config> = StorageMap<_, Blake2_128Concat, T::CurrencyId, T::PoolId>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn fee_receiver)]
-	pub type FeeReceiver<T: Config> = StorageValue<_, Option<T::AccountId>, ValueQuery>;
+	// #[pallet::storage]
+	// #[pallet::getter(fn fee_receiver)]
+	// pub type FeeReceiver<T: Config> = StorageValue<_, Option<T::AccountId>, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		CreatePool(T::PoolId, Vec<T::CurrencyId>, T::CurrencyId, Balance, T::AccountId),
+		CreatePool(
+			T::PoolId,
+			Vec<T::CurrencyId>,
+			T::CurrencyId,
+			Balance,
+			T::AccountId,
+			T::AccountId,
+		),
+		UpdateAdminFeeReceiver(T::PoolId, T::AccountId),
 		AddLiquidity(T::PoolId, T::AccountId, Vec<Balance>, Vec<Balance>, Balance, Balance),
 		TokenExchange(T::PoolId, T::AccountId, u32, Balance, u32, Balance),
 		RemoveLiquidity(T::PoolId, T::AccountId, Vec<Balance>, Vec<Balance>, Balance),
 		RemoveLiquidityOneCurrency(T::PoolId, T::AccountId, u32, Balance, Balance),
 		RemoveLiquidityImbalance(T::PoolId, T::AccountId, Vec<Balance>, Vec<Balance>, Balance, Balance),
 		NewFee(T::PoolId, Balance, Balance),
-		RampA(T::PoolId, Balance, Balance, u64, u64),
+		RampA(T::PoolId, Balance, Balance, u128, u64),
 		StopRampA(T::PoolId, Balance, u64),
 		CollectProtocolFee(T::PoolId, T::CurrencyId, Balance),
 	}
@@ -159,6 +168,7 @@ pub mod pallet {
 			a: Balance,
 			fee: Balance,
 			admin_fee: Balance,
+			admin_fee_receiver: T::AccountId,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -220,6 +230,7 @@ pub mod pallet {
 						initial_a_time: Zero::zero(),
 						future_a_time: Zero::zero(),
 						pool_account: pool_account.clone(),
+						admin_fee_receiver: admin_fee_receiver.clone(),
 					});
 
 					Ok(())
@@ -235,6 +246,7 @@ pub mod pallet {
 					lp_currency_id,
 					a,
 					pool_account,
+					admin_fee_receiver,
 				));
 				Ok(())
 			})
@@ -349,17 +361,23 @@ pub mod pallet {
 		#[transactional]
 		pub fn update_fee_receiver(
 			origin: OriginFor<T>,
+			pool_id: T::PoolId,
 			fee_receiver: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			let account = T::Lookup::lookup(fee_receiver)?;
-			FeeReceiver::<T>::mutate(|receiver| (*receiver = Some(account)));
-			Ok(())
+			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
+				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
+				pool.admin_fee_receiver = account.clone();
+
+				Self::deposit_event(Event::UpdateAdminFeeReceiver(pool_id, account));
+				Ok(())
+			})
 		}
 
 		#[pallet::weight(1_000_000)]
 		#[transactional]
-		pub fn update_fee(
+		pub fn set_fee(
 			origin: OriginFor<T>,
 			pool_id: T::PoolId,
 			new_swap_fee: Balance,
@@ -387,8 +405,8 @@ pub mod pallet {
 			future_a: Balance,
 			future_a_time: u64,
 		) -> DispatchResult {
-			ensure_signed(origin)?;
-			let timestamp = T::TimeProvider::now().as_secs();
+			ensure_root(origin)?;
+			let timestamp = T::TimeProvider::now().as_millis();
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 				let now = Balance::try_from(timestamp).map_err(|_| Error::<T>::Arithmetic)?;
 
@@ -404,7 +422,7 @@ pub mod pallet {
 
 				ensure!(
 					Balance::from(future_a_time)
-						< now
+						>= now
 							.checked_add(Balance::from(MIN_RAMP_TIME))
 							.ok_or(Error::<T>::Arithmetic)?,
 					Error::<T>::MinRampTime
@@ -459,7 +477,7 @@ pub mod pallet {
 		#[pallet::weight(1_000_000)]
 		#[transactional]
 		pub fn stop_ramp_a(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
-			ensure_signed(origin)?;
+			ensure_root(origin)?;
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 				let timestamp = T::TimeProvider::now().as_secs();
@@ -483,8 +501,6 @@ pub mod pallet {
 		pub fn withdraw_admin_fee(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
 			ensure_root(origin)?;
 
-			let receiver = Self::fee_receiver().ok_or(Error::<T>::NoFeeReceiver)?;
-
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 				for (i, reserve) in pool.balances.iter().enumerate() {
@@ -496,7 +512,7 @@ pub mod pallet {
 						T::MultiCurrency::transfer(
 							pool.pooled_currency_ids[i],
 							&pool.pool_account,
-							&receiver,
+							&pool.admin_fee_receiver,
 							balance,
 						)?;
 					}
@@ -990,7 +1006,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn get_a_precise(pool: &Pool<T::CurrencyId, T::AccountId>) -> Option<Balance> {
-		let now = Balance::try_from(T::TimeProvider::now().as_secs()).ok()?;
+		let now = Balance::from(T::TimeProvider::now().as_millis());
 
 		if now >= pool.future_a_time {
 			return Some(pool.future_a);
@@ -1006,8 +1022,8 @@ impl<T: Config> Pallet<T> {
 		}
 
 		pool.initial_a.checked_sub(
-			pool.initial_a_time
-				.checked_sub(pool.future_a_time)?
+			pool.initial_a
+				.checked_sub(pool.future_a)?
 				.checked_mul(now.checked_sub(pool.initial_a_time)?)?
 				.checked_div(pool.future_a_time.checked_sub(pool.initial_a_time)?)?,
 		)
@@ -1027,7 +1043,6 @@ impl<T: Config> Pallet<T> {
 		if sum == Balance::default() {
 			return Some(Balance::default());
 		}
-		// sp_std::if_std! {println!("n1")}
 		let mut d_prev: U256;
 		let mut d = U256::from(sum);
 		let ann = U256::from(amp.checked_mul(n_currencies)?);
@@ -1047,26 +1062,18 @@ impl<T: Config> Pallet<T> {
 				.and_then(|n| n.checked_div(a_precision))
 				.and_then(|n| n.checked_add(d_p.checked_mul(U256::from(n_currencies))?))
 				.and_then(|n| n.checked_mul(d))?;
-			//sp_std::if_std! {println!("numerator {:#?}", numerator)}
-
-			// sp_std::if_std! {println!("numerator-- {:#?} {:#?}", ann,a_precision)}
 
 			let denominator = ann
 				.checked_sub(a_precision)
-				.and_then(|n| {
-					// sp_std::if_std! {println!("dmid0 {:#?}", n)}
-					n.checked_mul(d)
-				})
+				.and_then(|n| n.checked_mul(d))
 				.and_then(|n| n.checked_div(a_precision))
 				.and_then(|n| {
-					// sp_std::if_std! {println!("dmid {:#?}", n)}
 					n.checked_add(
 						U256::from(n_currencies)
 							.checked_add(U256::from(1u32))?
 							.checked_mul(d_p)?,
 					)
 				})?;
-			//sp_std::if_std! {println!("denominator {:#?}", denominator)}
 
 			d = numerator.checked_div(denominator)?;
 
@@ -1292,6 +1299,18 @@ impl<T: Config> Pallet<T> {
 			None
 		}
 	}
+
+	pub fn get_admin_balancce(pool_id: T::PoolId, currency_index: usize) -> Option<Balance> {
+		if let Some(pool) = Self::pools(pool_id) {
+			let currencies_len = pool.pooled_currency_ids.len();
+			if currency_index >= currencies_len {
+				return None;
+			}
+			let balance = T::MultiCurrency::free_balance(pool.pooled_currency_ids[currency_index], &pool.pool_account);
+
+			balance.checked_sub(pool.balances[currency_index])
+		} else {
+			None
+		}
+	}
 }
-
-
