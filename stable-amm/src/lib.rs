@@ -27,19 +27,19 @@ pub use pallet::*;
 type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
 
 type Balance = u128;
+type Number = Balance;
 
-const FEE_DENOMINATOR: Balance = 10_000_000_000u128;
-const A_PRECISION: Balance = 100u128;
+const FEE_DENOMINATOR: Number = 10_000_000_000;
+const A_PRECISION: Number = 100;
 const MAX_ITERATION: u32 = 255; // the number of iterations to sum d and y
 pub const POOL_TOKEN_COMMON_DECIMALS: u8 = 18;
 
-/// Some thresholds when setting the pool
-const DAY: u32 = 24 * 60 * 60;
+const DAY: u32 = 86400;
 const MIN_RAMP_TIME: u32 = DAY;
-const MAX_A: Balance = 1_000_000;
-const MAX_A_CHANGE: u32 = 10u32;
-pub const MAX_ADMIN_FEE: Balance = 10_000_000_000u128;
-const MAX_SWAP_FEE: Balance = 100_000_000;
+const MAX_A: Number = 1_000_000;
+const MAX_A_CHANGE: u32 = 10;
+const MAX_ADMIN_FEE: Number = 10_000_000_000;
+const MAX_SWAP_FEE: Number = 100_000_000;
 
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug, TypeInfo)]
 pub struct Pool<CurrencyId, AccountId> {
@@ -47,12 +47,12 @@ pub struct Pool<CurrencyId, AccountId> {
 	pub lp_currency_id: CurrencyId,
 	pub token_multipliers: Vec<Balance>,
 	pub balances: Vec<Balance>,
-	pub fee: Balance,
-	pub admin_fee: Balance,
-	pub initial_a: Balance,
-	pub future_a: Balance,
-	pub initial_a_time: Balance,
-	pub future_a_time: Balance,
+	pub fee: Number,
+	pub admin_fee: Number,
+	pub initial_a: Number,
+	pub future_a: Number,
+	pub initial_a_time: Number,
+	pub future_a_time: Number,
 	pub pool_account: AccountId,
 	pub admin_fee_receiver: AccountId,
 }
@@ -106,7 +106,7 @@ pub mod pallet {
 			T::PoolId,
 			Vec<T::CurrencyId>,
 			T::CurrencyId,
-			Balance,
+			Number,
 			T::AccountId,
 			T::AccountId,
 		),
@@ -116,9 +116,9 @@ pub mod pallet {
 		RemoveLiquidity(T::PoolId, T::AccountId, Vec<Balance>, Vec<Balance>, Balance),
 		RemoveLiquidityOneCurrency(T::PoolId, T::AccountId, u32, Balance, Balance),
 		RemoveLiquidityImbalance(T::PoolId, T::AccountId, Vec<Balance>, Vec<Balance>, Balance, Balance),
-		NewFee(T::PoolId, Balance, Balance),
-		RampA(T::PoolId, Balance, Balance, u128, u64),
-		StopRampA(T::PoolId, Balance, u64),
+		NewFee(T::PoolId, Number, Number),
+		RampA(T::PoolId, Balance, Balance, Number, Number),
+		StopRampA(T::PoolId, Number, Number),
 		CollectProtocolFee(T::PoolId, T::CurrencyId, Balance),
 	}
 
@@ -163,9 +163,9 @@ pub mod pallet {
 			currency_ids: Vec<T::CurrencyId>,
 			currency_decimals: Vec<u8>,
 			lp_currency_id: T::CurrencyId,
-			a: Balance,
-			fee: Balance,
-			admin_fee: Balance,
+			a: Number,
+			fee: Number,
+			admin_fee: Number,
 			admin_fee_receiver: T::AccountId,
 		) -> DispatchResult {
 			ensure_root(origin)?;
@@ -378,8 +378,8 @@ pub mod pallet {
 		pub fn set_fee(
 			origin: OriginFor<T>,
 			pool_id: T::PoolId,
-			new_swap_fee: Balance,
-			new_admin_fee: Balance,
+			new_swap_fee: Number,
+			new_admin_fee: Number,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
@@ -400,26 +400,26 @@ pub mod pallet {
 		pub fn ramp_a(
 			origin: OriginFor<T>,
 			pool_id: T::PoolId,
-			future_a: Balance,
-			future_a_time: u64,
+			future_a: Number,
+			future_a_time: Number,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			let now = T::TimeProvider::now().as_millis();
+			let now = T::TimeProvider::now().as_secs() as Number;
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 
 				ensure!(
 					now >= pool
 						.initial_a_time
-						.checked_add(Balance::from(DAY))
+						.checked_add(Number::from(DAY))
 						.ok_or(Error::<T>::Arithmetic)?,
 					Error::<T>::RampADelay
 				);
 
 				ensure!(
-					Balance::from(future_a_time)
+					future_a_time
 						>= now
-							.checked_add(Balance::from(MIN_RAMP_TIME))
+							.checked_add(Number::from(MIN_RAMP_TIME))
 							.ok_or(Error::<T>::Arithmetic)?,
 					Error::<T>::MinRampTime
 				);
@@ -427,13 +427,13 @@ pub mod pallet {
 				ensure!(future_a > Zero::zero() && future_a < MAX_A, Error::<T>::ExceedThreshold);
 
 				let (initial_a_precise, future_a_precise) = Self::get_a_precise(pool)
-					.and_then(|initial_a_precise| -> Option<(Balance, Balance)> {
+					.and_then(|initial_a_precise| -> Option<(Number, Number)> {
 						let future_a_precise = future_a.checked_mul(A_PRECISION)?;
 						Some((initial_a_precise, future_a_precise))
 					})
 					.ok_or(Error::<T>::Arithmetic)?;
 
-				let max_a_change = Balance::from(MAX_A_CHANGE);
+				let max_a_change = Number::from(MAX_A_CHANGE);
 
 				if future_a_precise < initial_a_precise {
 					ensure!(
@@ -456,7 +456,7 @@ pub mod pallet {
 				pool.initial_a = initial_a_precise;
 				pool.future_a = future_a_precise;
 				pool.initial_a_time = now;
-				pool.future_a_time = Balance::from(future_a_time);
+				pool.future_a_time = future_a_time;
 
 				Self::deposit_event(Event::RampA(
 					pool_id,
@@ -476,8 +476,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 				let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
-				let timestamp = T::TimeProvider::now().as_secs();
-				let now = Balance::try_from(timestamp).map_err(|_| Error::<T>::Arithmetic)?;
+				let now = T::TimeProvider::now().as_secs() as Number;
 				ensure!(pool.future_a_time > now, Error::<T>::AlreadyStoppedRampA);
 
 				let current_a = Self::get_a_precise(pool).ok_or(Error::<T>::Arithmetic)?;
@@ -487,7 +486,7 @@ pub mod pallet {
 				pool.initial_a_time = now;
 				pool.future_a_time = now;
 
-				Self::deposit_event(Event::StopRampA(pool_id, current_a, timestamp));
+				Self::deposit_event(Event::StopRampA(pool_id, current_a, now));
 				Ok(())
 			})
 		}
@@ -1000,8 +999,8 @@ impl<T: Config> Pallet<T> {
 		Some((burn_amount, fees, d1))
 	}
 
-	fn get_a_precise(pool: &Pool<T::CurrencyId, T::AccountId>) -> Option<Balance> {
-		let now = T::TimeProvider::now().as_millis();
+	fn get_a_precise(pool: &Pool<T::CurrencyId, T::AccountId>) -> Option<Number> {
+		let now = T::TimeProvider::now().as_secs() as Number;
 
 		if now >= pool.future_a_time {
 			return Some(pool.future_a);
@@ -1098,11 +1097,7 @@ impl<T: Config> Pallet<T> {
 			if i == out_index {
 				continue;
 			}
-			let x: Balance = if i == in_index {
-				in_balance
-			} else {
-				*normalize_balance
-			};
+			let x: Balance = if i == in_index { in_balance } else { *normalize_balance };
 
 			sum = sum.checked_add(U256::from(x))?;
 
