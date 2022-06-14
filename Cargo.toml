@@ -6,5 +6,7 @@ members = [
 	"example/runtime",
 	"zenlink-protocol",
 	"zenlink-protocol/rpc",
-	"stable-amm"
+	"stable-amm",
+	"stable-amm/rpc",
+	"stable-amm/rpc/runtime-api",
 ]

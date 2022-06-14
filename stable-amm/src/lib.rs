@@ -32,7 +32,7 @@ type Number = Balance;
 const FEE_DENOMINATOR: Number = 10_000_000_000;
 const A_PRECISION: Number = 100;
 const MAX_ITERATION: u32 = 255; // the number of iterations to sum d and y
-pub const POOL_TOKEN_COMMON_DECIMALS: u8 = 18;
+const POOL_TOKEN_COMMON_DECIMALS: u8 = 18;
 
 const DAY: u32 = 86400;
 const MIN_RAMP_TIME: u32 = DAY;
