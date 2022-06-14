@@ -322,7 +322,7 @@ fn create_pool_should_work() {
 		assert_eq!(
 			StableAmm::pools(0),
 			Some(MockPool {
-				pooled_currency_ids: vec![
+				currency_ids: vec![
 					Token(TOKEN1_SYMBOL),
 					Token(TOKEN2_SYMBOL),
 					Token(TOKEN3_SYMBOL),
@@ -342,7 +342,7 @@ fn create_pool_should_work() {
 				future_a: INITIAL_A_VALUE * (A_PRECISION as Balance),
 				initial_a_time: 0,
 				future_a_time: 0,
-				pool_account: POOL0ACCOUNTID,
+				account: POOL0ACCOUNTID,
 				admin_fee_receiver: ALICE,
 			})
 		);
@@ -381,7 +381,7 @@ fn add_liquidity_with_incorrect_should_not_work() {
 		// case1: add_liquidity with invalid amounts length
 		assert_noop!(
 			StableAmm::add_liquidity(Origin::signed(BOB), 0, vec![1e16 as Balance], 0, u64::MAX,),
-			Error::<Test>::InvalidParameter
+			Error::<Test>::MismatchParameter
 		);
 
 		// case2: initial add liquidity require all currencies
@@ -565,7 +565,7 @@ fn remove_liquidity_with_incorrect_min_amounts_length_should_not_work() {
 		let (pool_id, _) = setup_test_pool();
 		assert_noop!(
 			StableAmm::remove_liquidity(Origin::signed(ALICE), pool_id, 2e18 as Balance, vec![0], u64::MAX,),
-			Error::<Test>::InvalidParameter
+			Error::<Test>::MismatchParameter
 		);
 	})
 }
@@ -761,7 +761,7 @@ fn remove_liquidity_imbalance_with_mismatch_amounts_should_not_work() {
 				Balance::MAX,
 				u64::MAX
 			),
-			Error::<Test>::InvalidParameter
+			Error::<Test>::MismatchParameter
 		);
 	})
 }
@@ -1961,7 +1961,7 @@ fn prepare_attack_context(new_a: Balance) -> AttackContext {
 	let pool = StableAmm::pools(pool_id).unwrap();
 
 	let mut attack_balances = Vec::new();
-	for currency_id in pool.pooled_currency_ids.iter() {
+	for currency_id in pool.currency_ids.iter() {
 		attack_balances.push(<Test as Config>::MultiCurrency::free_balance(*currency_id, &attacker));
 	}
 
@@ -1981,7 +1981,7 @@ fn prepare_attack_context(new_a: Balance) -> AttackContext {
 	AttackContext {
 		initial_attacker_balances: attack_balances,
 		initial_pool_balances: pool.balances.clone(),
-		pool_currencies: pool.pooled_currency_ids.clone(),
+		pool_currencies: pool.currency_ids.clone(),
 		attacker,
 		pool_id,
 	}
