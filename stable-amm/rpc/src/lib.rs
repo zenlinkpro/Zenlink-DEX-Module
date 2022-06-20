@@ -31,7 +31,7 @@ pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {
 	#[rpc(name = "stable_amm_get_currencies")]
 	fn get_currencies(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<Vec<CurrencyId>>;
 
-	#[rpc(name = "stable_amm_get_currencies")]
+	#[rpc(name = "stable_amm_get_currency")]
 	fn get_currency(&self, pool_id: PoolId, index: u32, at: Option<BlockHash>) -> Result<CurrencyId>;
 
 	#[rpc(name = "stable_amm_get_lp_currency")]
