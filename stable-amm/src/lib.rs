@@ -4,7 +4,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-mod traits;
+pub mod rpc;
+pub mod traits;
 
 #[cfg(test)]
 mod mock;
@@ -22,7 +23,7 @@ use orml_traits::MultiCurrency;
 use sp_arithmetic::traits::{checked_pow, AtLeast32BitUnsigned, CheckedAdd, One, Zero};
 use sp_core::U256;
 use sp_runtime::traits::{AccountIdConversion, StaticLookup};
-use sp_std::ops::Sub;
+use sp_std::{ops::Sub, vec, vec::Vec};
 
 pub use pallet::*;
 
@@ -39,7 +40,7 @@ const A_PRECISION: Number = 100;
 
 // the number of iterations to sum d and y
 const MAX_ITERATION: u32 = 255;
-const POOL_TOKEN_COMMON_DECIMALS: u8 = 18;
+const POOL_TOKEN_COMMON_DECIMALS: u32 = 18;
 
 const DAY: u32 = 86400;
 const MIN_RAMP_TIME: u32 = DAY;
@@ -283,7 +284,7 @@ pub mod pallet {
 		pub fn create_pool(
 			origin: OriginFor<T>,
 			currency_ids: Vec<T::CurrencyId>,
-			currency_decimals: Vec<u8>,
+			currency_decimals: Vec<u32>,
 			lp_currency_id: T::CurrencyId,
 			a: Number,
 			fee: Number,
@@ -1126,7 +1127,7 @@ impl<T: Config> Pallet<T> {
 		Some(amounts)
 	}
 
-	fn calculate_remove_liquidity_one_token(
+	pub fn calculate_remove_liquidity_one_token(
 		pool: &Pool<T::CurrencyId, T::AccountId>,
 		token_amount: Balance,
 		index: u32,
@@ -1221,7 +1222,7 @@ impl<T: Config> Pallet<T> {
 		Some((burn_amount, fees, d1))
 	}
 
-	fn get_a_precise(pool: &Pool<T::CurrencyId, T::AccountId>) -> Option<Number> {
+	pub fn get_a_precise(pool: &Pool<T::CurrencyId, T::AccountId>) -> Option<Number> {
 		let now = T::TimeProvider::now().as_secs() as Number;
 
 		if now >= pool.future_a_time {
@@ -1437,7 +1438,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// used for rpc
-	pub fn calculate_token_amount(
+	pub fn calculate_currency_amount(
 		pool_id: T::PoolId,
 		amounts: Vec<Balance>,
 		deposit: bool,
@@ -1508,7 +1509,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub fn get_admin_balancce(pool_id: T::PoolId, currency_index: usize) -> Option<Balance> {
+	pub fn get_admin_balance(pool_id: T::PoolId, currency_index: usize) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			let currencies_len = pool.currency_ids.len();
 			if currency_index >= currencies_len {

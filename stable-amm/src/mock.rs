@@ -197,10 +197,10 @@ pub const TOKEN2_SYMBOL: u8 = 2;
 pub const TOKEN3_SYMBOL: u8 = 3;
 pub const TOKEN4_SYMBOL: u8 = 4;
 
-pub const TOKEN1_DECIMAL: u8 = 18;
-pub const TOKEN2_DECIMAL: u8 = 18;
-pub const TOKEN3_DECIMAL: u8 = 12;
-pub const TOKEN4_DECIMAL: u8 = 18;
+pub const TOKEN1_DECIMAL: u32 = 18;
+pub const TOKEN2_DECIMAL: u32 = 18;
+pub const TOKEN3_DECIMAL: u32 = 12;
+pub const TOKEN4_DECIMAL: u32 = 18;
 
 pub const TOKEN1_UNIT: u128 = 1_000_000_000_000_000_000;
 pub const TOKEN2_UNIT: u128 = 1_000_000_000_000_000_000;

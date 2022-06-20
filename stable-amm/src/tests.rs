@@ -426,7 +426,7 @@ fn add_liquidity_with_expected_amount_lp_token_should_work() {
 			2e18 as Balance
 		);
 		let calculated_lp_token_amount =
-			StableAmm::calculate_token_amount(pool_id, vec![1e18 as Balance, 3e18 as Balance], true)
+			StableAmm::calculate_currency_amount(pool_id, vec![1e18 as Balance, 3e18 as Balance], true)
 				.unwrap_or_default();
 		assert_eq!(calculated_lp_token_amount, 3992673697878079065);
 
@@ -452,7 +452,7 @@ fn add_liquidity_lp_token_amount_has_small_slippage_should_work() {
 		let (pool_id, lp_currency_id) = setup_test_pool();
 
 		let calculated_lp_token_amount =
-			StableAmm::calculate_token_amount(pool_id, vec![1e18 as Balance, 3e18 as Balance], true)
+			StableAmm::calculate_currency_amount(pool_id, vec![1e18 as Balance, 3e18 as Balance], true)
 				.unwrap_or_default();
 
 		let calculated_lp_token_amount_with_negative_slippage = calculated_lp_token_amount * 999 / 1000;
@@ -502,7 +502,7 @@ fn add_liquidity_when_mint_amount_not_reach_due_to_front_running_should_not_work
 		let (pool_id, _) = setup_test_pool();
 
 		let calculated_lp_token_amount =
-			StableAmm::calculate_token_amount(pool_id, vec![1e18 as Balance, 3e18 as Balance], true)
+			StableAmm::calculate_currency_amount(pool_id, vec![1e18 as Balance, 3e18 as Balance], true)
 				.unwrap_or_default();
 		let calculated_lp_token_amount_with_slippage = calculated_lp_token_amount * 999 / 1000;
 		assert_ok!(StableAmm::add_liquidity(
@@ -797,7 +797,7 @@ fn remove_liquidity_imbalance_with_max_burn_lp_token_amount_range_should_work() 
 
 		// calculates amount of pool token to be burned
 		let max_pool_token_amount_to_be_burned =
-			StableAmm::calculate_token_amount(pool_id, vec![1e18 as Balance, 1e16 as Balance], false).unwrap();
+			StableAmm::calculate_currency_amount(pool_id, vec![1e18 as Balance, 1e16 as Balance], false).unwrap();
 		assert_eq!(1000688044155287276, max_pool_token_amount_to_be_burned);
 
 		let max_pool_token_amount_to_be_burned_negative_slippage = max_pool_token_amount_to_be_burned * 1001 / 1000;
@@ -868,7 +868,7 @@ fn remove_liquidity_imbalance_when_min_amounts_of_underlying_tokens_not_reached_
 		));
 
 		let max_pool_token_amount_to_be_burned =
-			StableAmm::calculate_token_amount(pool_id, vec![1e18 as Balance, 1e16 as Balance], false).unwrap();
+			StableAmm::calculate_currency_amount(pool_id, vec![1e18 as Balance, 1e16 as Balance], false).unwrap();
 
 		let max_pool_token_amount_to_be_burned_negative_slippage = max_pool_token_amount_to_be_burned * 1001 / 1000;
 
@@ -1474,7 +1474,7 @@ fn get_admin_balance_with_index_out_of_range_should_not_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_pool();
 
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 3), None);
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 3), None);
 	})
 }
 
@@ -1482,8 +1482,8 @@ fn get_admin_balance_with_index_out_of_range_should_not_work() {
 fn get_admin_balance_always_zero_when_admin_fee_equal_zero() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_pool();
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 0), Some(Zero::zero()));
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 1), Some(Zero::zero()));
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 0), Some(Zero::zero()));
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 1), Some(Zero::zero()));
 
 		assert_ok!(StableAmm::swap(
 			Origin::signed(BOB),
@@ -1495,8 +1495,8 @@ fn get_admin_balance_always_zero_when_admin_fee_equal_zero() {
 			u64::MAX
 		));
 
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 0), Some(Zero::zero()));
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 1), Some(Zero::zero()));
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 0), Some(Zero::zero()));
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 1), Some(Zero::zero()));
 	})
 }
 
@@ -1520,8 +1520,8 @@ fn get_admin_balance_with_expected_amount_after_swap_should_work() {
 			0,
 			u64::MAX
 		));
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 0), Some(Zero::zero()));
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 1), Some(998024139765));
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 0), Some(Zero::zero()));
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 1), Some(998024139765));
 
 		assert_ok!(StableAmm::swap(
 			Origin::signed(BOB),
@@ -1533,8 +1533,8 @@ fn get_admin_balance_with_expected_amount_after_swap_should_work() {
 			u64::MAX
 		));
 
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 0), Some(1001973776101));
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 1), Some(998024139765));
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 0), Some(1001973776101));
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 1), Some(998024139765));
 	})
 }
 
@@ -1612,8 +1612,8 @@ fn withdraw_admin_fee_with_expected_amount_of_fees_should_work() {
 			u64::MAX
 		));
 
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 0), Some(1001973776101));
-		assert_eq!(StableAmm::get_admin_balancce(pool_id, 1), Some(998024139765));
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 0), Some(1001973776101));
+		assert_eq!(StableAmm::get_admin_balance(pool_id, 1), Some(998024139765));
 
 		let first_token_balance_before =
 			<Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &pool.admin_fee_receiver);

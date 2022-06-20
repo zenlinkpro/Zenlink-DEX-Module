@@ -7544,22 +7544,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpc"
-version = "0.1.0"
-dependencies = [
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "parity-scale-codec",
- "serde",
- "sp-api",
- "sp-blockchain",
- "sp-rpc",
- "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.19)",
- "stable-amm-runtime-api",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10163,13 +10147,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "stable-amm-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-rpc",
+ "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.19)",
+ "stable-amm-runtime-api",
+]
+
+[[package]]
 name = "stable-amm-runtime-api"
 version = "0.1.0"
 dependencies = [
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.19)",
  "parity-scale-codec",
  "sp-api",
- "sp-runtime 6.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.19)",
+ "sp-std 4.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.19)",
  "stable-amm",
 ]
 

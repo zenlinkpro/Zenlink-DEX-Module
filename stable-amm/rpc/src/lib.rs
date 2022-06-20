@@ -159,15 +159,20 @@ where
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		api.get_currency(&at, pool_id, index)
-			.map_err(runtime_error_into_rpc_err)
+		api.get_currency(&at, pool_id, index).map_or_else(
+			|e| Err(runtime_error_into_rpc_err(e)),
+			|v| v.ok_or(runtime_error_into_rpc_err("not found")),
+		)
 	}
 
 	fn get_lp_currency(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<CurrencyId> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		api.get_lp_currency(&at, pool_id).map_err(runtime_error_into_rpc_err)
+		api.get_lp_currency(&at, pool_id).map_or_else(
+			|e| Err(runtime_error_into_rpc_err(e)),
+			|v| v.ok_or(runtime_error_into_rpc_err("not found")),
+		)
 	}
 
 	fn get_currency_index(

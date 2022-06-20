@@ -5,7 +5,7 @@
 #![allow(clippy::too_many_arguments)]
 // The `unnecessary_mut_passed` warning originates from `decl_runtime_apis` macro.
 #![allow(clippy::unnecessary_mut_passed)]
-
+use sp_std::vec::Vec;
 use codec::Codec;
 
 sp_api::decl_runtime_apis! {
@@ -23,9 +23,9 @@ sp_api::decl_runtime_apis! {
 
 		fn get_currencies(pool_id: PoolId)->Vec<CurrencyId>;
 
-		fn get_currency(pool_id: PoolId, index: u32)->CurrencyId;
+		fn get_currency(pool_id: PoolId, index: u32)->Option<CurrencyId>;
 
-		fn get_lp_currency(pool_id: PoolId)->CurrencyId;
+		fn get_lp_currency(pool_id: PoolId)->Option<CurrencyId>;
 
 		fn get_currency_precision_multipliers(pool_id: PoolId)->Vec<Balance>;
 
