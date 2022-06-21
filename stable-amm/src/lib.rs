@@ -1236,22 +1236,32 @@ impl<T: Config> Pallet<T> {
 		if now >= pool.future_a_time {
 			return Some(pool.future_a);
 		}
-		// to U256 ?
+
+		let future_a = U256::from(pool.future_a);
+		let initial_a = U256::from(pool.initial_a);
+		let now = U256::from(now);
+		let future_a_time = U256::from(pool.future_a_time);
+		let initial_a_time = U256::from(pool.initial_a_time);
+		
 		if pool.future_a > pool.initial_a {
-			return pool.initial_a.checked_add(
-				pool.future_a
-					.checked_sub(pool.initial_a)?
-					.checked_mul(now.checked_sub(pool.initial_a_time)?)?
-					.checked_div(pool.future_a_time.checked_sub(pool.initial_a_time)?)?,
-			);
+			return initial_a
+				.checked_add(
+					future_a
+						.checked_sub(initial_a)?
+						.checked_mul(now.checked_sub(initial_a_time)?)?
+						.checked_div(future_a_time.checked_sub(initial_a_time)?)?,
+				)
+				.and_then(|n| TryInto::<Balance>::try_into(n).ok());
 		}
 
-		pool.initial_a.checked_sub(
-			pool.initial_a
-				.checked_sub(pool.future_a)?
-				.checked_mul(now.checked_sub(pool.initial_a_time)?)?
-				.checked_div(pool.future_a_time.checked_sub(pool.initial_a_time)?)?,
-		)
+		initial_a
+			.checked_sub(
+				initial_a
+					.checked_sub(future_a)?
+					.checked_mul(now.checked_sub(initial_a_time)?)?
+					.checked_div(future_a_time.checked_sub(initial_a_time)?)?,
+			)
+			.and_then(|n| TryInto::<Balance>::try_into(n).ok())
 	}
 
 	fn xp(balances: &[Balance], rates: &[Balance]) -> Option<Vec<Balance>> {
