@@ -2647,10 +2647,13 @@ fn check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 
 		assert_eq!(user2_pool_lp_balance_after, 200293563918551832434667);
 		assert_eq!(
-			user2_token0_balance_after- user2_token0_balance_before,
+			user2_token0_balance_after - user2_token0_balance_before,
 			100000000000000000000000000
 		);
-		assert_eq!(user2_token1_balance_after - user2_token1_balance_before, 300000000000000000000000000);
+		assert_eq!(
+			user2_token1_balance_after - user2_token1_balance_before,
+			300000000000000000000000000
+		);
 	})
 }
 
@@ -2711,9 +2714,7 @@ fn check_arithmetic_in_swap_should_successfully() {
 		let user1_token0_balance_after = <Test as Config>::MultiCurrency::free_balance(pool.currency_ids[0], &BOB);
 		let user1_token1_balance_after = <Test as Config>::MultiCurrency::free_balance(pool.currency_ids[1], &BOB);
 
-		assert_eq!(
-			user1_pool_lp_balance_before, user1_pool_lp_balance_after
-		);
+		assert_eq!(user1_pool_lp_balance_before, user1_pool_lp_balance_after);
 		assert_eq!(
 			user1_token0_balance_before - user1_token0_balance_after,
 			100000000000000000000000000
@@ -2733,16 +2734,29 @@ fn check_arithmetic_in_swap_should_successfully() {
 			u64::MAX
 		));
 
-
 		let user2_pool_lp_balance_after = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &CHARLIE);
 		let user2_token0_balance_after = <Test as Config>::MultiCurrency::free_balance(pool.currency_ids[0], &CHARLIE);
 		let user2_token1_balance_after = <Test as Config>::MultiCurrency::free_balance(pool.currency_ids[1], &CHARLIE);
 
 		assert_eq!(user2_pool_lp_balance_after, user2_pool_lp_balance_before);
 		assert_eq!(
-			user2_token0_balance_after- user2_token0_balance_before,
+			user2_token0_balance_after - user2_token0_balance_before,
 			100416682007269587274140452
 		);
-		assert_eq!(user2_token1_balance_before - user2_token1_balance_after, 100000000000000000000000000);
+		assert_eq!(
+			user2_token1_balance_before - user2_token1_balance_after,
+			100000000000000000000000000
+		);
+
+		let pool = StableAmm::pools(pool_id).unwrap();
+
+		// check pool balances
+		assert_eq!(pool.balances[0], 399683318992730412725859548);
+		assert_eq!(pool.balances[1], 400817323058344171409290535);
+
+		let pool_token0_balance = <Test as Config>::MultiCurrency::free_balance(pool.currency_ids[0], &POOL0ACCOUNTID);
+		let pool_token1_balance = <Test as Config>::MultiCurrency::free_balance(pool.currency_ids[1], &POOL0ACCOUNTID);
+		assert_eq!(pool.balances[0], pool_token0_balance);
+		assert_eq!(pool.balances[1], pool_token1_balance);
 	})
 }
