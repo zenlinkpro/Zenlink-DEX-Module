@@ -880,9 +880,10 @@ impl<T: Config> Pallet<T> {
 				.and_then(|n| n.checked_sub(One::one()))
 				.ok_or(Error::<T>::Arithmetic)?;
 
-			let dy_fee = dy
-				.checked_mul(pool.fee)
-				.and_then(|n| n.checked_div(FEE_DENOMINATOR))
+			let dy_fee = U256::from(dy)
+				.checked_mul(U256::from(pool.fee))
+				.and_then(|n| n.checked_div(U256::from(FEE_DENOMINATOR)))
+				.and_then(|n| TryInto::<Balance>::try_into(n).ok())
 				.ok_or(Error::<T>::Arithmetic)?;
 
 			dy = dy
@@ -892,10 +893,11 @@ impl<T: Config> Pallet<T> {
 
 			ensure!(dy >= out_min_amount, Error::<T>::AmountSlippage);
 
-			let admin_fee = dy_fee
-				.checked_mul(pool.admin_fee)
-				.and_then(|n| n.checked_div(FEE_DENOMINATOR))
-				.and_then(|n| n.checked_div(pool.token_multipliers[j]))
+			let admin_fee = U256::from(dy_fee)
+				.checked_mul(U256::from(pool.admin_fee))
+				.and_then(|n| n.checked_div(U256::from(FEE_DENOMINATOR)))
+				.and_then(|n| n.checked_div(U256::from(pool.token_multipliers[j])))
+				.and_then(|n| TryInto::<Balance>::try_into(n).ok())
 				.ok_or(Error::<T>::Arithmetic)?;
 
 			//update pool balance
@@ -1125,7 +1127,10 @@ impl<T: Config> Pallet<T> {
 			.checked_sub(One::one())?
 			.checked_div(pool.token_multipliers[j])?;
 
-		let fee = out_amount.checked_mul(pool.fee)?.checked_div(fee_denominator)?;
+		let fee = U256::from(out_amount)
+			.checked_mul(U256::from(pool.fee))?
+			.checked_div(U256::from(fee_denominator))
+			.and_then(|n| TryInto::<Balance>::try_into(n).ok())?;
 
 		out_amount = out_amount.checked_sub(fee)?;
 
@@ -1528,9 +1533,10 @@ impl<T: Config> Pallet<T> {
 				d0.checked_sub(d1).ok_or(Error::<T>::Arithmetic)?
 			};
 
-			let amount = diff
-				.checked_mul(total_supply)
-				.and_then(|n| n.checked_div(d0))
+			let amount = U256::from(diff)
+				.checked_mul(U256::from(total_supply))
+				.and_then(|n| n.checked_div(U256::from(d0)))
+				.and_then(|n| TryInto::<Balance>::try_into(n).ok())
 				.ok_or(Error::<T>::Arithmetic)?;
 
 			Ok(amount)
