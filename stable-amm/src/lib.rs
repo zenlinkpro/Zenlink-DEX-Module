@@ -4,6 +4,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 #![allow(clippy::too_many_arguments)]
+#![allow(clippy::type_complexity)]
 
 pub mod rpc;
 pub mod traits;
@@ -53,7 +54,7 @@ const MAX_ADMIN_FEE: Number = 10_000_000_000;
 const MAX_SWAP_FEE: Number = 100_000_000;
 
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug, TypeInfo)]
-pub struct Pool<CurrencyId, AccountId> {
+pub struct Pool<CurrencyId, AccountId, BoundString> {
 	pub currency_ids: Vec<CurrencyId>,
 	pub lp_currency_id: CurrencyId,
 	// token i multiplier to reach POOL_TOKEN_COMMON_DECIMALS
@@ -72,7 +73,7 @@ pub struct Pool<CurrencyId, AccountId> {
 	// the pool's account
 	pub account: AccountId,
 	pub admin_fee_receiver: AccountId,
-	pub lp_currency_symbol: String,
+	pub lp_currency_symbol: BoundString,
 	pub lp_currency_decimal: u8,
 }
 
@@ -101,6 +102,9 @@ pub mod pallet {
 		/// The trait get timestamp of chain.
 		type TimeProvider: UnixTime;
 
+		#[pallet::constant]
+		type PoolCurrencySymbolLimit: Get<u32>;
+
 		/// This pallet ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -119,7 +123,12 @@ pub mod pallet {
 	/// Info of a pool.
 	#[pallet::storage]
 	#[pallet::getter(fn pools)]
-	pub type Pools<T: Config> = StorageMap<_, Blake2_128Concat, T::PoolId, Pool<T::CurrencyId, T::AccountId>>;
+	pub type Pools<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::PoolId,
+		Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
+	>;
 
 	/// The pool id corresponding to lp currency
 	#[pallet::storage]
@@ -264,6 +273,8 @@ pub mod pallet {
 		LpCurrencyAlreadyUsed,
 		/// Require all currencies of this pool when first supply.
 		RequireAllCurrencies,
+		/// The symbol of created pool maybe exceed length limit.
+		BadPoolCurrencySymbol,
 	}
 
 	#[pallet::call]
@@ -294,7 +305,7 @@ pub mod pallet {
 			fee: Number,
 			admin_fee: Number,
 			admin_fee_receiver: T::AccountId,
-			lp_currency_symbol: String,
+			lp_currency_symbol: Vec<u8>,
 			lp_currency_decimal: u8,
 		) -> DispatchResult {
 			ensure_root(origin)?;
@@ -345,6 +356,10 @@ pub mod pallet {
 					frame_system::Pallet::<T>::inc_providers(&account);
 					let a_with_precision = a.checked_mul(A_PRECISION).ok_or(Error::<T>::Arithmetic)?;
 
+					let symbol: BoundedVec<u8, T::PoolCurrencySymbolLimit> = lp_currency_symbol
+						.try_into()
+						.map_err(|_| Error::<T>::BadPoolCurrencySymbol)?;
+
 					*pool_info = Some(Pool {
 						currency_ids: currency_ids.clone(),
 						lp_currency_id,
@@ -358,7 +373,7 @@ pub mod pallet {
 						future_a_time: Zero::zero(),
 						account: account.clone(),
 						admin_fee_receiver: admin_fee_receiver.clone(),
-						lp_currency_symbol,
+						lp_currency_symbol: symbol,
 						lp_currency_decimal,
 					});
 
@@ -1032,7 +1047,9 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	fn calculate_fee_per_token(pool: &Pool<T::CurrencyId, T::AccountId>) -> Option<Balance> {
+	fn calculate_fee_per_token(
+		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
+	) -> Option<Balance> {
 		let n_pooled_currency = Balance::from(pool.currency_ids.len() as u64);
 
 		pool.fee
@@ -1041,7 +1058,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn calculate_mint_amount(
-		pool: &mut Pool<T::CurrencyId, T::AccountId>,
+		pool: &mut Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		new_balances: &mut [Balance],
 		d0: Balance,
 		d1: &mut Balance,
@@ -1087,7 +1104,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn calculate_swap_amount(
-		pool: &Pool<T::CurrencyId, T::AccountId>,
+		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		i: usize,
 		j: usize,
 		in_balance: Balance,
@@ -1116,7 +1133,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn calculate_removed_liquidity(
-		pool: &Pool<T::CurrencyId, T::AccountId>,
+		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		amount: Balance,
 	) -> Option<Vec<Balance>> {
 		let lp_total_supply = T::MultiCurrency::total_issuance(pool.lp_currency_id);
@@ -1136,7 +1153,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn calculate_remove_liquidity_one_token(
-		pool: &Pool<T::CurrencyId, T::AccountId>,
+		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		token_amount: Balance,
 		index: u32,
 	) -> Option<(Balance, Balance)> {
@@ -1197,7 +1214,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn calculate_remove_liquidity_imbalance(
-		pool: &mut Pool<T::CurrencyId, T::AccountId>,
+		pool: &mut Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		amounts: &[Balance],
 		total_supply: Balance,
 	) -> Option<(Balance, Vec<Balance>, Balance)> {
@@ -1245,7 +1262,9 @@ impl<T: Config> Pallet<T> {
 		Some((burn_amount, fees, d1))
 	}
 
-	pub fn get_a_precise(pool: &Pool<T::CurrencyId, T::AccountId>) -> Option<Number> {
+	pub fn get_a_precise(
+		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
+	) -> Option<Number> {
 		let now = T::TimeProvider::now().as_secs() as Number;
 
 		if now >= pool.future_a_time {
@@ -1335,7 +1354,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn get_y(
-		pool: &Pool<T::CurrencyId, T::AccountId>,
+		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		in_index: usize,
 		out_index: usize,
 		in_balance: Balance,
@@ -1386,7 +1405,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn get_yd(
-		pool: &Pool<T::CurrencyId, T::AccountId>,
+		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		a: Balance,
 		index: u32,
 		xp: &[Balance],

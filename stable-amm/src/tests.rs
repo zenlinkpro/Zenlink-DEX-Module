@@ -10,7 +10,7 @@ use super::{
 
 const POOL0ACCOUNTID: AccountId = 33865947477506447919519395693;
 
-type MockPool = Pool<CurrencyId, AccountId>;
+type MockPool = Pool<CurrencyId, AccountId, BoundedVec<u8, PoolCurrencySymbolLimit>>;
 
 const INITIAL_A_VALUE: Balance = 50;
 const SWAP_FEE: Balance = 1e7 as Balance;
@@ -63,7 +63,7 @@ fn setup_test_pool() -> (PoolId, CurrencyId) {
 		SWAP_FEE,
 		ADMIN_FEE,
 		ALICE,
-		"stable_pool_lp".to_string(),
+		Vec::from("stable_pool_lp"),
 		18,
 	));
 
@@ -104,7 +104,7 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				0,
 				0,
 				ALICE,
-				"stable_pool_lp".to_string(),
+				Vec::from("stable_pool_lp"),
 				18,
 			),
 			BadOrigin
@@ -123,7 +123,7 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				0,
 				0,
 				ALICE,
-				"stable_pool_lp".to_string(),
+				Vec::from("stable_pool_lp"),
 				18,
 			),
 			Error::<Test>::MismatchParameter
@@ -147,7 +147,7 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				0,
 				0,
 				ALICE,
-				"stable_pool_lp".to_string(),
+				Vec::from("stable_pool_lp"),
 				18,
 			),
 			Error::<Test>::InvalidPooledCurrency
@@ -166,7 +166,7 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				0,
 				0,
 				ALICE,
-				"stable_pool_lp".to_string(),
+				Vec::from("stable_pool_lp"),
 				18,
 			),
 			Error::<Test>::InvalidLpCurrency
@@ -185,7 +185,7 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				0,
 				0,
 				ALICE,
-				"stable_pool_lp".to_string(),
+				Vec::from("stable_pool_lp"),
 				18,
 			),
 			Error::<Test>::InvalidCurrencyDecimal
@@ -215,7 +215,7 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 				(MAX_SWAP_FEE + 1).into(),
 				0,
 				ALICE,
-				"stable_pool_lp".to_string(),
+				Vec::from("stable_pool_lp"),
 				18,
 			),
 			Error::<Test>::ExceedMaxFee
@@ -239,7 +239,7 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 				(MAX_SWAP_FEE).into(),
 				(MAX_ADMIN_FEE + 1).into(),
 				ALICE,
-				"stable_pool_lp".to_string(),
+				Vec::from("stable_pool_lp"),
 				18,
 			),
 			Error::<Test>::ExceedMaxAdminFee
@@ -263,7 +263,7 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 				(MAX_SWAP_FEE - 1).into(),
 				(MAX_ADMIN_FEE - 1).into(),
 				ALICE,
-				"stable_pool_lp".to_string(),
+				Vec::from("stable_pool_lp"),
 				18,
 			),
 			Error::<Test>::ExceedMaxA
@@ -288,7 +288,7 @@ fn create_pool_with_already_used_lp_currency_should_not_work() {
 			(MAX_SWAP_FEE - 1).into(),
 			(MAX_ADMIN_FEE - 1).into(),
 			ALICE,
-			"stable_pool_lp".to_string(),
+			Vec::from("stable_pool_lp"),
 			18,
 		));
 
@@ -305,7 +305,7 @@ fn create_pool_with_already_used_lp_currency_should_not_work() {
 				(MAX_SWAP_FEE - 1).into(),
 				(MAX_ADMIN_FEE - 1).into(),
 				ALICE,
-				"stable_pool_lp".to_string(),
+				Vec::from("stable_pool_lp"),
 				18,
 			),
 			Error::<Test>::LpCurrencyAlreadyUsed
@@ -337,7 +337,7 @@ fn create_pool_should_work() {
 			SWAP_FEE,
 			ADMIN_FEE,
 			ALICE,
-			"stable_pool_lp".to_string(),
+			Vec::from("stable_pool_lp"),
 			18,
 		));
 
@@ -368,8 +368,8 @@ fn create_pool_should_work() {
 				future_a_time: 0,
 				account: POOL0ACCOUNTID,
 				admin_fee_receiver: ALICE,
-
-				lp_currency_symbol: "stable_pool_lp".to_string().to_string(),
+				lp_currency_symbol: BoundedVec::<u8, PoolCurrencySymbolLimit>::try_from(Vec::from("stable_pool_lp"))
+					.unwrap(),
 				lp_currency_decimal: 18,
 			})
 		);
@@ -391,7 +391,7 @@ fn add_liquidity_with_incorrect_should_not_work() {
 			SWAP_FEE,
 			ADMIN_FEE,
 			ALICE,
-			"stable_pool_lp".to_string(),
+			Vec::from("stable_pool_lp"),
 			18,
 		));
 
@@ -568,7 +568,7 @@ fn add_liquidity_with_expired_deadline_should_not_work() {
 			SWAP_FEE,
 			ADMIN_FEE,
 			ALICE,
-			"stable_pool_lp".to_string(),
+			Vec::from("stable_pool_lp"),
 			18,
 		));
 

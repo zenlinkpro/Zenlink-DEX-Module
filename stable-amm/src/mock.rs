@@ -28,6 +28,7 @@ parameter_types! {
 	pub const MaxReserves: u32 = 50;
 	pub const MaxLocks:u32 = 50;
 	pub const MinimumPeriod: Moment = SLOT_DURATION / 2;
+	pub const PoolCurrencySymbolLimit: u32 = 50;
 }
 
 parameter_type_with_key! {
@@ -141,6 +142,7 @@ impl Config for Test {
 	type PoolId = PoolId;
 	type EnsurePoolAsset = EnsurePoolAssetImpl<Tokens>;
 	type TimeProvider = Timestamp;
+	type PoolCurrencySymbolLimit = PoolCurrencySymbolLimit;
 	type PalletId = StableAmmPalletId;
 }
 
@@ -187,7 +189,6 @@ frame_support::construct_runtime!(
 );
 
 pub type StableAmm = Pallet<Test>;
-
 pub const ALICE: u128 = 1;
 pub const BOB: u128 = 2;
 pub const CHARLIE: u128 = 3;
