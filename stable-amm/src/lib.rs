@@ -3,6 +3,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
+#![allow(clippy::too_many_arguments)]
 
 pub mod rpc;
 pub mod traits;
@@ -280,9 +281,10 @@ pub mod pallet {
 		/// - `fee`: The swap fee of created pool.
 		/// - `admin_fee`: The admin fee of created pool.
 		/// - `admin_fee_receiver`: The admin fee receiver of created pool.
+		/// - `lp_currency_symbol`: The symbol of created pool lp currency.
+		/// - `lp_currency_decimal`: The decimal of created pool lp currency.
 		#[pallet::weight(1_000_000)]
 		#[transactional]
-		#[allow(clippy::too_many_arguments)]
 		pub fn create_pool(
 			origin: OriginFor<T>,
 			currency_ids: Vec<T::CurrencyId>,
