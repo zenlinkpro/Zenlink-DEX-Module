@@ -62,7 +62,9 @@ fn setup_test_pool() -> (PoolId, CurrencyId) {
 		INITIAL_A_VALUE,
 		SWAP_FEE,
 		ADMIN_FEE,
-		ALICE
+		ALICE,
+		"stable_pool_lp".to_string(),
+		18,
 	));
 
 	assert_ok!(StableAmm::add_liquidity(
@@ -101,7 +103,9 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				0,
 				0,
 				0,
-				ALICE
+				ALICE,
+				"stable_pool_lp".to_string(),
+				18,
 			),
 			BadOrigin
 		);
@@ -118,7 +122,9 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				0,
 				0,
 				0,
-				ALICE
+				ALICE,
+				"stable_pool_lp".to_string(),
+				18,
 			),
 			Error::<Test>::MismatchParameter
 		);
@@ -140,7 +146,9 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				0,
 				0,
 				0,
-				ALICE
+				ALICE,
+				"stable_pool_lp".to_string(),
+				18,
 			),
 			Error::<Test>::InvalidPooledCurrency
 		);
@@ -157,7 +165,9 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				0,
 				0,
 				0,
-				ALICE
+				ALICE,
+				"stable_pool_lp".to_string(),
+				18,
 			),
 			Error::<Test>::InvalidLpCurrency
 		);
@@ -174,7 +184,9 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				0,
 				0,
 				0,
-				ALICE
+				ALICE,
+				"stable_pool_lp".to_string(),
+				18,
 			),
 			Error::<Test>::InvalidCurrencyDecimal
 		);
@@ -202,7 +214,9 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 				0,
 				(MAX_SWAP_FEE + 1).into(),
 				0,
-				ALICE
+				ALICE,
+				"stable_pool_lp".to_string(),
+				18,
 			),
 			Error::<Test>::ExceedMaxFee
 		);
@@ -224,7 +238,9 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 				0,
 				(MAX_SWAP_FEE).into(),
 				(MAX_ADMIN_FEE + 1).into(),
-				ALICE
+				ALICE,
+				"stable_pool_lp".to_string(),
+				18,
 			),
 			Error::<Test>::ExceedMaxAdminFee
 		);
@@ -246,7 +262,9 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 				MAX_A.into(),
 				(MAX_SWAP_FEE - 1).into(),
 				(MAX_ADMIN_FEE - 1).into(),
-				ALICE
+				ALICE,
+				"stable_pool_lp".to_string(),
+				18,
 			),
 			Error::<Test>::ExceedMaxA
 		);
@@ -269,7 +287,9 @@ fn create_pool_with_already_used_lp_currency_should_not_work() {
 			(MAX_A - 1).into(),
 			(MAX_SWAP_FEE - 1).into(),
 			(MAX_ADMIN_FEE - 1).into(),
-			ALICE
+			ALICE,
+			"stable_pool_lp".to_string(),
+			18,
 		));
 
 		assert_eq!(StableAmm::next_pool_id(), 1);
@@ -284,7 +304,9 @@ fn create_pool_with_already_used_lp_currency_should_not_work() {
 				(MAX_A - 1).into(),
 				(MAX_SWAP_FEE - 1).into(),
 				(MAX_ADMIN_FEE - 1).into(),
-				ALICE
+				ALICE,
+				"stable_pool_lp".to_string(),
+				18,
 			),
 			Error::<Test>::LpCurrencyAlreadyUsed
 		);
@@ -314,7 +336,9 @@ fn create_pool_should_work() {
 			INITIAL_A_VALUE,
 			SWAP_FEE,
 			ADMIN_FEE,
-			ALICE
+			ALICE,
+			"stable_pool_lp".to_string(),
+			18,
 		));
 
 		assert_eq!(StableAmm::next_pool_id(), 1);
@@ -344,6 +368,9 @@ fn create_pool_should_work() {
 				future_a_time: 0,
 				account: POOL0ACCOUNTID,
 				admin_fee_receiver: ALICE,
+
+				lp_currency_symbol: "stable_pool_lp".to_string().to_string(),
+				lp_currency_decimal: 18,
 			})
 		);
 
@@ -363,7 +390,9 @@ fn add_liquidity_with_incorrect_should_not_work() {
 			INITIAL_A_VALUE,
 			SWAP_FEE,
 			ADMIN_FEE,
-			ALICE
+			ALICE,
+			"stable_pool_lp".to_string(),
+			18,
 		));
 
 		// case0: add_liquidity with incorrect pool id
@@ -538,7 +567,9 @@ fn add_liquidity_with_expired_deadline_should_not_work() {
 			INITIAL_A_VALUE,
 			SWAP_FEE,
 			ADMIN_FEE,
-			ALICE
+			ALICE,
+			"stable_pool_lp".to_string(),
+			18,
 		));
 
 		System::set_block_number(100);

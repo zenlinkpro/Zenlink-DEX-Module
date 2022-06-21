@@ -71,6 +71,8 @@ pub struct Pool<CurrencyId, AccountId> {
 	// the pool's account
 	pub account: AccountId,
 	pub admin_fee_receiver: AccountId,
+	pub lp_currency_symbol: String,
+	pub lp_currency_decimal: u8,
 }
 
 #[frame_support::pallet]
@@ -290,6 +292,8 @@ pub mod pallet {
 			fee: Number,
 			admin_fee: Number,
 			admin_fee_receiver: T::AccountId,
+			lp_currency_symbol: String,
+			lp_currency_decimal: u8,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -352,6 +356,8 @@ pub mod pallet {
 						future_a_time: Zero::zero(),
 						account: account.clone(),
 						admin_fee_receiver: admin_fee_receiver.clone(),
+						lp_currency_symbol,
+						lp_currency_decimal,
 					});
 
 					Ok(())
@@ -1228,7 +1234,7 @@ impl<T: Config> Pallet<T> {
 		if now >= pool.future_a_time {
 			return Some(pool.future_a);
 		}
-
+		// to U256 ?
 		if pool.future_a > pool.initial_a {
 			return pool.initial_a.checked_add(
 				pool.future_a
