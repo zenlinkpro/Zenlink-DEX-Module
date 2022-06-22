@@ -1168,7 +1168,7 @@ impl<T: Config> Pallet<T> {
 		let total_supply = T::MultiCurrency::total_issuance(pool.lp_currency_id);
 
 		let amp = Self::get_a_precise(pool)?;
-		let xp = Self::xp(&pool.balances, &pool.token_multipliers)?;
+		let mut xp = Self::xp(&pool.balances, &pool.token_multipliers)?;
 		let d0 = Self::get_d(&pool.balances, amp)?;
 
 		let d1 = U256::from(d0)
@@ -1181,11 +1181,10 @@ impl<T: Config> Pallet<T> {
 
 		let new_y = Self::get_yd(pool, amp, index, &xp, d1)?;
 
-		let mut reduce_xp = xp.clone();
 		let fee_pre_token = U256::from(Self::calculate_fee_per_token(pool)?);
 		let fee_denominator = U256::from(FEE_DENOMINATOR);
 
-		for (i, x) in xp.iter().enumerate() {
+		for (i, x) in xp.clone().iter().enumerate() {
 			let expected_dx = if i as u32 == index {
 				U256::from(*x)
 					.checked_mul(U256::from(d1))?
@@ -1198,14 +1197,15 @@ impl<T: Config> Pallet<T> {
 						.checked_div(U256::from(d0))?,
 				)?
 			};
-			reduce_xp[i] = reduce_xp[i].checked_sub(
+			xp[i] = xp[i].checked_sub(
 				fee_pre_token
 					.checked_mul(expected_dx)?
 					.checked_div(fee_denominator)
 					.and_then(|n| TryInto::<Balance>::try_into(n).ok())?,
 			)?;
 		}
-		let mut dy = reduce_xp[index as usize].checked_sub(Self::get_yd(pool, amp, index, &reduce_xp, d1)?)?;
+
+		let mut dy = xp[index as usize].checked_sub(Self::get_yd(pool, amp, index, &xp, d1)?)?;
 		dy = dy
 			.checked_sub(One::one())?
 			.checked_div(pool.token_multipliers[index as usize])?;

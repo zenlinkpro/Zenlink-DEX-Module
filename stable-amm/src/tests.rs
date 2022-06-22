@@ -2760,3 +2760,313 @@ fn check_arithmetic_in_swap_should_successfully() {
 		assert_eq!(pool.balances[1], pool_token1_balance);
 	})
 }
+
+#[test]
+fn check_arithmetic_in_add_liquidity_with_admin_fee_should_successfully() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		let pool = StableAmm::pools(pool_id).unwrap();
+		mint_more_currencies(
+			vec![BOB, CHARLIE],
+			pool.currency_ids.clone(),
+			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
+		);
+
+		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, SWAP_FEE, MAX_ADMIN_FEE,));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			0,
+			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(CHARLIE),
+			0,
+			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			0,
+			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
+			0,
+			u64::MAX,
+		));
+
+		let admin_balances = StableAmm::get_admin_balances(pool_id);
+		assert_eq!(admin_balances[0], 116218703966498771606127);
+		assert_eq!(admin_balances[1], 117921007525488838747514);
+	})
+}
+
+#[test]
+fn check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		let pool = StableAmm::pools(pool_id).unwrap();
+		mint_more_currencies(
+			vec![BOB, CHARLIE],
+			pool.currency_ids.clone(),
+			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
+		);
+
+		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, SWAP_FEE, MAX_ADMIN_FEE,));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			0,
+			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(CHARLIE),
+			0,
+			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			0,
+			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
+			0,
+			u64::MAX,
+		));
+
+		let user1_pool_lp_balance_before = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &BOB);
+
+		assert_ok!(StableAmm::remove_liquidity(
+			Origin::signed(BOB),
+			pool_id,
+			user1_pool_lp_balance_before,
+			vec![0, 0],
+			u64::MAX
+		));
+		// user2 remove liquidity
+		let user2_pool_lp_balance_before = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &CHARLIE);
+
+		assert_ok!(StableAmm::remove_liquidity(
+			Origin::signed(CHARLIE),
+			pool_id,
+			user2_pool_lp_balance_before,
+			vec![0, 0],
+			u64::MAX
+		));
+
+		let admin_balances = StableAmm::get_admin_balances(pool_id);
+		assert_eq!(admin_balances[0], 116218703966498771606127);
+		assert_eq!(admin_balances[1], 117921007525488838747514);
+	})
+}
+
+#[test]
+fn check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_successfully() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		let pool = StableAmm::pools(pool_id).unwrap();
+		mint_more_currencies(
+			vec![BOB, CHARLIE],
+			pool.currency_ids.clone(),
+			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
+		);
+
+		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, SWAP_FEE, MAX_ADMIN_FEE,));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			0,
+			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(CHARLIE),
+			0,
+			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			0,
+			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
+			0,
+			u64::MAX,
+		));
+
+		let user1_pool_lp_balance_before = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &BOB);
+		let user2_pool_lp_balance_before = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &CHARLIE);
+
+		let balances = StableAMM::pools(pool_id).unwrap().balances;
+		println!("{:#?}", balances);
+
+		assert_ok!(StableAmm::remove_liquidity_one_currency(
+			Origin::signed(BOB),
+			pool_id,
+			user1_pool_lp_balance_before,
+			0,
+			0,
+			u64::MAX
+		));
+
+		assert_ok!(StableAmm::remove_liquidity_one_currency(
+			Origin::signed(CHARLIE),
+			pool_id,
+			user2_pool_lp_balance_before,
+			0,
+			0,
+			u64::MAX
+		));
+
+		let admin_balances = StableAmm::get_admin_balances(pool_id);
+		assert_eq!(admin_balances[0], 162191894424543883363758);
+		assert_eq!(admin_balances[1], 117921007525488838747514);
+
+		let balances = StableAMM::pools(pool_id).unwrap().balances;
+		assert_eq!(balances[0], 43828306204680);
+		assert_eq!(balances[1], 400082079992474511161252486);
+	})
+}
+
+#[test]
+fn check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_successfully() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		let pool = StableAmm::pools(pool_id).unwrap();
+		mint_more_currencies(
+			vec![BOB, CHARLIE],
+			pool.currency_ids.clone(),
+			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
+		);
+
+		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, SWAP_FEE, MAX_ADMIN_FEE,));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			0,
+			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(CHARLIE),
+			0,
+			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			0,
+			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
+			0,
+			u64::MAX,
+		));
+
+		let user1_pool_lp_balance_before = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &BOB);
+		let user2_pool_lp_balance_before = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &CHARLIE);
+
+		assert_ok!(StableAmm::remove_liquidity_imbalance(
+			Origin::signed(BOB),
+			pool_id,
+			vec![200000000000000000000000000, 100000000000000000000000000],
+			user1_pool_lp_balance_before,
+			u64::MAX
+		));
+
+		assert_ok!(StableAmm::remove_liquidity_imbalance(
+			Origin::signed(CHARLIE),
+			pool_id,
+			vec![100000000000000000000000000, 200000000000000000000000000],
+			user2_pool_lp_balance_before,
+			u64::MAX
+		));
+
+		let admin_balances = StableAmm::get_admin_balances(pool_id);
+		assert_eq!(admin_balances[0], 151146217664745609762144);
+		assert_eq!(admin_balances[1], 152991616465138594784072);
+
+		let balances = StableAMM::pools(pool_id).unwrap().balances;
+		assert_eq!(balances[0], 99948854782335254390237856);
+		assert_eq!(balances[1], 100047009383534861405215928);
+	})
+}
+
+#[test]
+fn check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() {
+	new_test_ext().execute_with(|| {
+		let (pool_id, _) = setup_test_pool();
+		let pool = StableAmm::pools(pool_id).unwrap();
+		mint_more_currencies(
+			vec![BOB, CHARLIE],
+			pool.currency_ids.clone(),
+			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
+		);
+
+		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, SWAP_FEE, MAX_ADMIN_FEE,));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			0,
+			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(CHARLIE),
+			0,
+			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(BOB),
+			0,
+			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
+			0,
+			u64::MAX,
+		));
+
+		assert_ok!(StableAmm::swap(
+			Origin::signed(BOB),
+			pool_id,
+			0,
+			1,
+			100000000000000000000000000,
+			0,
+			u64::MAX
+		));
+
+		assert_ok!(StableAmm::swap(
+			Origin::signed(CHARLIE),
+			pool_id,
+			1,
+			0,
+			100000000000000000000000000,
+			0,
+			u64::MAX
+		));
+
+		let admin_balances = StableAmm::get_admin_balances(pool_id);
+		assert_eq!(admin_balances[0], 216736707365806476948490);
+		assert_eq!(admin_balances[1], 217402988477687128132247);
+
+		let balances = StableAMM::pools(pool_id).unwrap().balances;
+		assert_eq!(balances[0], 399465778896725795886030548);
+		assert_eq!(balances[1], 400600099040276221776518758);
+	})
+}
