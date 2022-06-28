@@ -9,4 +9,5 @@ members = [
 	"stable-amm",
 	"stable-amm/rpc",
 	"stable-amm/rpc/runtime-api",
+	"swap-router"
 ]

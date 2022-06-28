@@ -1316,7 +1316,6 @@ impl<T: Config> Pallet<T> {
 		Self::inner_remove_liquidity_one_currency(pool_id, who, amount, base_pool_currency_index, 0)?;
 		let base_pool_currency_after = <T as Config>::MultiCurrency::free_balance(base_pool_currency, who);
 
-
 		let base_pool_currency_amount = base_pool_currency_after
 			.checked_sub(base_pool_currency_before)
 			.ok_or(Error::<T>::Arithmetic)?;

@@ -3107,7 +3107,8 @@ fn add_pool_and_base_pool_liquidity_should_work() {
 	new_test_ext().execute_with(|| {
 		let (basic_pool_id, pool_id) = setup_test_pool_and_base_pool();
 
-		let expected_mint_amount = StableAmm::calculate_currency_amount(pool_id, vec![3e18 as Balance, 1e6 as Balance], true).unwrap();
+		let expected_mint_amount =
+			StableAmm::calculate_currency_amount(pool_id, vec![3e18 as Balance, 1e6 as Balance], true).unwrap();
 
 		let pool = StableAmm::pools(pool_id).unwrap();
 
@@ -3130,7 +3131,7 @@ fn add_pool_and_base_pool_liquidity_should_work() {
 }
 
 #[test]
-fn remove_pool_and_base_pool_liquidity_should_work(){
+fn remove_pool_and_base_pool_liquidity_should_work() {
 	new_test_ext().execute_with(|| {
 		let (basic_pool_id, pool_id) = setup_test_pool_and_base_pool();
 		let pool = StableAmm::pools(pool_id).unwrap();
@@ -3162,14 +3163,17 @@ fn remove_pool_and_base_pool_liquidity_should_work(){
 			u64::MAX
 		));
 
-		let balances_after = get_user_token_balances(&vec![
-			Token(TOKEN1_SYMBOL),
-			Token(TOKEN2_SYMBOL),
-			Token(TOKEN3_SYMBOL),
-			Token(TOKEN4_SYMBOL),
-			base_pool.lp_currency_id,
-			pool.lp_currency_id,
-		],&BOB);
+		let balances_after = get_user_token_balances(
+			&vec![
+				Token(TOKEN1_SYMBOL),
+				Token(TOKEN2_SYMBOL),
+				Token(TOKEN3_SYMBOL),
+				Token(TOKEN4_SYMBOL),
+				base_pool.lp_currency_id,
+				pool.lp_currency_id,
+			],
+			&BOB,
+		);
 
 		assert_eq!(balances_after[0], 99166666666666666666);
 		assert_eq!(balances_after[1], 99166666666666666666);
@@ -3181,7 +3185,7 @@ fn remove_pool_and_base_pool_liquidity_should_work(){
 }
 
 #[test]
-fn remove_pool_and_base_pool_liquidity_one_currency_should_work(){
+fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
 	new_test_ext().execute_with(|| {
 		let (basic_pool_id, pool_id) = setup_test_pool_and_base_pool();
 		let pool = StableAmm::pools(pool_id).unwrap();
@@ -3213,15 +3217,17 @@ fn remove_pool_and_base_pool_liquidity_one_currency_should_work(){
 			u64::MAX
 		));
 
-
-		let balances_after = get_user_token_balances(&vec![
-			Token(TOKEN1_SYMBOL),
-			Token(TOKEN2_SYMBOL),
-			Token(TOKEN3_SYMBOL),
-			Token(TOKEN4_SYMBOL),
-			base_pool.lp_currency_id,
-			pool.lp_currency_id,
-		],&BOB);
+		let balances_after = get_user_token_balances(
+			&vec![
+				Token(TOKEN1_SYMBOL),
+				Token(TOKEN2_SYMBOL),
+				Token(TOKEN3_SYMBOL),
+				Token(TOKEN4_SYMBOL),
+				base_pool.lp_currency_id,
+				pool.lp_currency_id,
+			],
+			&BOB,
+		);
 
 		assert_eq!(balances_after[0], 99915975025371929634);
 		assert_eq!(balances_after[1], 99000000000000000000);
@@ -3233,7 +3239,7 @@ fn remove_pool_and_base_pool_liquidity_one_currency_should_work(){
 }
 
 #[test]
-fn swap_pool_from_base_should_work(){
+fn swap_pool_from_base_should_work() {
 	new_test_ext().execute_with(|| {
 		let (basic_pool_id, pool_id) = setup_test_pool_and_base_pool();
 		let pool = StableAmm::pools(pool_id).unwrap();
@@ -3266,15 +3272,17 @@ fn swap_pool_from_base_should_work(){
 			u64::MAX
 		));
 
-
-		let balances_after = get_user_token_balances(&vec![
-			Token(TOKEN1_SYMBOL),
-			Token(TOKEN2_SYMBOL),
-			Token(TOKEN3_SYMBOL),
-			Token(TOKEN4_SYMBOL),
-			base_pool.lp_currency_id,
-			pool.lp_currency_id,
-		],&BOB);
+		let balances_after = get_user_token_balances(
+			&vec![
+				Token(TOKEN1_SYMBOL),
+				Token(TOKEN2_SYMBOL),
+				Token(TOKEN3_SYMBOL),
+				Token(TOKEN4_SYMBOL),
+				base_pool.lp_currency_id,
+				pool.lp_currency_id,
+			],
+			&BOB,
+		);
 
 		assert_eq!(balances_after[0], 98990000000000000000);
 		assert_eq!(balances_after[1], 99000000000000000000);
@@ -3286,7 +3294,7 @@ fn swap_pool_from_base_should_work(){
 }
 
 #[test]
-fn swap_pool_to_base_should_work(){
+fn swap_pool_to_base_should_work() {
 	new_test_ext().execute_with(|| {
 		let (basic_pool_id, pool_id) = setup_test_pool_and_base_pool();
 		let pool = StableAmm::pools(pool_id).unwrap();
@@ -3319,15 +3327,17 @@ fn swap_pool_to_base_should_work(){
 			u64::MAX
 		));
 
-
-		let balances_after = get_user_token_balances(&vec![
-			Token(TOKEN1_SYMBOL),
-			Token(TOKEN2_SYMBOL),
-			Token(TOKEN3_SYMBOL),
-			Token(TOKEN4_SYMBOL),
-			base_pool.lp_currency_id,
-			pool.lp_currency_id,
-		],&BOB);
+		let balances_after = get_user_token_balances(
+			&vec![
+				Token(TOKEN1_SYMBOL),
+				Token(TOKEN2_SYMBOL),
+				Token(TOKEN3_SYMBOL),
+				Token(TOKEN4_SYMBOL),
+				base_pool.lp_currency_id,
+				pool.lp_currency_id,
+			],
+			&BOB,
+		);
 
 		assert_eq!(balances_after[0], 99881980616021312485);
 		assert_eq!(balances_after[1], 99000000000000000000);
