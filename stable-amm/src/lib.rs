@@ -235,6 +235,8 @@ pub mod pallet {
 		InvalidCurrencyDecimal,
 		/// The pool id is invalid.
 		InvalidPoolId,
+		/// The base pool mismatch this pool.
+		InvalidBasePool,
 		/// The error generate by some arithmetic function.
 		Arithmetic,
 		/// The call already expired.
@@ -495,7 +497,7 @@ pub mod pallet {
 		/// - `pool_id`: The id of pool.
 		/// - `lp_amount`: The amounts of lp currency.
 		/// - `index`: The index of receive currency.
-		/// - `min_amount`: The min amounts of receive currency;
+		/// - `min_amount`: The min amounts of received currency;
 		/// - `deadline`: Height of the cutoff block of this transaction
 		#[pallet::weight(1_000_000)]
 		#[transactional]
@@ -540,6 +542,185 @@ pub mod pallet {
 			ensure!(deadline > now, Error::<T>::Deadline);
 
 			Self::inner_remove_liquidity_imbalance(&who, pool_id, &amounts, max_burn_amount)?;
+
+			Ok(())
+		}
+
+		/// Supply amounts of currencies to the pool which contains the lp currency of the base
+		/// pool.
+		///
+		/// # Argument
+		///
+		/// - `pool_id`: The id of pool.
+		/// - `base_pool_id`: The id of base pool.
+		/// - `meta_amounts`: Supply amounts of currencies to pool.
+		/// - `base_amounts`: Supply amounts of currencies to base pool.
+		/// - `min_to_mint`: The min amount of pool lp currency get.
+		/// - `deadline`: Height of the cutoff block of this transaction.
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn add_pool_and_base_pool_liquidity(
+			origin: OriginFor<T>,
+			pool_id: T::PoolId,
+			base_pool_id: T::PoolId,
+			meta_amounts: Vec<Balance>,
+			base_amounts: Vec<Balance>,
+			min_to_mint: Balance,
+			deadline: T::BlockNumber,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let now = frame_system::Pallet::<T>::block_number();
+			ensure!(deadline > now, Error::<T>::Deadline);
+
+			Self::inner_add_pool_and_base_pool_liquidity(
+				&who,
+				pool_id,
+				base_pool_id,
+				meta_amounts,
+				&base_amounts,
+				min_to_mint,
+			)?;
+
+			Ok(())
+		}
+
+		/// Remove liquidity from a pool which contains the lp currency of the base pool.
+		///
+		/// # Argument
+		///
+		/// - `pool_id`: The id of pool.
+		/// - `base_pool_id`: The id of base pool.
+		/// - `amount`: The amounts of lp currency to burn.
+		/// - `min_amounts_meta`: The min amounts of pool's currencies to get.
+		/// - `min_amounts_base`: The min amounts of basic pool's currencies to get.
+		/// - `deadline`: Height of the cutoff block of this transaction.
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn remove_pool_and_base_pool_liquidity(
+			origin: OriginFor<T>,
+			pool_id: T::PoolId,
+			base_pool_id: T::PoolId,
+			amount: Balance,
+			min_amounts_meta: Vec<Balance>,
+			min_amounts_base: Vec<Balance>,
+			deadline: T::BlockNumber,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let now = frame_system::Pallet::<T>::block_number();
+			ensure!(deadline > now, Error::<T>::Deadline);
+
+			Self::inner_remove_pool_and_base_pool_liquidity(
+				&who,
+				pool_id,
+				base_pool_id,
+				amount,
+				&min_amounts_meta,
+				&min_amounts_base,
+			)?;
+
+			Ok(())
+		}
+
+		/// Remove liquidity from a pool which contains the lp currency of the base pool
+		/// to get one currency.
+		///
+		/// # Argument
+		///
+		/// - `pool_id`: The id of pool.
+		/// - `base_pool_id`: The id of base pool.
+		/// - `amount`: The amounts of lp currency to burn.
+		/// - `i`: The index of target currency in basic pool.
+		/// - `min_amount`: The min amounts of received currency.
+		/// - `deadline`: Height of the cutoff block of this transaction.
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn remove_pool_and_base_pool_liquidity_one_currency(
+			origin: OriginFor<T>,
+			pool_id: T::PoolId,
+			base_pool_id: T::PoolId,
+			amount: Balance,
+			i: u32,
+			min_amount: Balance,
+			deadline: T::BlockNumber,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let now = frame_system::Pallet::<T>::block_number();
+			ensure!(deadline > now, Error::<T>::Deadline);
+
+			Self::inner_remove_pool_and_base_pool_liquidity_one_currency(
+				&who,
+				pool_id,
+				base_pool_id,
+				amount,
+				i,
+				min_amount,
+			)?;
+
+			Ok(())
+		}
+
+		/// Swap the currency from basic pool to get amounts of other currency in pool.
+		/// to get one currency.
+		///
+		/// # Argument
+		///
+		/// - `pool_id`: The id of pool.
+		/// - `base_pool_id`: The id of base pool.
+		/// - `in_index`: The index of swap currency in basic pool.
+		/// - `out_index`: The index of target currency in pool.
+		/// - `dx`: The amounts of swap currency.
+		/// - `min_dy`: The min amounts of target currency.
+		/// - `deadline`: Height of the cutoff block of this transaction.
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn swap_pool_from_base(
+			origin: OriginFor<T>,
+			pool_id: T::PoolId,
+			base_pool_id: T::PoolId,
+			in_index: u32,
+			out_index: u32,
+			dx: Balance,
+			min_dy: Balance,
+			deadline: T::BlockNumber,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let now = frame_system::Pallet::<T>::block_number();
+			ensure!(deadline > now, Error::<T>::Deadline);
+
+			Self::inner_swap_pool_from_base(&who, pool_id, base_pool_id, in_index, out_index, dx, min_dy)?;
+
+			Ok(())
+		}
+
+		/// Swap the currency from pool to get amounts of other currency in basic pool.
+		/// to get one currency.
+		///
+		/// # Argument
+		///
+		/// - `pool_id`: The id of pool.
+		/// - `base_pool_id`: The id of base pool.
+		/// - `in_index`: The index of swap currency in basic pool.
+		/// - `out_index`: The index of target currency in pool.
+		/// - `dx`: The amounts of swap currency.
+		/// - `min_dy`: The min amounts of target currency.
+		/// - `deadline`: Height of the cutoff block of this transaction.
+		#[pallet::weight(1_000_000)]
+		#[transactional]
+		pub fn swap_pool_to_base(
+			origin: OriginFor<T>,
+			pool_id: T::PoolId,
+			base_pool_id: T::PoolId,
+			in_index: u32,
+			out_index: u32,
+			dx: Balance,
+			min_dy: Balance,
+			deadline: T::BlockNumber,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let now = frame_system::Pallet::<T>::block_number();
+			ensure!(deadline > now, Error::<T>::Deadline);
+
+			Self::inner_swap_pool_to_base(&who, pool_id, base_pool_id, in_index, out_index, dx, min_dy)?;
 
 			Ok(())
 		}
@@ -771,8 +952,8 @@ impl<T: Config> Pallet<T> {
 		pool_id: T::PoolId,
 		amounts: &[Balance],
 		min_mint_amount: Balance,
-	) -> DispatchResult {
-		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
+	) -> Result<Balance, sp_runtime::DispatchError> {
+		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> Result<Balance, sp_runtime::DispatchError> {
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 
 			let n_currencies = pool.currency_ids.len();
@@ -845,7 +1026,7 @@ impl<T: Config> Pallet<T> {
 				new_d: d1,
 				mint_amount,
 			});
-			Ok(())
+			Ok(mint_amount)
 		})
 	}
 
@@ -856,10 +1037,10 @@ impl<T: Config> Pallet<T> {
 		j: usize,
 		in_amount: Balance,
 		out_min_amount: Balance,
-	) -> DispatchResult {
+	) -> Result<Balance, sp_runtime::DispatchError> {
 		ensure!(i != j, Error::<T>::SwapSameCurrency);
 
-		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
+		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> Result<Balance, sp_runtime::DispatchError> {
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 			let n_currencies = pool.currency_ids.len();
 			ensure!(i < n_currencies && j < n_currencies, Error::<T>::CurrencyIndexOutRange);
@@ -919,7 +1100,7 @@ impl<T: Config> Pallet<T> {
 				out_amount: dy,
 			});
 
-			Ok(())
+			Ok(dy)
 		})
 	}
 
@@ -1049,6 +1230,167 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
+	pub fn inner_add_pool_and_base_pool_liquidity(
+		who: &T::AccountId,
+		pool_id: T::PoolId,
+		base_pool_id: T::PoolId,
+		mut meta_amounts: Vec<Balance>,
+		base_amounts: &[Balance],
+		min_to_mint: Balance,
+	) -> DispatchResult {
+		let base_pool = Self::pools(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+		let pool = Self::pools(pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+
+		let mut deposit_base = false;
+		for amount in base_amounts.iter() {
+			if *amount > Zero::zero() {
+				deposit_base = true;
+				break;
+			}
+		}
+		let mut base_lp_received: Balance = Balance::default();
+		if deposit_base {
+			base_lp_received = Self::inner_add_liquidity(who, base_pool_id, base_amounts, 0)?;
+		}
+		let base_lp_prior = <T as Config>::MultiCurrency::free_balance(base_pool.lp_currency_id, who);
+
+		for (i, c) in pool.currency_ids.iter().enumerate() {
+			if *c == base_pool.lp_currency_id {
+				meta_amounts[i] = base_lp_received;
+			}
+		}
+
+		Self::inner_add_liquidity(who, pool_id, &meta_amounts, min_to_mint)?;
+
+		if deposit_base {
+			let base_lp_after = <T as Config>::MultiCurrency::free_balance(base_pool.lp_currency_id, who);
+			ensure!(
+				base_lp_after
+					.checked_add(base_lp_received)
+					.and_then(|n| n.checked_sub(base_lp_prior))
+					.ok_or(Error::<T>::Arithmetic)?
+					== Zero::zero(),
+				Error::<T>::AmountSlippage
+			)
+		}
+
+		Ok(())
+	}
+
+	pub fn inner_remove_pool_and_base_pool_liquidity(
+		who: &T::AccountId,
+		pool_id: T::PoolId,
+		base_pool_id: T::PoolId,
+		amount: Balance,
+		min_amounts_meta: &[Balance],
+		min_amounts_base: &[Balance],
+	) -> DispatchResult {
+		let base_pool = Self::pools(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+		let base_lp_amount_before = <T as Config>::MultiCurrency::free_balance(base_pool.lp_currency_id, who);
+
+		Self::inner_remove_liquidity(pool_id, who, amount, min_amounts_meta)?;
+
+		let base_lp_amount_after = <T as Config>::MultiCurrency::free_balance(base_pool.lp_currency_id, who);
+		let base_lp_amount = base_lp_amount_after
+			.checked_sub(base_lp_amount_before)
+			.ok_or(Error::<T>::Arithmetic)?;
+
+		Self::inner_remove_liquidity(base_pool_id, who, base_lp_amount, min_amounts_base)?;
+
+		Ok(())
+	}
+
+	pub fn inner_remove_pool_and_base_pool_liquidity_one_currency(
+		who: &T::AccountId,
+		pool_id: T::PoolId,
+		base_pool_id: T::PoolId,
+		amount: Balance,
+		i: u32,
+		min_amount: Balance,
+	) -> DispatchResult {
+		let base_pool_currency = Self::get_lp_currency(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+		let base_pool_currency_index =
+			Self::get_currency_index(pool_id, base_pool_currency).ok_or(Error::<T>::InvalidBasePool)?;
+
+		let base_pool_currency_before = <T as Config>::MultiCurrency::free_balance(base_pool_currency, who);
+		Self::inner_remove_liquidity_one_currency(pool_id, who, amount, base_pool_currency_index, 0)?;
+		let base_pool_currency_after = <T as Config>::MultiCurrency::free_balance(base_pool_currency, who);
+
+
+		let base_pool_currency_amount = base_pool_currency_after
+			.checked_sub(base_pool_currency_before)
+			.ok_or(Error::<T>::Arithmetic)?;
+
+		Self::inner_remove_liquidity_one_currency(base_pool_id, who, base_pool_currency_amount, i, min_amount)?;
+
+		Ok(())
+	}
+
+	pub fn inner_swap_pool_from_base(
+		who: &T::AccountId,
+		pool_id: T::PoolId,
+		base_pool_id: T::PoolId,
+		in_index: u32,
+		out_index: u32,
+		dx: Balance,
+		min_dy: Balance,
+	) -> DispatchResult {
+		let base_pool_len = Self::get_currencies(base_pool_id).len();
+		ensure!(base_pool_len > 0, Error::<T>::InvalidPoolId);
+		ensure!(in_index < base_pool_len as u32, Error::<T>::MismatchParameter);
+
+		let base_pool_currency = Self::get_lp_currency(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+		let base_pool_currency_index =
+			Self::get_currency_index(pool_id, base_pool_currency).ok_or(Error::<T>::InvalidBasePool)?;
+
+		let mut base_amounts = vec![Balance::default(); base_pool_len];
+		base_amounts[in_index as usize] = dx;
+
+		let base_lp_amount = Self::inner_add_liquidity(who, base_pool_id, &base_amounts, 0)?;
+
+		if base_pool_currency_index != out_index {
+			Self::inner_swap(
+				who,
+				pool_id,
+				base_pool_currency_index as usize,
+				out_index as usize,
+				base_lp_amount,
+				min_dy,
+			)?;
+		}
+
+		Ok(())
+	}
+
+	pub fn inner_swap_pool_to_base(
+		who: &T::AccountId,
+		pool_id: T::PoolId,
+		base_pool_id: T::PoolId,
+		in_index: u32,
+		out_index: u32,
+		dx: Balance,
+		min_dy: Balance,
+	) -> DispatchResult {
+		let base_pool_currency = Self::get_lp_currency(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+		let base_pool_currency_index =
+			Self::get_currency_index(pool_id, base_pool_currency).ok_or(Error::<T>::InvalidBasePool)?;
+
+		let mut base_lp_amount = Balance::default();
+		if base_pool_currency_index != in_index {
+			base_lp_amount = Self::inner_swap(
+				who,
+				pool_id,
+				in_index as usize,
+				base_pool_currency_index as usize,
+				dx,
+				0,
+			)?;
+		}
+		Self::inner_remove_liquidity_one_currency(base_pool_id, who, base_lp_amount, out_index, min_dy)?;
+
+		Ok(())
+	}
+
 	fn calculate_fee_per_token(
 		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 	) -> Option<Balance> {
@@ -1169,7 +1511,7 @@ impl<T: Config> Pallet<T> {
 
 		let amp = Self::get_a_precise(pool)?;
 		let mut xp = Self::xp(&pool.balances, &pool.token_multipliers)?;
-		let d0 = Self::get_d(&pool.balances, amp)?;
+		let d0 = Self::get_d(&xp, amp)?;
 
 		let d1 = U256::from(d0)
 			.checked_sub(
