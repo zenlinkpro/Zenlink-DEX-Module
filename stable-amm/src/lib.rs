@@ -1147,8 +1147,8 @@ impl<T: Config> Pallet<T> {
 		lp_amount: Balance,
 		index: u32,
 		min_amount: Balance,
-	) -> DispatchResult {
-		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
+	) -> Result<Balance, DispatchError> {
+		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> Result<Balance, DispatchError> {
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 			let total_supply = T::MultiCurrency::total_issuance(pool.lp_currency_id);
 			ensure!(total_supply > Zero::zero(), Error::<T>::InsufficientLpReserve);
@@ -1185,7 +1185,7 @@ impl<T: Config> Pallet<T> {
 				burn_amount: lp_amount,
 				out_amount: dy,
 			});
-			Ok(())
+			Ok(dy)
 		})
 	}
 
@@ -1333,7 +1333,7 @@ impl<T: Config> Pallet<T> {
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
-	) -> DispatchResult {
+	) -> Result<Balance, DispatchError> {
 		let base_pool_len = Self::get_currencies(base_pool_id).len();
 		ensure!(base_pool_len > 0, Error::<T>::InvalidPoolId);
 		ensure!(in_index < base_pool_len as u32, Error::<T>::MismatchParameter);
@@ -1347,8 +1347,9 @@ impl<T: Config> Pallet<T> {
 
 		let base_lp_amount = Self::inner_add_liquidity(who, base_pool_id, &base_amounts, 0)?;
 
+		let mut out_amount:Balance = 0;
 		if base_pool_currency_index != out_index {
-			Self::inner_swap(
+			out_amount = Self::inner_swap(
 				who,
 				pool_id,
 				base_pool_currency_index as usize,
@@ -1358,7 +1359,7 @@ impl<T: Config> Pallet<T> {
 			)?;
 		}
 
-		Ok(())
+		Ok(out_amount)
 	}
 
 	pub fn inner_swap_pool_to_base(
@@ -1369,7 +1370,7 @@ impl<T: Config> Pallet<T> {
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
-	) -> DispatchResult {
+	) -> Result<Balance, DispatchError> {
 		let base_pool_currency = Self::get_lp_currency(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		let base_pool_currency_index =
 			Self::get_currency_index(pool_id, base_pool_currency).ok_or(Error::<T>::InvalidBasePool)?;
@@ -1385,9 +1386,9 @@ impl<T: Config> Pallet<T> {
 				0,
 			)?;
 		}
-		Self::inner_remove_liquidity_one_currency(base_pool_id, who, base_lp_amount, out_index, min_dy)?;
+		let out_amount = Self::inner_remove_liquidity_one_currency(base_pool_id, who, base_lp_amount, out_index, min_dy)?;
 
-		Ok(())
+		Ok(out_amount)
 	}
 
 	fn calculate_fee_per_token(

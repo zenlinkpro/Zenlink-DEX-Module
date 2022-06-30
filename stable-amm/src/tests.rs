@@ -148,7 +148,7 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 
 		//create mismatch parameter should not work
 		assert_noop!(
-			StableAmm::create_pool(
+				StableAmm::create_pool(
 				Origin::root(),
 				vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL),],
 				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
