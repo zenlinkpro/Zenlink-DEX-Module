@@ -6,8 +6,12 @@
 #![allow(clippy::too_many_arguments)]
 
 use codec::Codec;
-use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
-use jsonrpc_derive::rpc;
+use jsonrpsee::{
+	core::{Error as JsonRpseeError, RpcResult},
+	proc_macros::rpc,
+	types::error::{CallError, ErrorObject},
+};
+
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
@@ -17,54 +21,54 @@ use std::sync::Arc;
 
 use stable_amm_runtime_api::StableAmmApi as StableAmmRuntimeApi;
 
-#[rpc]
+#[rpc(client, server)]
 pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {
-	#[rpc(name = "stable_amm_get_virtual_price")]
-	fn get_virtual_price(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<NumberOrHex>;
+	#[method(name = "stable_amm_get_virtual_price")]
+	fn get_virtual_price(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
-	#[rpc(name = "stable_amm_get_A")]
-	fn get_a(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<NumberOrHex>;
+	#[method(name = "stable_amm_get_A")]
+	fn get_a(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
-	#[rpc(name = "stable_amm_get_A_precise")]
-	fn get_a_precise(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<NumberOrHex>;
+	#[method(name = "stable_amm_get_A_precise")]
+	fn get_a_precise(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
-	#[rpc(name = "stable_amm_get_currencies")]
-	fn get_currencies(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<Vec<CurrencyId>>;
+	#[method(name = "stable_amm_get_currencies")]
+	fn get_currencies(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<Vec<CurrencyId>>;
 
-	#[rpc(name = "stable_amm_get_currency")]
-	fn get_currency(&self, pool_id: PoolId, index: u32, at: Option<BlockHash>) -> Result<CurrencyId>;
+	#[method(name = "stable_amm_get_currency")]
+	fn get_currency(&self, pool_id: PoolId, index: u32, at: Option<BlockHash>) -> RpcResult<CurrencyId>;
 
-	#[rpc(name = "stable_amm_get_lp_currency")]
-	fn get_lp_currency(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<CurrencyId>;
+	#[method(name = "stable_amm_get_lp_currency")]
+	fn get_lp_currency(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<CurrencyId>;
 
-	#[rpc(name = "stable_amm_get_currency_index")]
-	fn get_currency_index(&self, pool_id: PoolId, currency: CurrencyId, at: Option<BlockHash>) -> Result<u32>;
+	#[method(name = "stable_amm_get_currency_index")]
+	fn get_currency_index(&self, pool_id: PoolId, currency: CurrencyId, at: Option<BlockHash>) -> RpcResult<u32>;
 
-	#[rpc(name = "stable_amm_get_currency_precision_multipliers")]
-	fn get_currency_precision_multipliers(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<Vec<NumberOrHex>>;
+	#[method(name = "stable_amm_get_currency_precision_multipliers")]
+	fn get_currency_precision_multipliers(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<Vec<NumberOrHex>>;
 
-	#[rpc(name = "stable_amm_get_currency_balances")]
-	fn get_currency_balances(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<Vec<NumberOrHex>>;
+	#[method(name = "stable_amm_get_currency_balances")]
+	fn get_currency_balances(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<Vec<NumberOrHex>>;
 
-	#[rpc(name = "stable_amm_get_number_of_currencies")]
-	fn get_number_of_currencies(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<u32>;
+	#[method(name = "stable_amm_get_number_of_currencies")]
+	fn get_number_of_currencies(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<u32>;
 
-	#[rpc(name = "stable_amm_get_admin_balances")]
-	fn get_admin_balances(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<Vec<NumberOrHex>>;
+	#[method(name = "stable_amm_get_admin_balances")]
+	fn get_admin_balances(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<Vec<NumberOrHex>>;
 
-	#[rpc(name = "stable_amm_get_admin_balance")]
-	fn get_admin_balance(&self, pool_id: PoolId, index: u32, at: Option<BlockHash>) -> Result<NumberOrHex>;
+	#[method(name = "stable_amm_get_admin_balance")]
+	fn get_admin_balance(&self, pool_id: PoolId, index: u32, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
-	#[rpc(name = "stable_amm_calculate_currency_amount")]
+	#[method(name = "stable_amm_calculate_currency_amount")]
 	fn calculate_currency_amount(
 		&self,
 		pool_id: PoolId,
 		amounts: Vec<Balance>,
 		deposit: bool,
 		at: Option<BlockHash>,
-	) -> Result<NumberOrHex>;
+	) -> RpcResult<NumberOrHex>;
 
-	#[rpc(name = "stable_amm_calculate_swap")]
+	#[method(name = "stable_amm_calculate_swap")]
 	fn calculate_swap(
 		&self,
 		pool_id: PoolId,
@@ -72,24 +76,24 @@ pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {
 		out_index: u32,
 		in_amount: Balance,
 		at: Option<BlockHash>,
-	) -> Result<NumberOrHex>;
+	) -> RpcResult<NumberOrHex>;
 
-	#[rpc(name = "stable_amm_calculate_remove_liquidity")]
+	#[method(name = "stable_amm_calculate_remove_liquidity")]
 	fn calculate_remove_liquidity(
 		&self,
 		pool_id: PoolId,
 		amount: Balance,
 		at: Option<BlockHash>,
-	) -> Result<Vec<NumberOrHex>>;
+	) -> RpcResult<Vec<NumberOrHex>>;
 
-	#[rpc(name = "stable_amm_calculate_calculate_remove_liquidity_one_currency")]
+	#[method(name = "stable_amm_calculate_calculate_remove_liquidity_one_currency")]
 	fn calculate_remove_liquidity_one_currency(
 		&self,
 		pool_id: PoolId,
 		amount: Balance,
 		index: u32,
 		at: Option<BlockHash>,
-	) -> Result<NumberOrHex>;
+	) -> RpcResult<NumberOrHex>;
 }
 
 pub struct StableAmm<C, M> {
@@ -107,7 +111,7 @@ impl<C, M> StableAmm<C, M> {
 }
 
 impl<C, Block, CurrencyId, Balance, AccountId, PoolId>
-	StableAmmApi<<Block as BlockT>::Hash, CurrencyId, Balance, AccountId, PoolId> for StableAmm<C, Block>
+	StableAmmApiServer<<Block as BlockT>::Hash, CurrencyId, Balance, AccountId, PoolId> for StableAmm<C, Block>
 where
 	Block: BlockT,
 	CurrencyId: Codec + std::cmp::PartialEq,
@@ -119,7 +123,7 @@ where
 	C: HeaderBackend<Block>,
 	C::Api: StableAmmRuntimeApi<Block, CurrencyId, Balance, AccountId, PoolId>,
 {
-	fn get_virtual_price(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<NumberOrHex> {
+	fn get_virtual_price(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -130,7 +134,7 @@ where
 		try_into_rpc_balance(price)
 	}
 
-	fn get_a(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<NumberOrHex> {
+	fn get_a(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -139,7 +143,7 @@ where
 		try_into_rpc_balance(price)
 	}
 
-	fn get_a_precise(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<NumberOrHex> {
+	fn get_a_precise(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -148,14 +152,14 @@ where
 		try_into_rpc_balance(price)
 	}
 
-	fn get_currencies(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<CurrencyId>> {
+	fn get_currencies(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<CurrencyId>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
 		api.get_currencies(&at, pool_id).map_err(runtime_error_into_rpc_err)
 	}
 
-	fn get_currency(&self, pool_id: PoolId, index: u32, at: Option<<Block as BlockT>::Hash>) -> Result<CurrencyId> {
+	fn get_currency(&self, pool_id: PoolId, index: u32, at: Option<<Block as BlockT>::Hash>) -> RpcResult<CurrencyId> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -165,7 +169,7 @@ where
 		)
 	}
 
-	fn get_lp_currency(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<CurrencyId> {
+	fn get_lp_currency(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> RpcResult<CurrencyId> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -180,7 +184,7 @@ where
 		pool_id: PoolId,
 		currency: CurrencyId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<u32> {
+	) -> RpcResult<u32> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -198,7 +202,7 @@ where
 		&self,
 		pool_id: PoolId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Vec<NumberOrHex>> {
+	) -> RpcResult<Vec<NumberOrHex>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -209,7 +213,7 @@ where
 			.collect()
 	}
 
-	fn get_currency_balances(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<NumberOrHex>> {
+	fn get_currency_balances(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<NumberOrHex>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -220,7 +224,7 @@ where
 			.collect()
 	}
 
-	fn get_number_of_currencies(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<u32> {
+	fn get_number_of_currencies(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> RpcResult<u32> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -228,7 +232,7 @@ where
 			.map_err(runtime_error_into_rpc_err)
 	}
 
-	fn get_admin_balances(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<Vec<NumberOrHex>> {
+	fn get_admin_balances(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<NumberOrHex>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -244,7 +248,7 @@ where
 		pool_id: PoolId,
 		index: u32,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<NumberOrHex> {
+	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -267,7 +271,7 @@ where
 		amounts: Vec<Balance>,
 		deposit: bool,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<NumberOrHex> {
+	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -285,7 +289,7 @@ where
 		out_index: u32,
 		in_amount: Balance,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<NumberOrHex> {
+	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -301,7 +305,7 @@ where
 		pool_id: PoolId,
 		amount: Balance,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Vec<NumberOrHex>> {
+	) -> RpcResult<Vec<NumberOrHex>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -318,7 +322,7 @@ where
 		amount: Balance,
 		index: u32,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<NumberOrHex> {
+	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -332,18 +336,32 @@ where
 
 fn try_into_rpc_balance<Balance: Codec + TryInto<NumberOrHex> + MaybeDisplay + Copy + std::fmt::Debug>(
 	value: Balance,
-) -> Result<NumberOrHex> {
-	value.try_into().map_err(|_| RpcError {
-		code: ErrorCode::InvalidParams,
-		message: format!("{:#?} doesn't fit in NumberOrHex representation", value),
-		data: None,
-	})
+) -> RpcResult<NumberOrHex> {
+	value.try_into().map_err(|_| CallError::Custom(ErrorObject::owned(
+		Error::RuntimeError.into(),
+		"error in stable amm pallet",
+		Some("transfer into rpc balance".to_string()),
+	)).into())
 }
 
-fn runtime_error_into_rpc_err(err: impl std::fmt::Debug) -> RpcError {
-	RpcError {
-		code: ErrorCode::ServerError(1),
-		message: "Stable Amm trapped".into(),
-		data: Some(format!("{:?}", err).into()),
+/// Error type of this RPC api.
+pub enum Error {
+	/// The call to runtime failed.
+	RuntimeError,
+}
+
+impl From<Error> for i32 {
+	fn from(e: Error) -> i32 {
+		match e {
+			Error::RuntimeError => 1,
+		}
 	}
+}
+
+fn runtime_error_into_rpc_err(err: impl std::fmt::Display) -> JsonRpseeError {
+	CallError::Custom(ErrorObject::owned(
+		Error::RuntimeError.into(),
+		"error in stable pallet",
+		Some(err.to_string()),
+	)).into()
 }

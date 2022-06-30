@@ -1381,133 +1381,15 @@ fn liquidity_at_boundary_should_work() {
 }
 
 #[test]
-fn liquidity_at_boundary_forbid_trade_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &BOB, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-
-		assert_ok!(DexPallet::create_pair(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID));
-
-		assert_ok!(DexPallet::add_liquidity(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-			u128::MAX,
-			u128::MAX,
-			0,
-			0,
-			100
-		));
-
-		let path = vec![DOT_ASSET_ID, BTC_ASSET_ID];
-		let amount_out = 1 * DOT_UNIT;
-		let amount_in_max = 2 * DOT_UNIT;
-
-		assert_noop!(
-			DexPallet::inner_swap_assets_for_exact_assets(&BOB, amount_out, amount_in_max, &path, &BOB),
-			Error::<Test>::Overflow
-		);
-
-		let amount_in = 2 * DOT_UNIT;
-		let amount_out_min = 1 * DOT_UNIT;
-
-		assert_noop!(
-			DexPallet::inner_swap_exact_assets_for_assets(&BOB, amount_in, amount_out_min, &path, &BOB),
-			Error::<Test>::Overflow
-		);
-	})
-}
-
-#[test]
-fn bootstrap_contribute_claim_at_boundary_should_work() {
-	new_test_ext().execute_with(|| {
-		System::set_block_number(1);
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &BOB, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &BOB, u128::MAX));
-
-		assert_ok!(DexPallet::bootstrap_create(
-			Origin::root(),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-			u128::MAX,
-			u128::MAX,
-			u128::MAX,
-			u128::MAX,
-			2,
-			[].to_vec(),
-			[].to_vec(),
-		));
-
-		assert_ok!(DexPallet::bootstrap_contribute(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-			u128::MAX,
-			0,
-			1000,
-		));
-
-		assert_ok!(DexPallet::bootstrap_contribute(
-			Origin::signed(BOB),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-			0,
-			u128::MAX,
-			1000,
-		));
-
-		System::set_block_number(3);
-		assert_ok!(DexPallet::bootstrap_end(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
-
-		assert_ok!(match DexPallet::pair_status((DOT_ASSET_ID, BTC_ASSET_ID)) {
-			Trading(x) => {
-				assert_eq!(x.pair_account, PAIR_DOT_BTC_ACCOUNT);
-				assert_eq!(x.total_supply, u128::MAX);
-				Ok(())
-			}
-			_ => Err(()),
-		});
-
-		assert_ok!(DexPallet::bootstrap_claim(
-			Origin::signed(ALICE),
-			ALICE,
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-			1000,
-		));
-		let alice_lp_token_amount = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
-		assert_eq!(alice_lp_token_amount, u128::MAX / 2);
-
-		assert_ok!(DexPallet::bootstrap_claim(
-			Origin::signed(BOB),
-			BOB,
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-			1000,
-		));
-
-		let bob_lp_token_amount = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &BOB);
-		assert_eq!(bob_lp_token_amount, u128::MAX / 2);
-	})
-}
-
-#[test]
 fn multi_bootstrap_contribute_claim_should_work() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &BOB, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &BOB, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, u128::MAX));
-		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &CHARLIE, u128::MAX));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, u128::MAX / 4 - 1));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, u128::MAX / 4 - 1));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &BOB, u128::MAX / 4 - 1));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &BOB, u128::MAX / 4 - 1));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, u128::MAX / 4 - 1));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &CHARLIE, u128::MAX / 4 - 1));
 
 		let unit = 1_000_000_000_000_000_000u128;
 		assert_ok!(DexPallet::bootstrap_create(

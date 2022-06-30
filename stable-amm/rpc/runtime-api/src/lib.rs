@@ -5,8 +5,8 @@
 #![allow(clippy::too_many_arguments)]
 // The `unnecessary_mut_passed` warning originates from `decl_runtime_apis` macro.
 #![allow(clippy::unnecessary_mut_passed)]
-use sp_std::vec::Vec;
 use codec::Codec;
+use sp_std::vec::Vec;
 
 sp_api::decl_runtime_apis! {
 	pub trait StableAmmApi<CurrencyId, Balance, AccountId, PoolId> where

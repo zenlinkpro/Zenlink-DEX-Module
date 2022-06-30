@@ -14,6 +14,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	pallet_prelude::GenesisBuild,
 	parameter_types,
+	traits::ConstU32,
 	traits::Contains,
 	PalletId,
 };
@@ -34,7 +35,7 @@ use orml_traits::{parameter_type_with_key, MultiCurrency};
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug,PartialOrd, MaxEncodedLen,Ord, TypeInfo)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, MaxEncodedLen, Ord, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	Token(u8),
@@ -103,6 +104,8 @@ impl Contains<AccountId> for MockDustRemovalWhitelist {
 	}
 }
 
+pub type ReserveIdentifier = [u8; 8];
+
 impl orml_tokens::Config for Test {
 	type Event = Event;
 	type Balance = u128;
@@ -113,6 +116,8 @@ impl orml_tokens::Config for Test {
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
 	type DustRemovalWhitelist = MockDustRemovalWhitelist;
+	type ReserveIdentifier = ReserveIdentifier;
+	type MaxReserves = ConstU32<100_000>;
 }
 
 impl pallet_balances::Config for Test {

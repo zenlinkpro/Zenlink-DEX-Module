@@ -9,7 +9,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	pallet_prelude::GenesisBuild,
 	parameter_types,
-	traits::Contains,
+	traits::{Contains, ConstU32},
 	PalletId,
 };
 use sp_core::H256;
@@ -111,6 +111,7 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
+pub type ReserveIdentifier = [u8; 8];
 impl orml_tokens::Config for Test {
 	type Event = Event;
 	type Balance = u128;
@@ -121,6 +122,8 @@ impl orml_tokens::Config for Test {
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
 	type DustRemovalWhitelist = MockDustRemovalWhitelist;
+	type ReserveIdentifier = ReserveIdentifier;
+	type MaxReserves = ConstU32<100_000>;
 }
 
 impl pallet_balances::Config for Test {

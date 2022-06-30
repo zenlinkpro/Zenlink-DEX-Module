@@ -1347,7 +1347,7 @@ impl<T: Config> Pallet<T> {
 
 		let base_lp_amount = Self::inner_add_liquidity(who, base_pool_id, &base_amounts, 0)?;
 
-		let mut out_amount:Balance = 0;
+		let mut out_amount: Balance = 0;
 		if base_pool_currency_index != out_index {
 			out_amount = Self::inner_swap(
 				who,
@@ -1386,7 +1386,8 @@ impl<T: Config> Pallet<T> {
 				0,
 			)?;
 		}
-		let out_amount = Self::inner_remove_liquidity_one_currency(base_pool_id, who, base_lp_amount, out_index, min_dy)?;
+		let out_amount =
+			Self::inner_remove_liquidity_one_currency(base_pool_id, who, base_lp_amount, out_index, min_dy)?;
 
 		Ok(out_amount)
 	}

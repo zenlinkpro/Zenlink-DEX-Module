@@ -5,7 +5,12 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 
-use frame_support::{pallet_prelude::GenesisBuild, parameter_types, traits::Contains, PalletId};
+use frame_support::{
+	pallet_prelude::GenesisBuild,
+	parameter_types,
+	traits::{ConstU32, Contains},
+	PalletId,
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -100,6 +105,7 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
+pub type ReserveIdentifier = [u8; 8];
 impl orml_tokens::Config for Test {
 	type Event = Event;
 	type Balance = u128;
@@ -110,6 +116,8 @@ impl orml_tokens::Config for Test {
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
 	type DustRemovalWhitelist = MockDustRemovalWhitelist;
+	type ReserveIdentifier = ReserveIdentifier;
+	type MaxReserves = ConstU32<100_000>;
 }
 
 impl pallet_balances::Config for Test {

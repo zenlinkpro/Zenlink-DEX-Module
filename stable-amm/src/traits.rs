@@ -6,14 +6,21 @@ pub trait ValidateCurrency<CurrencyId> {
 }
 
 pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
-	fn stable_amm_calculate_currency_amount(pool_id: PoolId, amounts: &[Balance], deposit: bool)
-											-> Result<Balance, DispatchError>;
+	fn stable_amm_calculate_currency_amount(
+		pool_id: PoolId,
+		amounts: &[Balance],
+		deposit: bool,
+	) -> Result<Balance, DispatchError>;
 
 	fn stable_amm_calculate_swap_amount(pool_id: PoolId, i: usize, j: usize, in_balance: Balance) -> Option<Balance>;
 
-	fn stable_amm_calculate_remove_liquidity_one_currency(pool_id: PoolId, amount: Balance, index: u32) -> Option<Balance>;
+	fn stable_amm_calculate_remove_liquidity_one_currency(
+		pool_id: PoolId,
+		amount: Balance,
+		index: u32,
+	) -> Option<Balance>;
 
-	fn currency_index(pool_id:PoolId, currency: CurrencyId) ->Option<u32>;
+	fn currency_index(pool_id: PoolId, currency: CurrencyId) -> Option<u32>;
 
 	fn add_liquidity(
 		who: &AccountId,
@@ -57,7 +64,7 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
-	)->Result<Balance, DispatchError>;
+	) -> Result<Balance, DispatchError>;
 
 	fn swap_pool_to_base(
 		who: &AccountId,
@@ -67,7 +74,7 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
-	)->Result<Balance, DispatchError>;
+	) -> Result<Balance, DispatchError>;
 }
 
 impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> for Pallet<T> {
@@ -79,14 +86,23 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		Self::calculate_currency_amount(pool_id, amounts.to_vec(), deposit)
 	}
 
-	fn stable_amm_calculate_swap_amount(pool_id: T::PoolId, i: usize, j: usize, in_balance: Balance) -> Option<Balance> {
+	fn stable_amm_calculate_swap_amount(
+		pool_id: T::PoolId,
+		i: usize,
+		j: usize,
+		in_balance: Balance,
+	) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			return Self::calculate_swap_amount(&pool, i, j, in_balance);
 		}
 		None
 	}
 
-	fn stable_amm_calculate_remove_liquidity_one_currency(pool_id: T::PoolId, amount: Balance, index: u32) -> Option<Balance> {
+	fn stable_amm_calculate_remove_liquidity_one_currency(
+		pool_id: T::PoolId,
+		amount: Balance,
+		index: u32,
+	) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			if let Some(res) = Self::calculate_remove_liquidity_one_token(&pool, amount, index) {
 				return Some(res.0);
@@ -158,7 +174,7 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
-	)->Result<Balance, DispatchError>{
+	) -> Result<Balance, DispatchError> {
 		Self::inner_swap_pool_from_base(who, pool_id, base_pool_id, in_index, out_index, dx, min_dy)
 	}
 
@@ -170,12 +186,11 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
-	)->Result<Balance, DispatchError>{
+	) -> Result<Balance, DispatchError> {
 		Self::inner_swap_pool_to_base(who, pool_id, base_pool_id, in_index, out_index, dx, min_dy)
 	}
 
-	fn currency_index(pool_id: T::PoolId, currency: T::CurrencyId) ->Option<u32>{
+	fn currency_index(pool_id: T::PoolId, currency: T::CurrencyId) -> Option<u32> {
 		Self::get_currency_index(pool_id, currency)
 	}
-
 }

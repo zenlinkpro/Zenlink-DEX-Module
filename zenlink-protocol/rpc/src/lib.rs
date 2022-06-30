@@ -6,8 +6,12 @@
 #![allow(clippy::too_many_arguments)]
 
 use codec::Codec;
-use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
-use jsonrpc_derive::rpc;
+use jsonrpsee::{
+	core::{Error as JsonRpseeError, RpcResult},
+	proc_macros::rpc,
+	types::error::{CallError, ErrorObject},
+};
+
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
@@ -17,43 +21,43 @@ use std::sync::Arc;
 use zenlink_protocol::{AssetBalance, AssetId, PairInfo};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
-#[rpc]
+#[rpc(client, server)]
 pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
-	#[rpc(name = "zenlinkProtocol_getBalance")]
-	fn get_balance(&self, asset_id: AssetId, account: AccountId, at: Option<BlockHash>) -> Result<NumberOrHex>;
+	#[method(name = "zenlinkProtocol_getBalance")]
+	fn get_balance(&self, asset_id: AssetId, account: AccountId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
-	#[rpc(name = "zenlinkProtocol_getSovereignsInfo")]
+	#[method(name = "zenlinkProtocol_getSovereignsInfo")]
 	fn get_sovereigns_info(
 		&self,
 		asset_id: AssetId,
 		at: Option<BlockHash>,
-	) -> Result<Vec<(u32, AccountId, NumberOrHex)>>;
+	) -> RpcResult<Vec<(u32, AccountId, NumberOrHex)>>;
 
-	#[rpc(name = "zenlinkProtocol_getPairByAssetId")]
+	#[method(name = "zenlinkProtocol_getPairByAssetId")]
 	fn get_pair_by_asset_id(
 		&self,
 		asset_0: AssetId,
 		asset_1: AssetId,
 		at: Option<BlockHash>,
-	) -> Result<Option<PairInfo<AccountId, NumberOrHex>>>;
+	) -> RpcResult<Option<PairInfo<AccountId, NumberOrHex>>>;
 
-	#[rpc(name = "zenlinkProtocol_getAmountInPrice")]
+	#[method(name = "zenlinkProtocol_getAmountInPrice")]
 	fn get_amount_in_price(
 		&self,
 		supply: AssetBalance,
 		path: Vec<AssetId>,
 		at: Option<BlockHash>,
-	) -> Result<NumberOrHex>;
+	) -> RpcResult<NumberOrHex>;
 
-	#[rpc(name = "zenlinkProtocol_getAmountOutPrice")]
+	#[method(name = "zenlinkProtocol_getAmountOutPrice")]
 	fn get_amount_out_price(
 		&self,
 		supply: AssetBalance,
 		path: Vec<AssetId>,
 		at: Option<BlockHash>,
-	) -> Result<NumberOrHex>;
+	) -> RpcResult<NumberOrHex>;
 
-	#[rpc(name = "zenlinkProtocol_getEstimateLptoken")]
+	#[method(name = "zenlinkProtocol_getEstimateLptoken")]
 	fn get_estimate_lptoken(
 		&self,
 		asset_0: AssetId,
@@ -63,10 +67,8 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
 		amount_0_min: AssetBalance,
 		amount_1_min: AssetBalance,
 		at: Option<BlockHash>,
-	) -> Result<NumberOrHex>;
+	) -> RpcResult<NumberOrHex>;
 }
-
-const RUNTIME_ERROR: i64 = 1;
 
 pub struct ZenlinkProtocol<C, M> {
 	client: Arc<C>,
@@ -82,7 +84,7 @@ impl<C, M> ZenlinkProtocol<C, M> {
 	}
 }
 
-impl<C, Block, AccountId> ZenlinkProtocolApi<<Block as BlockT>::Hash, AccountId> for ZenlinkProtocol<C, Block>
+impl<C, Block, AccountId> ZenlinkProtocolApiServer<<Block as BlockT>::Hash, AccountId> for ZenlinkProtocol<C, Block>
 where
 	Block: BlockT,
 	AccountId: Codec,
@@ -97,7 +99,7 @@ where
 		supply: AssetBalance,
 		path: Vec<AssetId>,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<NumberOrHex> {
+	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -112,7 +114,7 @@ where
 		supply: AssetBalance,
 		path: Vec<AssetId>,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<NumberOrHex> {
+	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -130,7 +132,7 @@ where
 		amount_0_min: AssetBalance,
 		amount_1_min: AssetBalance,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<NumberOrHex> {
+	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -152,7 +154,7 @@ where
 		asset_id: AssetId,
 		account: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<NumberOrHex> {
+	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -165,7 +167,7 @@ where
 		&self,
 		asset_id: AssetId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Vec<(u32, AccountId, NumberOrHex)>> {
+	) -> RpcResult<Vec<(u32, AccountId, NumberOrHex)>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -184,7 +186,7 @@ where
 		asset_0: AssetId,
 		asset_1: AssetId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<Option<PairInfo<AccountId, NumberOrHex>>> {
+	) -> RpcResult<Option<PairInfo<AccountId, NumberOrHex>>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -206,11 +208,26 @@ where
 	}
 }
 
-/// Converts a runtime trap into an RPC error.
-fn runtime_error_into_rpc_err(err: impl std::fmt::Debug) -> RpcError {
-	RpcError {
-		code: ErrorCode::ServerError(RUNTIME_ERROR),
-		message: "Runtime trapped".into(),
-		data: Some(format!("{:?}", err).into()),
+/// Error type of this RPC api.
+pub enum Error {
+	/// The call to runtime failed.
+	RuntimeError,
+}
+
+impl From<Error> for i32 {
+	fn from(e: Error) -> i32 {
+		match e {
+			Error::RuntimeError => 1,
+		}
 	}
+}
+
+/// Converts a runtime trap into an RPC error.
+fn runtime_error_into_rpc_err(err: impl std::fmt::Display) -> JsonRpseeError {
+	CallError::Custom(ErrorObject::owned(
+		Error::RuntimeError.into(),
+		"error in zenlink pallet",
+		Some(err.to_string()),
+	))
+	.into()
 }
