@@ -21,8 +21,8 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", default-featu
 frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.22" }
 frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.22" }
 
-zenlink-protocol = {package = "zenlink-protocol", path = "../zenlink-protocol", version = "0.4.4"}
-stable-amm = {package = "stable-amm", path = "../stable-amm",version = "0.1.0"}
+zenlink-protocol = {package = "zenlink-protocol", path = "../zenlink-protocol", version = "0.4.4", default-features = false}
+stable-amm = {package = "stable-amm", path = "../stable-amm",version = "0.1.0", default-features = false}
 
 [dev-dependencies]
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "f709ed62262435b3ad80482d309e3575625d1e5b", default-features = false }
