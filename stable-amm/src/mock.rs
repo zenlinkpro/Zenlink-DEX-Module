@@ -19,7 +19,10 @@ use sp_runtime::{
 };
 
 use crate as stable_amm;
-use crate::{traits::ValidateCurrency, Config, Pallet};
+use crate::{
+	traits::{StablePoolLpCurrencyIdGenerate, ValidateCurrency},
+	Config, Pallet,
+};
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -59,6 +62,7 @@ pub enum CurrencyId {
 	Forbidden(TokenSymbol),
 	Token(TokenSymbol),
 	StableLP(PoolType),
+	StableLPV2(PoolId),
 }
 
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, MaxEncodedLen, Ord, TypeInfo)]
@@ -149,12 +153,21 @@ impl Config for Test {
 	type MultiCurrency = Tokens;
 	type PoolId = PoolId;
 	type EnsurePoolAsset = EnsurePoolAssetImpl<Tokens>;
+	type LpGenerate = PoolLpGenerate;
 	type TimeProvider = Timestamp;
 	type PoolCurrencySymbolLimit = PoolCurrencySymbolLimit;
 	type PalletId = StableAmmPalletId;
 }
 
 pub struct EnsurePoolAssetImpl<Local>(PhantomData<Local>);
+
+pub struct PoolLpGenerate;
+
+impl StablePoolLpCurrencyIdGenerate<CurrencyId, PoolId> for PoolLpGenerate {
+	fn generate_by_pool_id(pool_id: PoolId) -> CurrencyId {
+		return CurrencyId::StableLPV2(pool_id);
+	}
+}
 
 impl<Local> ValidateCurrency<CurrencyId> for EnsurePoolAssetImpl<Local>
 where
@@ -205,7 +218,6 @@ pub const TOKEN1_SYMBOL: u8 = 1;
 pub const TOKEN2_SYMBOL: u8 = 2;
 pub const TOKEN3_SYMBOL: u8 = 3;
 pub const TOKEN4_SYMBOL: u8 = 4;
-pub const TOKEN_LP: u8 = 5;
 
 pub const TOKEN1_DECIMAL: u32 = 18;
 pub const TOKEN2_DECIMAL: u32 = 18;

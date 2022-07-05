@@ -45,7 +45,8 @@ pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {
 	fn get_currency_index(&self, pool_id: PoolId, currency: CurrencyId, at: Option<BlockHash>) -> RpcResult<u32>;
 
 	#[method(name = "stable_amm_get_currency_precision_multipliers")]
-	fn get_currency_precision_multipliers(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<Vec<NumberOrHex>>;
+	fn get_currency_precision_multipliers(&self, pool_id: PoolId, at: Option<BlockHash>)
+		-> RpcResult<Vec<NumberOrHex>>;
 
 	#[method(name = "stable_amm_get_currency_balances")]
 	fn get_currency_balances(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<Vec<NumberOrHex>>;
@@ -213,7 +214,11 @@ where
 			.collect()
 	}
 
-	fn get_currency_balances(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> RpcResult<Vec<NumberOrHex>> {
+	fn get_currency_balances(
+		&self,
+		pool_id: PoolId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> RpcResult<Vec<NumberOrHex>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -337,11 +342,14 @@ where
 fn try_into_rpc_balance<Balance: Codec + TryInto<NumberOrHex> + MaybeDisplay + Copy + std::fmt::Debug>(
 	value: Balance,
 ) -> RpcResult<NumberOrHex> {
-	value.try_into().map_err(|_| CallError::Custom(ErrorObject::owned(
-		Error::RuntimeError.into(),
-		"error in stable amm pallet",
-		Some("transfer into rpc balance".to_string()),
-	)).into())
+	value.try_into().map_err(|_| {
+		CallError::Custom(ErrorObject::owned(
+			Error::RuntimeError.into(),
+			"error in stable amm pallet",
+			Some("transfer into rpc balance".to_string()),
+		))
+		.into()
+	})
 }
 
 /// Error type of this RPC api.
@@ -363,5 +371,6 @@ fn runtime_error_into_rpc_err(err: impl std::fmt::Display) -> JsonRpseeError {
 		Error::RuntimeError.into(),
 		"error in stable pallet",
 		Some(err.to_string()),
-	)).into()
+	))
+	.into()
 }

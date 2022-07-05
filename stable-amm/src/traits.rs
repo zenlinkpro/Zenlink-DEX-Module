@@ -5,6 +5,10 @@ pub trait ValidateCurrency<CurrencyId> {
 	fn validate_pool_lp_currency(a: CurrencyId) -> bool;
 }
 
+pub trait StablePoolLpCurrencyIdGenerate<CurrencyId, PoolId> {
+	fn generate_by_pool_id(pool_id: PoolId) -> CurrencyId;
+}
+
 pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 	fn stable_amm_calculate_currency_amount(
 		pool_id: PoolId,

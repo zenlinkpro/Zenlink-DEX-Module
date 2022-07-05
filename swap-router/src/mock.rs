@@ -9,7 +9,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	pallet_prelude::GenesisBuild,
 	parameter_types,
-	traits::{Contains, ConstU32},
+	traits::{ConstU32, Contains},
 	PalletId,
 };
 use sp_core::H256;
@@ -22,7 +22,7 @@ use sp_runtime::{
 use crate as router;
 use crate::{Config, Pallet};
 use orml_traits::{parameter_type_with_key, MultiCurrency};
-use stable_amm::traits::ValidateCurrency;
+use stable_amm::traits::{StablePoolLpCurrencyIdGenerate, ValidateCurrency};
 use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets, LOCAL};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -64,6 +64,7 @@ pub enum CurrencyId {
 	Forbidden(TokenSymbol),
 	Token(TokenSymbol),
 	StableLP(PoolType),
+	StableLPV2(PoolId),
 	ZenlinkLp(TokenSymbol, TokenSymbol),
 }
 
@@ -157,6 +158,7 @@ impl stable_amm::Config for Test {
 	type MultiCurrency = Tokens;
 	type PoolId = PoolId;
 	type EnsurePoolAsset = EnsurePoolAssetImpl<Tokens>;
+	type LpGenerate = PoolLpGenerate;
 	type TimeProvider = Timestamp;
 	type PoolCurrencySymbolLimit = PoolCurrencySymbolLimit;
 	type PalletId = StableAmmPalletId;
@@ -183,6 +185,14 @@ impl Config for Test {
 }
 
 pub struct EnsurePoolAssetImpl<Local>(PhantomData<Local>);
+
+pub struct PoolLpGenerate;
+
+impl StablePoolLpCurrencyIdGenerate<CurrencyId, PoolId> for PoolLpGenerate {
+	fn generate_by_pool_id(pool_id: PoolId) -> CurrencyId {
+		return CurrencyId::StableLPV2(pool_id);
+	}
+}
 
 impl<Local> ValidateCurrency<CurrencyId> for EnsurePoolAssetImpl<Local>
 where
@@ -304,7 +314,6 @@ pub const TOKEN1_SYMBOL: u8 = 1;
 pub const TOKEN2_SYMBOL: u8 = 2;
 pub const TOKEN3_SYMBOL: u8 = 3;
 pub const TOKEN4_SYMBOL: u8 = 4;
-pub const TOKEN_LP: u8 = 5;
 
 pub const TOKEN1_DECIMAL: u32 = 18;
 pub const TOKEN2_DECIMAL: u32 = 18;

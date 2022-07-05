@@ -4,7 +4,7 @@ use std::time::SystemTime;
 use std::u64;
 
 use super::{
-	mock::{CurrencyId::*, PoolToken::Token as pool_token, PoolType::*, *},
+	mock::{CurrencyId::*, *},
 	*,
 };
 
@@ -37,35 +37,20 @@ fn set_block_timestamp(timestamp: u64) {
 	Timestamp::set_timestamp(timestamp * 1000);
 }
 
-const BASIC_4_POOL_CURRENCY_ID: CurrencyId = StableLP(P4(
-	pool_token(TOKEN1_SYMBOL),
-	pool_token(TOKEN2_SYMBOL),
-	pool_token(TOKEN3_SYMBOL),
-	pool_token(TOKEN4_SYMBOL),
-));
-
-const BASIC_3_POOL_CURRENCY_ID: CurrencyId = StableLP(P3(
-	pool_token(TOKEN1_SYMBOL),
-	pool_token(TOKEN2_SYMBOL),
-	pool_token(TOKEN3_SYMBOL),
-));
-
-const BASIC_2_POOL_CURRENCY_ID: CurrencyId = StableLP(P2(pool_token(TOKEN1_SYMBOL), pool_token(TOKEN2_SYMBOL)));
-
 fn setup_test_pool() -> (PoolId, CurrencyId) {
-	let lp_currency_id = BASIC_2_POOL_CURRENCY_ID;
 	assert_ok!(StableAmm::create_pool(
 		Origin::root(),
 		vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL),],
 		vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL],
-		lp_currency_id,
 		INITIAL_A_VALUE,
 		SWAP_FEE,
 		ADMIN_FEE,
 		ALICE,
 		Vec::from("stable_pool_lp"),
-		18,
 	));
+
+	let pool_id = StableAmm::next_pool_id() - 1;
+	let lp_currency_id = StableAmm::pools(pool_id).unwrap().lp_currency_id;
 
 	assert_ok!(StableAmm::add_liquidity(
 		Origin::signed(ALICE),
@@ -78,34 +63,29 @@ fn setup_test_pool() -> (PoolId, CurrencyId) {
 }
 
 fn setup_test_pool_and_base_pool() -> (PoolId, PoolId) {
-	let first_pool_lp_currency_id = BASIC_3_POOL_CURRENCY_ID;
-
 	assert_ok!(StableAmm::create_pool(
 		Origin::root(),
 		vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL)],
 		vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL],
-		first_pool_lp_currency_id,
 		INITIAL_A_VALUE,
 		SWAP_FEE,
 		ADMIN_FEE,
 		ALICE,
 		Vec::from("basic_pool_lp"),
-		18,
 	));
 
-	let second_pool_lp_currency_id = StableLP(P2(pool_token(TOKEN_LP), pool_token(TOKEN4_SYMBOL)));
+	let pool_id = StableAmm::next_pool_id() - 1;
+	let first_pool_lp_currency_id = StableAmm::pools(pool_id).unwrap().lp_currency_id;
 
 	assert_ok!(StableAmm::create_pool(
 		Origin::root(),
 		vec![first_pool_lp_currency_id, Token(TOKEN4_SYMBOL)],
 		vec![18, TOKEN4_DECIMAL],
-		second_pool_lp_currency_id,
 		INITIAL_A_VALUE,
 		SWAP_FEE,
 		ADMIN_FEE,
 		ALICE,
 		Vec::from("pool_lp"),
-		18,
 	));
 
 	(0, 1)
@@ -133,13 +113,11 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 					Token(TOKEN4_SYMBOL)
 				],
 				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
-				BASIC_4_POOL_CURRENCY_ID,
 				0,
 				0,
 				0,
 				ALICE,
 				Vec::from("stable_pool_lp"),
-				18,
 			),
 			BadOrigin
 		);
@@ -152,13 +130,11 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				Origin::root(),
 				vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL),],
 				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
-				BASIC_3_POOL_CURRENCY_ID,
 				0,
 				0,
 				0,
 				ALICE,
 				Vec::from("stable_pool_lp"),
-				18,
 			),
 			Error::<Test>::MismatchParameter
 		);
@@ -176,34 +152,13 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 					Token(TOKEN4_SYMBOL)
 				],
 				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
-				BASIC_3_POOL_CURRENCY_ID,
 				0,
 				0,
 				0,
 				ALICE,
 				Vec::from("stable_pool_lp"),
-				18,
 			),
 			Error::<Test>::InvalidPooledCurrency
-		);
-		assert_eq!(StableAmm::next_pool_id(), 0);
-		assert_eq!(StableAmm::pools(0), None);
-
-		// Create with incorrect lp token should not work
-		assert_noop!(
-			StableAmm::create_pool(
-				Origin::root(),
-				vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL),],
-				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL],
-				Token(TOKEN4_SYMBOL),
-				0,
-				0,
-				0,
-				ALICE,
-				Vec::from("stable_pool_lp"),
-				18,
-			),
-			Error::<Test>::InvalidLpCurrency
 		);
 		assert_eq!(StableAmm::next_pool_id(), 0);
 		assert_eq!(StableAmm::pools(0), None);
@@ -214,13 +169,11 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 				Origin::root(),
 				vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL),],
 				vec![TOKEN1_DECIMAL, 20, TOKEN3_DECIMAL],
-				BASIC_3_POOL_CURRENCY_ID,
 				0,
 				0,
 				0,
 				ALICE,
 				Vec::from("stable_pool_lp"),
-				18,
 			),
 			Error::<Test>::InvalidCurrencyDecimal
 		);
@@ -232,7 +185,6 @@ fn create_pool_with_incorrect_parameter_should_not_work() {
 #[test]
 fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 	new_test_ext().execute_with(|| {
-		let lp_currency_id = BASIC_4_POOL_CURRENCY_ID;
 		// exceed max swap fee
 		assert_noop!(
 			StableAmm::create_pool(
@@ -244,13 +196,11 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 					Token(TOKEN4_SYMBOL)
 				],
 				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
-				lp_currency_id,
 				0,
 				(MAX_SWAP_FEE + 1).into(),
 				0,
 				ALICE,
 				Vec::from("stable_pool_lp"),
-				18,
 			),
 			Error::<Test>::ExceedMaxFee
 		);
@@ -268,13 +218,11 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 					Token(TOKEN4_SYMBOL)
 				],
 				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
-				lp_currency_id,
 				0,
 				(MAX_SWAP_FEE).into(),
 				(MAX_ADMIN_FEE + 1).into(),
 				ALICE,
 				Vec::from("stable_pool_lp"),
-				18,
 			),
 			Error::<Test>::ExceedMaxAdminFee
 		);
@@ -292,13 +240,11 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 					Token(TOKEN4_SYMBOL)
 				],
 				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
-				lp_currency_id,
 				MAX_A.into(),
 				(MAX_SWAP_FEE - 1).into(),
 				(MAX_ADMIN_FEE - 1).into(),
 				ALICE,
 				Vec::from("stable_pool_lp"),
-				18,
 			),
 			Error::<Test>::ExceedMaxA
 		);
@@ -308,53 +254,9 @@ fn create_pool_with_parameters_exceed_threshold_should_not_work() {
 }
 
 #[test]
-fn create_pool_with_already_used_lp_currency_should_not_work() {
-	new_test_ext().execute_with(|| {
-		let lp_currency_id = BASIC_4_POOL_CURRENCY_ID;
-		assert_eq!(StableAmm::lp_currencies(lp_currency_id), None);
-
-		assert_ok!(StableAmm::create_pool(
-			Origin::root(),
-			vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL)],
-			vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL],
-			lp_currency_id,
-			(MAX_A - 1).into(),
-			(MAX_SWAP_FEE - 1).into(),
-			(MAX_ADMIN_FEE - 1).into(),
-			ALICE,
-			Vec::from("stable_pool_lp"),
-			18,
-		));
-
-		assert_eq!(StableAmm::next_pool_id(), 1);
-		assert_eq!(StableAmm::lp_currencies(lp_currency_id), Some(0));
-
-		assert_noop!(
-			StableAmm::create_pool(
-				Origin::root(),
-				vec![Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL), Token(TOKEN4_SYMBOL)],
-				vec![TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
-				lp_currency_id,
-				(MAX_A - 1).into(),
-				(MAX_SWAP_FEE - 1).into(),
-				(MAX_ADMIN_FEE - 1).into(),
-				ALICE,
-				Vec::from("stable_pool_lp"),
-				18,
-			),
-			Error::<Test>::LpCurrencyAlreadyUsed
-		);
-
-		assert_eq!(StableAmm::pools(1), None);
-		assert_eq!(StableAmm::next_pool_id(), 1);
-		assert_eq!(StableAmm::lp_currencies(lp_currency_id), Some(0))
-	})
-}
-
-#[test]
 fn create_pool_should_work() {
 	new_test_ext().execute_with(|| {
-		let lp_currency_id = BASIC_4_POOL_CURRENCY_ID;
+		let lp_currency_id = CurrencyId::StableLPV2(0);
 		assert_eq!(StableAmm::lp_currencies(lp_currency_id), None);
 
 		assert_ok!(StableAmm::create_pool(
@@ -366,13 +268,11 @@ fn create_pool_should_work() {
 				Token(TOKEN4_SYMBOL)
 			],
 			vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
-			lp_currency_id,
 			INITIAL_A_VALUE,
 			SWAP_FEE,
 			ADMIN_FEE,
 			ALICE,
 			Vec::from("stable_pool_lp"),
-			18,
 		));
 
 		assert_eq!(StableAmm::next_pool_id(), 1);
@@ -415,18 +315,15 @@ fn create_pool_should_work() {
 #[test]
 fn add_liquidity_with_incorrect_should_not_work() {
 	new_test_ext().execute_with(|| {
-		let lp_currency_id = BASIC_2_POOL_CURRENCY_ID;
 		assert_ok!(StableAmm::create_pool(
 			Origin::root(),
 			vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL),],
 			vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL],
-			lp_currency_id,
 			INITIAL_A_VALUE,
 			SWAP_FEE,
 			ADMIN_FEE,
 			ALICE,
 			Vec::from("stable_pool_lp"),
-			18,
 		));
 
 		// case0: add_liquidity with incorrect pool id
@@ -592,18 +489,15 @@ fn add_liquidity_when_mint_amount_not_reach_due_to_front_running_should_not_work
 #[test]
 fn add_liquidity_with_expired_deadline_should_not_work() {
 	new_test_ext().execute_with(|| {
-		let lp_currency_id = BASIC_2_POOL_CURRENCY_ID;
 		assert_ok!(StableAmm::create_pool(
 			Origin::root(),
 			vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL),],
 			vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL],
-			lp_currency_id,
 			INITIAL_A_VALUE,
 			SWAP_FEE,
 			ADMIN_FEE,
 			ALICE,
 			Vec::from("stable_pool_lp"),
-			18,
 		));
 
 		System::set_block_number(100);
