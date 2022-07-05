@@ -36,6 +36,7 @@ type Balance = u128;
 type Number = Balance;
 
 const FEE_DENOMINATOR: Number = 10_000_000_000;
+const POOL_LP_CURRENCY_ID_DECIMAL: u8 = 18;
 
 // protect from division loss when run approximation loop
 const A_PRECISION: Number = 100;
@@ -81,7 +82,7 @@ pub struct Pool<CurrencyId, AccountId, BoundString> {
 pub mod pallet {
 	use super::*;
 	use frame_system::pallet_prelude::*;
-	use traits::ValidateCurrency;
+	use traits::{StablePoolLpCurrencyIdGenerate, ValidateCurrency};
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -98,6 +99,8 @@ pub mod pallet {
 
 		/// The trait verify currency for some scenes.
 		type EnsurePoolAsset: ValidateCurrency<Self::CurrencyId>;
+
+		type LpGenerate: StablePoolLpCurrencyIdGenerate<Self::CurrencyId, Self::PoolId>;
 
 		/// The trait get timestamp of chain.
 		type TimeProvider: UnixTime;
@@ -302,27 +305,17 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_ids: Vec<T::CurrencyId>,
 			currency_decimals: Vec<u32>,
-			lp_currency_id: T::CurrencyId,
 			a: Number,
 			fee: Number,
 			admin_fee: Number,
 			admin_fee_receiver: T::AccountId,
 			lp_currency_symbol: Vec<u8>,
-			lp_currency_decimal: u8,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
 			ensure!(
 				T::EnsurePoolAsset::validate_pooled_currency(&currency_ids),
 				Error::<T>::InvalidPooledCurrency
-			);
-			ensure!(
-				T::EnsurePoolAsset::validate_pool_lp_currency(lp_currency_id),
-				Error::<T>::InvalidLpCurrency
-			);
-			ensure!(
-				Self::lp_currencies(lp_currency_id).is_none(),
-				Error::<T>::LpCurrencyAlreadyUsed
 			);
 
 			ensure!(
@@ -350,6 +343,13 @@ pub mod pallet {
 
 			NextPoolId::<T>::try_mutate(|next_pool_id| -> DispatchResult {
 				let pool_id = *next_pool_id;
+				let lp_currency_id = T::LpGenerate::generate_by_pool_id(pool_id);
+
+				ensure!(
+					Self::lp_currencies(lp_currency_id).is_none(),
+					Error::<T>::LpCurrencyAlreadyUsed
+				);
+
 				let account = T::PalletId::get().into_sub_account(pool_id);
 
 				Pools::<T>::try_mutate_exists(pool_id, |pool_info| -> DispatchResult {
@@ -376,7 +376,7 @@ pub mod pallet {
 						account: account.clone(),
 						admin_fee_receiver: admin_fee_receiver.clone(),
 						lp_currency_symbol: symbol,
-						lp_currency_decimal,
+						lp_currency_decimal: POOL_LP_CURRENCY_ID_DECIMAL,
 					});
 
 					Ok(())
