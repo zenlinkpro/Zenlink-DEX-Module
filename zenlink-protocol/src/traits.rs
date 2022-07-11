@@ -35,36 +35,6 @@ pub trait LocalAssetHandler<AccountId> {
 	) -> Result<AssetBalance, DispatchError>;
 }
 
-impl<AccountId> LocalAssetHandler<AccountId> for () {
-	fn local_balance_of(_asset_id: AssetId, _who: &AccountId) -> AssetBalance {
-		Default::default()
-	}
-
-	fn local_total_supply(_asset_id: AssetId) -> AssetBalance {
-		Default::default()
-	}
-
-	fn local_is_exists(_asset_id: AssetId) -> bool {
-		false
-	}
-
-	fn local_deposit(
-		_asset_id: AssetId,
-		_origin: &AccountId,
-		_amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError> {
-		unimplemented!()
-	}
-
-	fn local_withdraw(
-		_asset_id: AssetId,
-		_origin: &AccountId,
-		_amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError> {
-		unimplemented!()
-	}
-}
-
 pub trait OtherAssetHandler<AccountId> {
 	fn other_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance;
 
@@ -97,35 +67,6 @@ pub trait OtherAssetHandler<AccountId> {
 	) -> Result<AssetBalance, DispatchError>;
 }
 
-impl<AccountId> OtherAssetHandler<AccountId> for () {
-	fn other_balance_of(_asset_id: AssetId, _who: &AccountId) -> AssetBalance {
-		Default::default()
-	}
-
-	fn other_total_supply(_asset_id: AssetId) -> AssetBalance {
-		Default::default()
-	}
-
-	fn other_is_exists(_asset_id: AssetId) -> bool {
-		false
-	}
-
-	fn other_deposit(
-		_asset_id: AssetId,
-		_origin: &AccountId,
-		_amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError> {
-		unimplemented!()
-	}
-
-	fn other_withdraw(
-		_asset_id: AssetId,
-		_origin: &AccountId,
-		_amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError> {
-		unimplemented!()
-	}
-}
 
 pub trait ExportZenlink<AccountId> {
 	fn get_amount_in_by_path(amount_out: AssetBalance, path: &[AssetId]) -> Result<Vec<AssetBalance>, DispatchError>;
