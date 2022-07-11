@@ -28,8 +28,8 @@ use sp_runtime::{
 
 use crate as pallet_zenlink;
 pub use crate::{
-	AssetBalance, AssetId, Config, LocalAssetHandler, MultiAssetsHandler, Pallet, ParaId, ZenlinkMultiAssets,
-	LIQUIDITY, LOCAL, NATIVE, RESERVED,
+	AssetBalance, AssetId, Config, LocalAssetHandler, MultiAssetsHandler, OtherAssetHandler, Pallet, ParaId,
+	ZenlinkMultiAssets, LIQUIDITY, LOCAL, NATIVE, RESERVED,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -134,7 +134,7 @@ impl pallet_balances::Config for Test {
 
 impl Config for Test {
 	type Event = Event;
-	type MultiAssetsHandler = ZenlinkMultiAssets<Zenlink, Balances, LocalAssetAdaptor<Tokens>>;
+	type MultiAssetsHandler = ZenlinkMultiAssets<Zenlink, Balances, LocalAssetAdaptor<Tokens>, MockOtherAsset>;
 	type PalletId = ZenlinkPalletId;
 	type TargetChains = ();
 	type SelfParaId = ();
@@ -250,5 +250,37 @@ where
 		asset_id_to_currency_id(&asset_id).map_or(Ok(AssetBalance::default()), |currency_id| {
 			Local::withdraw(currency_id, origin, amount).map(|_| amount)
 		})
+	}
+}
+
+pub struct MockOtherAsset;
+
+impl<AccountId> OtherAssetHandler<AccountId> for MockOtherAsset {
+	fn other_balance_of(_asset_id: AssetId, _who: &AccountId) -> AssetBalance {
+		Default::default()
+	}
+
+	fn other_total_supply(_asset_id: AssetId) -> AssetBalance {
+		Default::default()
+	}
+
+	fn other_is_exists(_asset_id: AssetId) -> bool {
+		false
+	}
+
+	fn other_deposit(
+		_asset_id: AssetId,
+		_origin: &AccountId,
+		_amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		unimplemented!()
+	}
+
+	fn other_withdraw(
+		_asset_id: AssetId,
+		_origin: &AccountId,
+		_amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		unimplemented!()
 	}
 }

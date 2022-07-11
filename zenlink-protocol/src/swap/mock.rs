@@ -27,8 +27,8 @@ use sp_runtime::{
 
 use crate as pallet_zenlink;
 pub use crate::{
-	AssetBalance, AssetId, Config, LocalAssetHandler, MultiAssetsHandler, Pallet, ParaId, ZenlinkMultiAssets,
-	LIQUIDITY, LOCAL, NATIVE, RESERVED,
+	AssetBalance, AssetId, Config, LocalAssetHandler, MultiAssetsHandler, OtherAssetHandler, Pallet, ParaId,
+	ZenlinkMultiAssets, LIQUIDITY, LOCAL, NATIVE, RESERVED,
 };
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 
@@ -134,7 +134,7 @@ impl pallet_balances::Config for Test {
 
 impl Config for Test {
 	type Event = Event;
-	type MultiAssetsHandler = ZenlinkMultiAssets<Zenlink, Balances, LocalAssetAdaptor<Tokens>>;
+	type MultiAssetsHandler = ZenlinkMultiAssets<Zenlink, Balances, LocalAssetAdaptor<Tokens>, MockOtherAsset>;
 	type PalletId = ZenlinkPalletId;
 	type TargetChains = ();
 	type SelfParaId = ();
@@ -183,6 +183,38 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 }
 
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+
+pub struct MockOtherAsset;
+
+impl<AccountId> OtherAssetHandler<AccountId> for MockOtherAsset {
+	fn other_balance_of(_asset_id: AssetId, _who: &AccountId) -> AssetBalance {
+		Default::default()
+	}
+
+	fn other_total_supply(_asset_id: AssetId) -> AssetBalance {
+		Default::default()
+	}
+
+	fn other_is_exists(_asset_id: AssetId) -> bool {
+		false
+	}
+
+	fn other_deposit(
+		_asset_id: AssetId,
+		_origin: &AccountId,
+		_amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		unimplemented!()
+	}
+
+	fn other_withdraw(
+		_asset_id: AssetId,
+		_origin: &AccountId,
+		_amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		unimplemented!()
+	}
+}
 
 type AccountId = u128;
 

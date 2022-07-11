@@ -22,7 +22,7 @@ pub trait MultiAssetsHandler<AccountId> {
 	fn withdraw(asset_id: AssetId, origin: &AccountId, amount: AssetBalance) -> Result<AssetBalance, DispatchError>;
 }
 
-pub struct ZenlinkMultiAssets<T, Native = (), Local = (), Other = ()>(PhantomData<(T, Native, Local, Other)>);
+pub struct ZenlinkMultiAssets<T, Native, Local, Other>(PhantomData<(T, Native, Local, Other)>);
 
 impl<T: Config, NativeCurrency, Local, Other> MultiAssetsHandler<T::AccountId>
 	for ZenlinkMultiAssets<Pallet<T>, NativeCurrency, Local, Other>
