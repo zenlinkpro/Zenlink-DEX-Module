@@ -53,7 +53,7 @@ impl<AccountId> LocalAssetHandler<AccountId> for () {
 		_origin: &AccountId,
 		_amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		unimplemented!()
+		Err(DispatchError::Other("unimplemented"))
 	}
 
 	fn local_withdraw(
@@ -61,7 +61,7 @@ impl<AccountId> LocalAssetHandler<AccountId> for () {
 		_origin: &AccountId,
 		_amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		unimplemented!()
+		Err(DispatchError::Other("unimplemented"))
 	}
 }
 
@@ -115,7 +115,7 @@ impl<AccountId> OtherAssetHandler<AccountId> for () {
 		_origin: &AccountId,
 		_amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		unimplemented!()
+		Err(DispatchError::Other("unimplemented"))
 	}
 
 	fn other_withdraw(
@@ -123,7 +123,7 @@ impl<AccountId> OtherAssetHandler<AccountId> for () {
 		_origin: &AccountId,
 		_amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		unimplemented!()
+		Err(DispatchError::Other("unimplemented"))
 	}
 }
 
