@@ -23,44 +23,44 @@ use stable_amm_runtime_api::StableAmmApi as StableAmmRuntimeApi;
 
 #[rpc(client, server)]
 pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {
-	#[method(name = "stable_amm_get_virtual_price")]
+	#[method(name = "stableAmm_get_virtual_price")]
 	fn get_virtual_price(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
-	#[method(name = "stable_amm_get_A")]
+	#[method(name = "stableAmm_get_A")]
 	fn get_a(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
-	#[method(name = "stable_amm_get_A_precise")]
+	#[method(name = "stableAmm_get_A_precise")]
 	fn get_a_precise(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
-	#[method(name = "stable_amm_get_currencies")]
+	#[method(name = "stableAmm_get_currencies")]
 	fn get_currencies(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<Vec<CurrencyId>>;
 
-	#[method(name = "stable_amm_get_currency")]
+	#[method(name = "stableAmm_get_currency")]
 	fn get_currency(&self, pool_id: PoolId, index: u32, at: Option<BlockHash>) -> RpcResult<CurrencyId>;
 
-	#[method(name = "stable_amm_get_lp_currency")]
+	#[method(name = "stableAmm_get_lp_currency")]
 	fn get_lp_currency(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<CurrencyId>;
 
-	#[method(name = "stable_amm_get_currency_index")]
+	#[method(name = "stableAmm_get_currency_index")]
 	fn get_currency_index(&self, pool_id: PoolId, currency: CurrencyId, at: Option<BlockHash>) -> RpcResult<u32>;
 
-	#[method(name = "stable_amm_get_currency_precision_multipliers")]
+	#[method(name = "stableAmm_get_currency_precision_multipliers")]
 	fn get_currency_precision_multipliers(&self, pool_id: PoolId, at: Option<BlockHash>)
 		-> RpcResult<Vec<NumberOrHex>>;
 
-	#[method(name = "stable_amm_get_currency_balances")]
+	#[method(name = "stableAmm_get_currency_balances")]
 	fn get_currency_balances(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<Vec<NumberOrHex>>;
 
-	#[method(name = "stable_amm_get_number_of_currencies")]
+	#[method(name = "stableAmm_get_number_of_currencies")]
 	fn get_number_of_currencies(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<u32>;
 
-	#[method(name = "stable_amm_get_admin_balances")]
+	#[method(name = "stableAmm_get_admin_balances")]
 	fn get_admin_balances(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<Vec<NumberOrHex>>;
 
-	#[method(name = "stable_amm_get_admin_balance")]
+	#[method(name = "stableAmm_get_admin_balance")]
 	fn get_admin_balance(&self, pool_id: PoolId, index: u32, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
 
-	#[method(name = "stable_amm_calculate_currency_amount")]
+	#[method(name = "stableAmm_calculate_currency_amount")]
 	fn calculate_currency_amount(
 		&self,
 		pool_id: PoolId,
@@ -69,7 +69,7 @@ pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {
 		at: Option<BlockHash>,
 	) -> RpcResult<NumberOrHex>;
 
-	#[method(name = "stable_amm_calculate_swap")]
+	#[method(name = "stableAmm_calculate_swap")]
 	fn calculate_swap(
 		&self,
 		pool_id: PoolId,
@@ -79,7 +79,7 @@ pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {
 		at: Option<BlockHash>,
 	) -> RpcResult<NumberOrHex>;
 
-	#[method(name = "stable_amm_calculate_remove_liquidity")]
+	#[method(name = "stableAmm_calculate_remove_liquidity")]
 	fn calculate_remove_liquidity(
 		&self,
 		pool_id: PoolId,
@@ -87,7 +87,7 @@ pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {
 		at: Option<BlockHash>,
 	) -> RpcResult<Vec<NumberOrHex>>;
 
-	#[method(name = "stable_amm_calculate_calculate_remove_liquidity_one_currency")]
+	#[method(name = "stableAmm_calculate_calculate_remove_liquidity_one_currency")]
 	fn calculate_remove_liquidity_one_currency(
 		&self,
 		pool_id: PoolId,
