@@ -41,6 +41,7 @@ fn setup_stable_pools() {
 		0,
 		vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
 		0,
+		USER1,
 		u64::MAX,
 	));
 
@@ -49,6 +50,7 @@ fn setup_stable_pools() {
 		1,
 		vec![1e18 as Balance, 1e6 as Balance],
 		0,
+		USER1,
 		u64::MAX,
 	));
 }
@@ -90,6 +92,7 @@ fn swap_exact_token_for_tokens_through_stable_pool_with_amount_slippage_should_f
 				1e16 as Balance,
 				u128::MAX,
 				routes,
+				USER1,
 				u64::MAX,
 			),
 			Error::<Test>::AmountSlippage
@@ -116,13 +119,14 @@ fn swap_exact_token_for_tokens_through_stable_pool_should_work() {
 		let token1_balance_before = Tokens::accounts(USER1, Token(TOKEN1_SYMBOL)).free;
 		let token2_balance_before = Tokens::accounts(USER1, Token(TOKEN2_SYMBOL)).free;
 		let token3_balance_before = Tokens::accounts(USER1, Token(TOKEN3_SYMBOL)).free;
-		let token4_balance_before = Tokens::accounts(USER1, Token(TOKEN4_SYMBOL)).free;
+		let token4_balance_before = Tokens::accounts(USER2, Token(TOKEN4_SYMBOL)).free;
 
 		assert_ok!(RouterPallet::swap_exact_token_for_tokens_through_stable_pool(
 			Origin::signed(USER1),
 			1e16 as Balance,
 			0,
 			routes,
+			USER2,
 			u64::MAX,
 		));
 
@@ -139,7 +143,7 @@ fn swap_exact_token_for_tokens_through_stable_pool_should_work() {
 			token3_balance_before
 		);
 		assert_eq!(
-			Tokens::accounts(USER1, Token(TOKEN4_SYMBOL)).free,
+			Tokens::accounts(USER2, Token(TOKEN4_SYMBOL)).free,
 			token4_balance_before + 9854
 		);
 	})

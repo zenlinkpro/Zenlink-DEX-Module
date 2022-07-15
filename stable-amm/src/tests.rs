@@ -57,6 +57,7 @@ fn setup_test_pool() -> (PoolId, CurrencyId) {
 		0,
 		vec![1e18 as Balance, 1e18 as Balance],
 		0,
+		ALICE,
 		u64::MAX,
 	));
 	(0, lp_currency_id)
@@ -333,6 +334,7 @@ fn add_liquidity_with_incorrect_should_not_work() {
 				1,
 				vec![1e16 as Balance, 2e18 as Balance],
 				0,
+				BOB,
 				u64::MAX,
 			),
 			Error::<Test>::InvalidPoolId
@@ -340,13 +342,20 @@ fn add_liquidity_with_incorrect_should_not_work() {
 
 		// case1: add_liquidity with invalid amounts length
 		assert_noop!(
-			StableAmm::add_liquidity(Origin::signed(BOB), 0, vec![1e16 as Balance], 0, u64::MAX,),
+			StableAmm::add_liquidity(Origin::signed(BOB), 0, vec![1e16 as Balance], 0, BOB, u64::MAX,),
 			Error::<Test>::MismatchParameter
 		);
 
 		// case2: initial add liquidity require all currencies
 		assert_noop!(
-			StableAmm::add_liquidity(Origin::signed(BOB), 0, vec![1e16 as Balance, 0 as Balance], 0, u64::MAX,),
+			StableAmm::add_liquidity(
+				Origin::signed(BOB),
+				0,
+				vec![1e16 as Balance, 0 as Balance],
+				0,
+				BOB,
+				u64::MAX,
+			),
 			Error::<Test>::RequireAllCurrencies
 		);
 	});
@@ -367,10 +376,11 @@ fn add_liquidity_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 3e18 as Balance],
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 		assert_eq!(
-			<Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB),
+			<Test as Config>::MultiCurrency::free_balance(lp_currency_id, &CHARLIE),
 			3991672211258372957
 		);
 	});
@@ -397,10 +407,11 @@ fn add_liquidity_with_expected_amount_lp_token_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 3e18 as Balance],
 			calculated_lp_token_amount_with_slippage,
+			CHARLIE,
 			u64::MAX,
 		));
 		assert_eq!(
-			<Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB),
+			<Test as Config>::MultiCurrency::free_balance(lp_currency_id, &CHARLIE),
 			3991672211258372957
 		);
 	});
@@ -422,10 +433,11 @@ fn add_liquidity_lp_token_amount_has_small_slippage_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 3e18 as Balance],
 			calculated_lp_token_amount_with_negative_slippage,
+			CHARLIE,
 			u64::MAX,
 		));
 
-		let lp_token_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
+		let lp_token_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &CHARLIE);
 		assert!(lp_token_balance > calculated_lp_token_amount_with_negative_slippage);
 		assert!(lp_token_balance < calculated_lp_token_amount_with_positive_slippage);
 	})
@@ -441,6 +453,7 @@ fn add_liquidity_update_pool_balance_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 3e18 as Balance],
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -470,6 +483,7 @@ fn add_liquidity_when_mint_amount_not_reach_due_to_front_running_should_not_work
 			pool_id,
 			vec![1e18 as Balance, 3e18 as Balance],
 			0,
+			ALICE,
 			u64::MAX,
 		));
 
@@ -479,6 +493,7 @@ fn add_liquidity_when_mint_amount_not_reach_due_to_front_running_should_not_work
 				pool_id,
 				vec![1e18 as Balance, 3e18 as Balance],
 				calculated_lp_token_amount_with_slippage,
+				ALICE,
 				u64::MAX,
 			),
 			Error::<Test>::AmountSlippage
@@ -503,7 +518,14 @@ fn add_liquidity_with_expired_deadline_should_not_work() {
 		System::set_block_number(100);
 
 		assert_noop!(
-			StableAmm::add_liquidity(Origin::signed(ALICE), 0, vec![1e18 as Balance, 1e18 as Balance], 0, 99,),
+			StableAmm::add_liquidity(
+				Origin::signed(ALICE),
+				0,
+				vec![1e18 as Balance, 1e18 as Balance],
+				0,
+				ALICE,
+				99,
+			),
 			Error::<Test>::Deadline
 		);
 	})
@@ -523,7 +545,14 @@ fn remove_liquidity_with_incorrect_min_amounts_length_should_not_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_pool();
 		assert_noop!(
-			StableAmm::remove_liquidity(Origin::signed(ALICE), pool_id, 2e18 as Balance, vec![0], u64::MAX,),
+			StableAmm::remove_liquidity(
+				Origin::signed(ALICE),
+				pool_id,
+				2e18 as Balance,
+				vec![0],
+				ALICE,
+				u64::MAX,
+			),
 			Error::<Test>::MismatchParameter
 		);
 	})
@@ -539,6 +568,7 @@ fn remove_liquidity_should_work() {
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -547,6 +577,7 @@ fn remove_liquidity_should_work() {
 			pool_id,
 			2e18 as Balance,
 			vec![0, 0],
+			ALICE,
 			u64::MAX
 		));
 
@@ -558,6 +589,7 @@ fn remove_liquidity_should_work() {
 			pool_id,
 			current_bob_balance,
 			vec![0, 0],
+			BOB,
 			u64::MAX
 		));
 		assert_eq!(
@@ -581,11 +613,12 @@ fn remove_liquidity_with_expected_return_amount_underlying_currency_should_work(
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
-		let first_token_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
-		let second_token_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &BOB);
-		let pool_token_balance_before = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
+		let first_token_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &CHARLIE);
+		let second_token_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &CHARLIE);
+		let pool_token_balance_before = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &CHARLIE);
 
 		assert_eq!(pool_token_balance_before, 1996275270169644725);
 		let pool = StableAmm::pools(pool_id).unwrap();
@@ -594,15 +627,16 @@ fn remove_liquidity_with_expected_return_amount_underlying_currency_should_work(
 		assert_eq!(expected_balances[1], 504529314564897436);
 
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(BOB),
+			Origin::signed(CHARLIE),
 			pool_id,
 			pool_token_balance_before,
 			expected_balances.clone(),
+			CHARLIE,
 			u64::MAX
 		));
 
-		let first_token_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
-		let second_token_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &BOB);
+		let first_token_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &CHARLIE);
+		let second_token_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &CHARLIE);
 
 		assert_eq!(
 			first_token_balance_after - first_token_balance_before,
@@ -625,6 +659,7 @@ fn remove_liquidity_exceed_own_lp_tokens_should_not_work() {
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -636,6 +671,7 @@ fn remove_liquidity_exceed_own_lp_tokens_should_not_work() {
 				pool_id,
 				pool_token_balance + 1,
 				vec![Balance::MAX, Balance::MAX],
+				BOB,
 				u64::MAX
 			),
 			Error::<Test>::AmountSlippage
@@ -653,6 +689,7 @@ fn remove_liquidity_when_min_amounts_not_reached_due_to_front_running_should_not
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -669,6 +706,7 @@ fn remove_liquidity_when_min_amounts_not_reached_due_to_front_running_should_not
 			pool_id,
 			vec![1e16 as Balance, 2e18 as Balance],
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -678,6 +716,7 @@ fn remove_liquidity_when_min_amounts_not_reached_due_to_front_running_should_not
 				pool_id,
 				pool_token_balance,
 				expected_balances,
+				BOB,
 				u64::MAX
 			),
 			Error::<Test>::AmountSlippage
@@ -695,6 +734,7 @@ fn remove_liquidity_with_expired_deadline_should_not_work() {
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 		let pool_token_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
@@ -702,7 +742,7 @@ fn remove_liquidity_with_expired_deadline_should_not_work() {
 		System::set_block_number(100);
 
 		assert_noop!(
-			StableAmm::remove_liquidity(Origin::signed(BOB), pool_id, pool_token_balance, vec![0, 0], 99),
+			StableAmm::remove_liquidity(Origin::signed(BOB), pool_id, pool_token_balance, vec![0, 0], BOB, 99),
 			Error::<Test>::Deadline
 		);
 	})
@@ -718,6 +758,7 @@ fn remove_liquidity_imbalance_with_mismatch_amounts_should_not_work() {
 				pool_id,
 				vec![1e18 as Balance],
 				Balance::MAX,
+				ALICE,
 				u64::MAX
 			),
 			Error::<Test>::MismatchParameter
@@ -735,6 +776,7 @@ fn remove_liquidity_imbalance_when_withdraw_more_than_available_should_not_work(
 				pool_id,
 				vec![Balance::MAX, Balance::MAX],
 				1,
+				ALICE,
 				u64::MAX
 			),
 			Error::<Test>::Arithmetic
@@ -751,6 +793,7 @@ fn remove_liquidity_imbalance_with_max_burn_lp_token_amount_range_should_work() 
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -769,6 +812,7 @@ fn remove_liquidity_imbalance_with_max_burn_lp_token_amount_range_should_work() 
 			pool_id,
 			vec![1e18 as Balance, 1e16 as Balance],
 			max_pool_token_amount_to_be_burned_negative_slippage,
+			BOB,
 			u64::MAX
 		));
 
@@ -795,6 +839,7 @@ fn remove_liquidity_imbalance_exceed_own_lp_token_amount_should_not_work() {
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -807,6 +852,7 @@ fn remove_liquidity_imbalance_exceed_own_lp_token_amount_should_not_work() {
 				pool_id,
 				vec![2e18 as Balance, 1e16 as Balance],
 				current_balance + 1,
+				BOB,
 				u64::MAX
 			),
 			Error::<Test>::AmountSlippage
@@ -823,6 +869,7 @@ fn remove_liquidity_imbalance_when_min_amounts_of_underlying_tokens_not_reached_
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -836,6 +883,7 @@ fn remove_liquidity_imbalance_when_min_amounts_of_underlying_tokens_not_reached_
 			pool_id,
 			vec![1e16 as Balance, 2e20 as Balance],
 			0,
+			ALICE,
 			u64::MAX,
 		));
 
@@ -845,6 +893,7 @@ fn remove_liquidity_imbalance_when_min_amounts_of_underlying_tokens_not_reached_
 				pool_id,
 				vec![1e18 as Balance, 1e16 as Balance],
 				max_pool_token_amount_to_be_burned_negative_slippage,
+				BOB,
 				u64::MAX
 			),
 			Error::<Test>::AmountSlippage
@@ -861,6 +910,7 @@ fn remove_liquidity_imbalance_with_expired_deadline_should_not_work() {
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 		let current_balance = <Test as Config>::MultiCurrency::free_balance(lp_currency_id, &BOB);
@@ -872,6 +922,7 @@ fn remove_liquidity_imbalance_with_expired_deadline_should_not_work() {
 				pool_id,
 				vec![1e18 as Balance, 1e16 as Balance],
 				current_balance,
+				BOB,
 				99
 			),
 			Error::<Test>::Deadline
@@ -897,6 +948,7 @@ fn remove_liquidity_one_currency_calculation_should_work() {
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -921,6 +973,7 @@ fn remove_liquidity_one_currency_calculated_amount_as_min_amount_should_work() {
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -939,6 +992,7 @@ fn remove_liquidity_one_currency_calculated_amount_as_min_amount_should_work() {
 			pool_token_balance,
 			0,
 			calculated_first_token_amount.0,
+			BOB,
 			u64::MAX
 		));
 
@@ -956,6 +1010,7 @@ fn remove_liquidity_one_currency_with_lp_token_amount_exceed_own_should_work() {
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -969,6 +1024,7 @@ fn remove_liquidity_one_currency_with_lp_token_amount_exceed_own_should_work() {
 				pool_token_balance + 1,
 				0,
 				0,
+				BOB,
 				u64::MAX
 			),
 			Error::<Test>::InsufficientSupply
@@ -985,6 +1041,7 @@ fn remove_liquidity_one_currency_with_min_amount_not_reached_due_to_front_runnin
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -1001,6 +1058,7 @@ fn remove_liquidity_one_currency_with_min_amount_not_reached_due_to_front_runnin
 			pool_id,
 			vec![1e16 as Balance, 1e20 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -1011,6 +1069,7 @@ fn remove_liquidity_one_currency_with_min_amount_not_reached_due_to_front_runnin
 				pool_token_balance,
 				0,
 				calculated_first_token_amount.0,
+				BOB,
 				u64::MAX
 			),
 			Error::<Test>::AmountSlippage
@@ -1027,6 +1086,7 @@ fn remove_liquidity_one_currency_with_expired_deadline_should_not_work() {
 			pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -1035,7 +1095,7 @@ fn remove_liquidity_one_currency_with_expired_deadline_should_not_work() {
 		System::set_block_number(100);
 
 		assert_noop!(
-			StableAmm::remove_liquidity_one_currency(Origin::signed(BOB), pool_id, pool_token_balance, 0, 0, 99),
+			StableAmm::remove_liquidity_one_currency(Origin::signed(BOB), pool_id, pool_token_balance, 0, 0, BOB, 99),
 			Error::<Test>::Deadline
 		);
 	})
@@ -1055,7 +1115,7 @@ fn swap_with_currency_amount_exceed_own_should_not_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_pool();
 		assert_noop!(
-			StableAmm::swap(Origin::signed(BOB), pool_id, 0, 1, Balance::MAX, 0, u64::MAX),
+			StableAmm::swap(Origin::signed(BOB), pool_id, 0, 1, Balance::MAX, 0, BOB, u64::MAX),
 			Error::<Test>::InsufficientReserve
 		);
 	})
@@ -1071,7 +1131,7 @@ fn swap_with_expected_amounts_should_work() {
 		assert_eq!(calculated_swap_return, 99702611562565289);
 
 		let token_from_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
-		let token_to_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &BOB);
+		let token_to_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &CHARLIE);
 
 		assert_ok!(StableAmm::swap(
 			Origin::signed(BOB),
@@ -1080,10 +1140,11 @@ fn swap_with_expected_amounts_should_work() {
 			1,
 			1e17 as Balance,
 			calculated_swap_return,
+			CHARLIE,
 			u64::MAX
 		));
 		let token_from_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
-		let token_to_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &BOB);
+		let token_to_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &CHARLIE);
 
 		assert_eq!(token_from_balance_before - token_from_balance_after, 1e17 as Balance);
 		assert_eq!(token_to_balance_after - token_to_balance_before, calculated_swap_return);
@@ -1105,6 +1166,7 @@ fn swap_when_min_amount_receive_not_reached_due_to_front_running_should_not_work
 			1,
 			1e17 as Balance,
 			calculated_swap_return,
+			CHARLIE,
 			u64::MAX
 		));
 
@@ -1116,6 +1178,7 @@ fn swap_when_min_amount_receive_not_reached_due_to_front_running_should_not_work
 				1,
 				1e17 as Balance,
 				calculated_swap_return,
+				BOB,
 				u64::MAX
 			),
 			Error::<Test>::AmountSlippage
@@ -1145,6 +1208,7 @@ fn swap_with_lower_min_dy_when_transaction_is_front_ran_should_work() {
 			1,
 			1e17 as Balance,
 			0,
+			CHARLIE,
 			u64::MAX
 		));
 
@@ -1156,6 +1220,7 @@ fn swap_with_lower_min_dy_when_transaction_is_front_ran_should_work() {
 			1,
 			1e17 as Balance,
 			calculated_swap_return_with_negative_slippage,
+			BOB,
 			u64::MAX
 		));
 
@@ -1179,7 +1244,7 @@ fn swap_with_expired_deadline_should_not_work() {
 		System::set_block_number(100);
 
 		assert_noop!(
-			StableAmm::swap(Origin::signed(BOB), pool_id, 0, 1, 1e17 as Balance, 0, 99),
+			StableAmm::swap(Origin::signed(BOB), pool_id, 0, 1, 1e17 as Balance, 0, BOB, 99),
 			Error::<Test>::Deadline
 		);
 	})
@@ -1204,6 +1269,7 @@ fn calculate_virtual_price_after_swap_should_work() {
 			1,
 			1e17 as Balance,
 			0,
+			BOB,
 			u64::MAX
 		));
 		assert_eq!(
@@ -1218,6 +1284,7 @@ fn calculate_virtual_price_after_swap_should_work() {
 			0,
 			1e17 as Balance,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -1237,6 +1304,7 @@ fn calculate_virtual_price_after_imbalanced_withdrawal_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -1245,6 +1313,7 @@ fn calculate_virtual_price_after_imbalanced_withdrawal_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -1255,6 +1324,7 @@ fn calculate_virtual_price_after_imbalanced_withdrawal_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 0],
 			2e18 as Balance,
+			BOB,
 			u64::MAX
 		));
 
@@ -1268,6 +1338,7 @@ fn calculate_virtual_price_after_imbalanced_withdrawal_should_work() {
 			pool_id,
 			vec![0, 1e18 as Balance],
 			2e18 as Balance,
+			CHARLIE,
 			u64::MAX
 		));
 		assert_eq!(
@@ -1289,6 +1360,7 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
@@ -1299,6 +1371,7 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 			pool_id,
 			vec![2e18 as Balance, 0],
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 		assert_eq!(
@@ -1312,6 +1385,7 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 			pool_id,
 			vec![2e18 as Balance, 1e18 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 		assert_eq!(
@@ -1330,6 +1404,7 @@ fn calculate_virtual_price_value_not_change_after_balanced_withdrawal_should_not
 			pool_id,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -1338,6 +1413,7 @@ fn calculate_virtual_price_value_not_change_after_balanced_withdrawal_should_not
 			pool_id,
 			1e18 as Balance,
 			vec![0, 0],
+			BOB,
 			u64::MAX
 		));
 
@@ -1451,6 +1527,7 @@ fn get_admin_balance_always_zero_when_admin_fee_equal_zero() {
 			1,
 			1e17 as Balance,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -1477,6 +1554,7 @@ fn get_admin_balance_with_expected_amount_after_swap_should_work() {
 			1,
 			1e17 as Balance,
 			0,
+			BOB,
 			u64::MAX
 		));
 		assert_eq!(StableAmm::get_admin_balance(pool_id, 0), Some(Zero::zero()));
@@ -1489,6 +1567,7 @@ fn get_admin_balance_with_expected_amount_after_swap_should_work() {
 			0,
 			1e17 as Balance,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -1558,6 +1637,7 @@ fn withdraw_admin_fee_with_expected_amount_of_fees_should_work() {
 			1,
 			1e17 as Balance,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -1568,6 +1648,7 @@ fn withdraw_admin_fee_with_expected_amount_of_fees_should_work() {
 			0,
 			1e17 as Balance,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -1609,6 +1690,7 @@ fn withdraw_admin_fee_has_no_impact_on_user_withdrawal() {
 			pool_id,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -1620,6 +1702,7 @@ fn withdraw_admin_fee_has_no_impact_on_user_withdrawal() {
 				1,
 				1e17 as Balance,
 				0,
+				CHARLIE,
 				u64::MAX
 			));
 
@@ -1630,6 +1713,7 @@ fn withdraw_admin_fee_has_no_impact_on_user_withdrawal() {
 				0,
 				1e17 as Balance,
 				0,
+				CHARLIE,
 				u64::MAX
 			));
 		}
@@ -1648,6 +1732,7 @@ fn withdraw_admin_fee_has_no_impact_on_user_withdrawal() {
 			pool_id,
 			pool_token_balance,
 			vec![0, 0],
+			BOB,
 			u64::MAX,
 		));
 
@@ -1677,6 +1762,7 @@ fn ramp_a_upwards_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 0],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -1714,6 +1800,7 @@ fn ramp_a_downward_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 0],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -1852,6 +1939,7 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 			pool_id,
 			vec![1e18 as Balance, 0],
 			0,
+			ALICE,
 			u64::MAX,
 		));
 
@@ -1883,6 +1971,7 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 			pool_id,
 			vec![1e18 as Balance, 0],
 			0,
+			ALICE,
 			u64::MAX,
 		));
 
@@ -1958,6 +2047,7 @@ fn check_when_ramp_a_upwards_and_tokens_price_equally() {
 			1,
 			1e18 as Balance,
 			0,
+			context.attacker,
 			u64::MAX
 		));
 		let second_token_output =
@@ -1985,6 +2075,7 @@ fn check_when_ramp_a_upwards_and_tokens_price_equally() {
 			0,
 			second_token_output,
 			0,
+			context.attacker,
 			u64::MAX
 		));
 
@@ -2024,6 +2115,7 @@ fn check_when_ramp_a_upwards_and_tokens_price_unequally() {
 			context.pool_id,
 			vec![0, 2e18 as Balance],
 			0,
+			ALICE,
 			u64::MAX,
 		));
 
@@ -2042,6 +2134,7 @@ fn check_when_ramp_a_upwards_and_tokens_price_unequally() {
 			1,
 			1e18 as Balance,
 			0,
+			context.attacker,
 			u64::MAX
 		));
 		let second_token_output =
@@ -2068,6 +2161,7 @@ fn check_when_ramp_a_upwards_and_tokens_price_unequally() {
 			0,
 			second_token_output,
 			0,
+			context.attacker,
 			u64::MAX
 		));
 
@@ -2108,6 +2202,7 @@ fn check_when_ramp_a_downwards_and_tokens_price_equally() {
 			1,
 			1e18 as Balance,
 			0,
+			context.attacker,
 			u64::MAX
 		));
 		let second_token_output =
@@ -2135,6 +2230,7 @@ fn check_when_ramp_a_downwards_and_tokens_price_equally() {
 			0,
 			second_token_output,
 			0,
+			context.attacker,
 			u64::MAX
 		));
 
@@ -2174,6 +2270,7 @@ fn check_when_ramp_a_downwards_and_tokens_price_unequally() {
 			context.pool_id,
 			vec![0, 2e18 as Balance],
 			0,
+			ALICE,
 			u64::MAX,
 		));
 
@@ -2192,6 +2289,7 @@ fn check_when_ramp_a_downwards_and_tokens_price_unequally() {
 			1,
 			1e18 as Balance,
 			0,
+			context.attacker,
 			u64::MAX
 		));
 		let second_token_output =
@@ -2218,6 +2316,7 @@ fn check_when_ramp_a_downwards_and_tokens_price_unequally() {
 			0,
 			second_token_output,
 			0,
+			context.attacker,
 			u64::MAX
 		));
 
@@ -2278,6 +2377,7 @@ fn check_arithmetic_in_add_liquidity_should_successfully() {
 			0,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2286,6 +2386,7 @@ fn check_arithmetic_in_add_liquidity_should_successfully() {
 			0,
 			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -2307,6 +2408,7 @@ fn check_arithmetic_in_add_liquidity_should_successfully() {
 			0,
 			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2334,6 +2436,7 @@ fn check_arithmetic_in_remove_liquidity_should_successfully() {
 			0,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2342,6 +2445,7 @@ fn check_arithmetic_in_remove_liquidity_should_successfully() {
 			0,
 			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -2350,6 +2454,7 @@ fn check_arithmetic_in_remove_liquidity_should_successfully() {
 			0,
 			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2362,6 +2467,7 @@ fn check_arithmetic_in_remove_liquidity_should_successfully() {
 			pool_id,
 			user1_pool_lp_balance_before,
 			vec![0, 0],
+			BOB,
 			u64::MAX
 		));
 
@@ -2389,6 +2495,7 @@ fn check_arithmetic_in_remove_liquidity_should_successfully() {
 			pool_id,
 			user2_pool_lp_balance_before,
 			vec![0, 0],
+			CHARLIE,
 			u64::MAX
 		));
 
@@ -2424,6 +2531,7 @@ fn check_arithmetic_in_remove_liquidity_one_currency_should_successfully() {
 			0,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2432,6 +2540,7 @@ fn check_arithmetic_in_remove_liquidity_one_currency_should_successfully() {
 			0,
 			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -2440,6 +2549,7 @@ fn check_arithmetic_in_remove_liquidity_one_currency_should_successfully() {
 			0,
 			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2457,6 +2567,7 @@ fn check_arithmetic_in_remove_liquidity_one_currency_should_successfully() {
 			user1_pool_lp_balance_before,
 			0,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -2477,6 +2588,7 @@ fn check_arithmetic_in_remove_liquidity_one_currency_should_successfully() {
 			user2_pool_lp_balance_before,
 			0,
 			0,
+			CHARLIE,
 			u64::MAX
 		));
 
@@ -2509,6 +2621,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 			0,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2517,6 +2630,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 			0,
 			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -2525,6 +2639,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 			0,
 			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2541,6 +2656,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 			pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000],
 			user1_pool_lp_balance_before,
+			BOB,
 			u64::MAX
 		));
 
@@ -2566,6 +2682,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 			pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000],
 			user2_pool_lp_balance_before,
+			CHARLIE,
 			u64::MAX
 		));
 
@@ -2601,6 +2718,7 @@ fn check_arithmetic_in_swap_should_successfully() {
 			0,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2609,6 +2727,7 @@ fn check_arithmetic_in_swap_should_successfully() {
 			0,
 			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -2617,6 +2736,7 @@ fn check_arithmetic_in_swap_should_successfully() {
 			0,
 			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2635,6 +2755,7 @@ fn check_arithmetic_in_swap_should_successfully() {
 			1,
 			100000000000000000000000000,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -2659,6 +2780,7 @@ fn check_arithmetic_in_swap_should_successfully() {
 			0,
 			100000000000000000000000000,
 			0,
+			CHARLIE,
 			u64::MAX
 		));
 
@@ -2707,6 +2829,7 @@ fn check_arithmetic_in_add_liquidity_with_admin_fee_should_successfully() {
 			0,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2715,6 +2838,7 @@ fn check_arithmetic_in_add_liquidity_with_admin_fee_should_successfully() {
 			0,
 			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -2723,6 +2847,7 @@ fn check_arithmetic_in_add_liquidity_with_admin_fee_should_successfully() {
 			0,
 			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2750,6 +2875,7 @@ fn check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully() {
 			0,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2758,6 +2884,7 @@ fn check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully() {
 			0,
 			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -2766,6 +2893,7 @@ fn check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully() {
 			0,
 			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2776,6 +2904,7 @@ fn check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully() {
 			pool_id,
 			user1_pool_lp_balance_before,
 			vec![0, 0],
+			BOB,
 			u64::MAX
 		));
 		// user2 remove liquidity
@@ -2786,6 +2915,7 @@ fn check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully() {
 			pool_id,
 			user2_pool_lp_balance_before,
 			vec![0, 0],
+			CHARLIE,
 			u64::MAX
 		));
 
@@ -2813,6 +2943,7 @@ fn check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_succe
 			0,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2821,6 +2952,7 @@ fn check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_succe
 			0,
 			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -2829,6 +2961,7 @@ fn check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_succe
 			0,
 			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2841,6 +2974,7 @@ fn check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_succe
 			user1_pool_lp_balance_before,
 			0,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -2850,6 +2984,7 @@ fn check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_succe
 			user2_pool_lp_balance_before,
 			0,
 			0,
+			CHARLIE,
 			u64::MAX
 		));
 
@@ -2881,6 +3016,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_successf
 			0,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2889,6 +3025,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_successf
 			0,
 			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -2897,6 +3034,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_successf
 			0,
 			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2908,6 +3046,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_successf
 			pool_id,
 			vec![200000000000000000000000000, 100000000000000000000000000],
 			user1_pool_lp_balance_before,
+			BOB,
 			u64::MAX
 		));
 
@@ -2916,6 +3055,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_successf
 			pool_id,
 			vec![100000000000000000000000000, 200000000000000000000000000],
 			user2_pool_lp_balance_before,
+			CHARLIE,
 			u64::MAX
 		));
 
@@ -2947,6 +3087,7 @@ fn check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() {
 			0,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2955,6 +3096,7 @@ fn check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() {
 			0,
 			vec![100000000000000000000000000, 300000000000000000000000000], // [100_000_000e18, 300_000_000e18]
 			0,
+			CHARLIE,
 			u64::MAX,
 		));
 
@@ -2963,6 +3105,7 @@ fn check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() {
 			0,
 			vec![300000000000000000000000000, 100000000000000000000000000], // [300_000_000e18, 100_000_000e18]
 			0,
+			BOB,
 			u64::MAX,
 		));
 
@@ -2973,6 +3116,7 @@ fn check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() {
 			1,
 			100000000000000000000000000,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -2983,6 +3127,7 @@ fn check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() {
 			0,
 			100000000000000000000000000,
 			0,
+			CHARLIE,
 			u64::MAX
 		));
 
@@ -3013,10 +3158,11 @@ fn add_pool_and_base_pool_liquidity_should_work() {
 			vec![0, 1e6 as Balance],
 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
 			0,
+			CHARLIE,
 			u64::MAX
 		));
 
-		let lp_amount = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &BOB);
+		let lp_amount = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &CHARLIE);
 
 		assert_eq!(lp_amount, expected_mint_amount);
 
@@ -3036,6 +3182,7 @@ fn remove_pool_and_base_pool_liquidity_should_work() {
 			basic_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -3044,6 +3191,7 @@ fn remove_pool_and_base_pool_liquidity_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 1e6 as Balance],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -3054,6 +3202,7 @@ fn remove_pool_and_base_pool_liquidity_should_work() {
 			1e18 as Balance,
 			vec![0, 0],
 			vec![0, 0, 0],
+			BOB,
 			u64::MAX
 		));
 
@@ -3090,6 +3239,7 @@ fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
 			basic_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -3098,6 +3248,7 @@ fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 1e6 as Balance],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -3108,6 +3259,7 @@ fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
 			1e18 as Balance,
 			0,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -3144,6 +3296,7 @@ fn swap_pool_from_base_should_work() {
 			basic_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -3152,6 +3305,7 @@ fn swap_pool_from_base_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 1e6 as Balance],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -3163,6 +3317,7 @@ fn swap_pool_from_base_should_work() {
 			1,
 			1e16 as Balance,
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -3199,6 +3354,7 @@ fn swap_pool_to_base_should_work() {
 			basic_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -3207,6 +3363,7 @@ fn swap_pool_to_base_should_work() {
 			pool_id,
 			vec![1e18 as Balance, 1e6 as Balance],
 			0,
+			BOB,
 			u64::MAX
 		));
 
@@ -3218,6 +3375,7 @@ fn swap_pool_to_base_should_work() {
 			0,
 			1e6 as Balance,
 			0,
+			BOB,
 			u64::MAX
 		));
 

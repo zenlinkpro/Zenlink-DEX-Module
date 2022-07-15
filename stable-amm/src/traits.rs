@@ -31,6 +31,7 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		pool_id: PoolId,
 		amounts: &[Balance],
 		min_mint_amount: Balance,
+		to: &AccountId,
 	) -> Result<Balance, sp_runtime::DispatchError>;
 
 	fn swap(
@@ -40,10 +41,16 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		to_index: u32,
 		in_amount: Balance,
 		min_out_amount: Balance,
+		to: &AccountId,
 	) -> Result<Balance, sp_runtime::DispatchError>;
 
-	fn remove_liquidity(who: &AccountId, poo_id: PoolId, lp_amount: Balance, min_amounts: &[Balance])
-		-> DispatchResult;
+	fn remove_liquidity(
+		who: &AccountId,
+		poo_id: PoolId,
+		lp_amount: Balance,
+		min_amounts: &[Balance],
+		to: &AccountId,
+	) -> DispatchResult;
 
 	fn remove_liquidity_one_currency(
 		who: &AccountId,
@@ -51,6 +58,7 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		lp_amount: Balance,
 		index: u32,
 		min_amount: Balance,
+		to: &AccountId,
 	) -> Result<Balance, DispatchError>;
 
 	fn remove_liquidity_imbalance(
@@ -58,6 +66,7 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		pool_id: PoolId,
 		amounts: &[Balance],
 		max_burn_amount: Balance,
+		to: &AccountId,
 	) -> DispatchResult;
 
 	fn swap_pool_from_base(
@@ -68,6 +77,7 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
+		to: &AccountId,
 	) -> Result<Balance, DispatchError>;
 
 	fn swap_pool_to_base(
@@ -78,6 +88,7 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
+		to: &AccountId,
 	) -> Result<Balance, DispatchError>;
 }
 
@@ -115,13 +126,18 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		None
 	}
 
+	fn currency_index(pool_id: T::PoolId, currency: T::CurrencyId) -> Option<u32> {
+		Self::get_currency_index(pool_id, currency)
+	}
+
 	fn add_liquidity(
 		who: &T::AccountId,
 		pool_id: T::PoolId,
 		amounts: &[Balance],
 		min_mint_amount: Balance,
+		to: &T::AccountId,
 	) -> Result<Balance, sp_runtime::DispatchError> {
-		Self::inner_add_liquidity(who, pool_id, amounts, min_mint_amount)
+		Self::inner_add_liquidity(who, pool_id, amounts, min_mint_amount, to)
 	}
 
 	fn swap(
@@ -131,6 +147,7 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		to_index: u32,
 		in_amount: Balance,
 		min_out_amount: Balance,
+		to: &T::AccountId,
 	) -> Result<Balance, sp_runtime::DispatchError> {
 		Self::inner_swap(
 			who,
@@ -139,6 +156,7 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 			to_index as usize,
 			in_amount,
 			min_out_amount,
+			to,
 		)
 	}
 
@@ -147,8 +165,9 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		poo_id: T::PoolId,
 		lp_amount: Balance,
 		min_amounts: &[Balance],
+		to: &T::AccountId,
 	) -> DispatchResult {
-		Self::inner_remove_liquidity(poo_id, who, lp_amount, min_amounts)
+		Self::inner_remove_liquidity(poo_id, who, lp_amount, min_amounts, to)
 	}
 
 	fn remove_liquidity_one_currency(
@@ -157,8 +176,9 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		lp_amount: Balance,
 		index: u32,
 		min_amount: Balance,
+		to: &T::AccountId,
 	) -> Result<Balance, DispatchError> {
-		Self::inner_remove_liquidity_one_currency(poo_id, who, lp_amount, index, min_amount)
+		Self::inner_remove_liquidity_one_currency(poo_id, who, lp_amount, index, min_amount, to)
 	}
 
 	fn remove_liquidity_imbalance(
@@ -166,8 +186,9 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		pool_id: T::PoolId,
 		amounts: &[Balance],
 		max_burn_amount: Balance,
+		to: &T::AccountId,
 	) -> DispatchResult {
-		Self::inner_remove_liquidity_imbalance(who, pool_id, amounts, max_burn_amount)
+		Self::inner_remove_liquidity_imbalance(who, pool_id, amounts, max_burn_amount, to)
 	}
 
 	fn swap_pool_from_base(
@@ -178,8 +199,9 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
+		to: &T::AccountId,
 	) -> Result<Balance, DispatchError> {
-		Self::inner_swap_pool_from_base(who, pool_id, base_pool_id, in_index, out_index, dx, min_dy)
+		Self::inner_swap_pool_from_base(who, pool_id, base_pool_id, in_index, out_index, dx, min_dy, to)
 	}
 
 	fn swap_pool_to_base(
@@ -190,11 +212,8 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
+		to: &T::AccountId,
 	) -> Result<Balance, DispatchError> {
-		Self::inner_swap_pool_to_base(who, pool_id, base_pool_id, in_index, out_index, dx, min_dy)
-	}
-
-	fn currency_index(pool_id: T::PoolId, currency: T::CurrencyId) -> Option<u32> {
-		Self::get_currency_index(pool_id, currency)
+		Self::inner_swap_pool_to_base(who, pool_id, base_pool_id, in_index, out_index, dx, min_dy, to)
 	}
 }
