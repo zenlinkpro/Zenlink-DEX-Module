@@ -663,10 +663,7 @@ fn bootstrap_contribute_end_should_work() {
 			[].to_vec(),
 		));
 
-		assert_noop!(
-			DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID),
-			Error::<Test>::UnqualifiedBootstrap
-		);
+		assert_ne!(DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID), Ok(()));
 
 		assert_ok!(DexPallet::bootstrap_contribute(
 			Origin::signed(ALICE),
@@ -1232,10 +1229,8 @@ fn create_bootstrap_in_disable_bootstrap() {
 			Error::<Test>::DenyRefund
 		);
 
-		assert_noop!(
-			DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID),
-			Error::<Test>::UnqualifiedBootstrap
-		);
+
+		assert_ne!(DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID), Ok(()));
 
 		assert_ok!(DexPallet::bootstrap_contribute(
 			Origin::signed(BOB),

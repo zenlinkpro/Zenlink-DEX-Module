@@ -3,6 +3,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
+#![allow(clippy::too_many_arguments)]
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -476,7 +477,6 @@ pub mod pallet {
 		/// - `account`: Destination account
 		/// - `amount`: Amount to transfer
 		#[pallet::weight(max_weight.saturating_add(100_000_000u64))]
-		#[frame_support::transactional]
 		pub fn transfer_to_parachain(
 			origin: OriginFor<T>,
 			asset_id: AssetId,
@@ -485,7 +485,7 @@ pub mod pallet {
 			#[pallet::compact] amount: AssetBalance,
 			max_weight: Weight,
 		) -> DispatchResult {
-			let who = ensure_signed(origin.clone())?;
+			let who = ensure_signed(origin)?;
 			let balance = T::MultiAssetsHandler::balance_of(asset_id, &who);
 			let checked = Self::check_existential_deposit(asset_id, amount);
 			ensure!(asset_id.is_support(), Error::<T>::UnsupportedAssetType);
@@ -604,7 +604,6 @@ pub mod pallet {
 		/// - `amount_1_min`: Minimum amount of asset_1 added to the pair
 		/// - `deadline`: Height of the cutoff block of this transaction
 		#[pallet::weight(T::WeightInfo::add_liquidity())]
-		#[frame_support::transactional]
 		#[allow(clippy::too_many_arguments)]
 		pub fn add_liquidity(
 			origin: OriginFor<T>,
@@ -648,7 +647,6 @@ pub mod pallet {
 		/// - `recipient`: Account that accepts withdrawal of assets
 		/// - `deadline`: Height of the cutoff block of this transaction
 		#[pallet::weight(T::WeightInfo::remove_liquidity())]
-		#[frame_support::transactional]
 		#[allow(clippy::too_many_arguments)]
 		pub fn remove_liquidity(
 			origin: OriginFor<T>,
@@ -690,7 +688,6 @@ pub mod pallet {
 		/// - `recipient`: Account that receive the target foreign
 		/// - `deadline`: Height of the cutoff block of this transaction
 		#[pallet::weight(T::WeightInfo::swap_exact_assets_for_assets())]
-		#[frame_support::transactional]
 		pub fn swap_exact_assets_for_assets(
 			origin: OriginFor<T>,
 			#[pallet::compact] amount_in: AssetBalance,
@@ -718,7 +715,6 @@ pub mod pallet {
 		/// - `recipient`: Account that receive the target foreign
 		/// - `deadline`: Height of the cutoff block of this transaction
 		#[pallet::weight(T::WeightInfo::swap_assets_for_exact_assets())]
-		#[frame_support::transactional]
 		pub fn swap_assets_for_exact_assets(
 			origin: OriginFor<T>,
 			#[pallet::compact] amount_out: AssetBalance,
@@ -750,7 +746,6 @@ pub mod pallet {
 		/// - `capacity_supply_1`: The max amount of asset_1 total contribute
 		/// - `end`: The earliest ending block.
 		#[pallet::weight(T::WeightInfo::bootstrap_create())]
-		#[frame_support::transactional]
 		#[allow(clippy::too_many_arguments)]
 		pub fn bootstrap_create(
 			origin: OriginFor<T>,
@@ -858,7 +853,6 @@ pub mod pallet {
 		/// - `amount_1_contribute`: The amount of asset_1 contribute to this bootstrap pair
 		/// - `deadline`: Height of the cutoff block of this transaction
 		#[pallet::weight(T::WeightInfo::bootstrap_contribute())]
-		#[frame_support::transactional]
 		pub fn bootstrap_contribute(
 			who: OriginFor<T>,
 			asset_0: AssetId,
@@ -888,7 +882,6 @@ pub mod pallet {
 		/// - `asset_1`: Asset which make up bootstrap pair
 		/// - `deadline`: Height of the cutoff block of this transaction
 		#[pallet::weight(T::WeightInfo::bootstrap_claim())]
-		#[frame_support::transactional]
 		pub fn bootstrap_claim(
 			origin: OriginFor<T>,
 			recipient: <T::Lookup as StaticLookup>::Source,
@@ -912,7 +905,6 @@ pub mod pallet {
 		/// - `asset_0`: Asset which make up bootstrap pair
 		/// - `asset_1`: Asset which make up bootstrap pair
 		#[pallet::weight(T::WeightInfo::bootstrap_end())]
-		#[frame_support::transactional]
 		pub fn bootstrap_end(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
 			ensure_signed(origin)?;
 			Self::mutate_lp_pairs(asset_0, asset_1);
@@ -934,7 +926,6 @@ pub mod pallet {
 		/// - `capacity_supply_1`: The new max amount of asset_1 total contribute
 		/// - `end`: The earliest ending block.
 		#[pallet::weight(T::WeightInfo::bootstrap_update())]
-		#[frame_support::transactional]
 		#[allow(clippy::too_many_arguments)]
 		pub fn bootstrap_update(
 			origin: OriginFor<T>,
@@ -1012,14 +1003,12 @@ pub mod pallet {
 		/// - `asset_0`: Asset which make up bootstrap pair
 		/// - `asset_1`: Asset which make up bootstrap pair
 		#[pallet::weight(T::WeightInfo::bootstrap_refund())]
-		#[frame_support::transactional]
 		pub fn bootstrap_refund(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_bootstrap_refund(who, asset_0, asset_1)
 		}
 
 		#[pallet::weight(100_000_000)]
-		#[frame_support::transactional]
 		pub fn bootstrap_charge_reward(
 			origin: OriginFor<T>,
 			asset_0: AssetId,
@@ -1036,7 +1025,7 @@ pub mod pallet {
 				);
 
 				for (asset_id, amount) in &charge_rewards {
-					let already_charge_amount = rewards.get(&asset_id).ok_or(Error::<T>::NoRewardTokens)?;
+					let already_charge_amount = rewards.get(asset_id).ok_or(Error::<T>::NoRewardTokens)?;
 
 					T::MultiAssetsHandler::transfer(*asset_id, &who, &Self::account_id(), *amount)?;
 					let new_charge_amount = already_charge_amount.checked_add(*amount).ok_or(Error::<T>::Overflow)?;
@@ -1053,7 +1042,6 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(100_000_000)]
-		#[frame_support::transactional]
 		pub fn bootstrap_withdraw_reward(
 			origin: OriginFor<T>,
 			asset_0: AssetId,

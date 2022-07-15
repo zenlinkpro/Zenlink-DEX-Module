@@ -88,9 +88,7 @@ impl<T: Config> Pallet<T> {
 			Junctions::X3(
 				Junction::Parachain(asset_id.chain_id),
 				Junction::PalletInstance(asset_id.asset_type),
-				Junction::GeneralIndex {
-					0: asset_id.asset_index as u128,
-				},
+				Junction::GeneralIndex(asset_id.asset_index as u128),
 			),
 		);
 
