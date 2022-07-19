@@ -4,11 +4,10 @@
 
 It should at least work until the following commits
 
--   rustc 1.53.0-nightly (673d0db5e 2021-03-23)
--   polkadot.js.org (apps v0.95.2-28)
--   Polkadot release-v0.9.13 
--   Cumulus polkadot-v0.9.13 
--   Substrate polkadot-v0.9.13 
+-   rustc 1.62.0-nightly (ecd44958e 2022-05-10)
+-   Polkadot release-v0.9.22
+-   Cumulus polkadot-v0.9.22 
+-   Substrate polkadot-v0.9.22 
 
 
 ## Precondition
