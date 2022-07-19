@@ -22,8 +22,8 @@ use sp_runtime::{
 use crate as router;
 use crate::{Config, Pallet};
 use orml_traits::{parameter_type_with_key, MultiCurrency};
-use stable_amm::traits::{StablePoolLpCurrencyIdGenerate, ValidateCurrency};
 use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets, LOCAL};
+use zenlink_stable_amm::traits::{StablePoolLpCurrencyIdGenerate, ValidateCurrency};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -152,7 +152,7 @@ impl pallet_timestamp::Config for Test {
 	type WeightInfo = ();
 }
 
-impl stable_amm::Config for Test {
+impl zenlink_stable_amm::Config for Test {
 	type Event = Event;
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Tokens;
@@ -298,7 +298,7 @@ frame_support::construct_runtime!(
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
 
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 8,
-		StableAMM: stable_amm::{Pallet, Call, Storage, Event<T>} = 9,
+		StableAMM: zenlink_stable_amm::{Pallet, Call, Storage, Event<T>} = 9,
 		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 11,
 		Zenlink: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 12,
 		Router: router::{Pallet, Call, Event<T>} = 13,

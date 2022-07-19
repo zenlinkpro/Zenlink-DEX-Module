@@ -23,8 +23,8 @@ use frame_support::{
 	transactional,
 };
 
-use stable_amm::traits::StableAmmApi;
 use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
+use zenlink_stable_amm::traits::StableAmmApi;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo)]
 pub struct StablePath<PoolId, CurrencyId> {

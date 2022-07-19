@@ -8,7 +8,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.22" }
 
-stable-amm = { path = '../..', default-features = false }
+zenlink-stable-amm = { path = '../..', default-features = false }
 
 [features]
 default = ["std"]
@@ -16,5 +16,5 @@ std = [
     "codec/std",
     "sp-api/std",
     'sp-std/std',
-    "stable-amm/std",
+    "zenlink-stable-amm/std",
 ]
