@@ -159,6 +159,7 @@ pub mod pallet {
 		AddLiquidity {
 			pool_id: T::PoolId,
 			who: T::AccountId,
+			to: T::AccountId,
 			supply_amounts: Vec<Balance>,
 			fees: Vec<Balance>,
 			new_d: Balance,
@@ -168,6 +169,7 @@ pub mod pallet {
 		TokenExchange {
 			pool_id: T::PoolId,
 			who: T::AccountId,
+			to: T::AccountId,
 			in_index: u32,
 			in_amount: Balance,
 			out_index: u32,
@@ -177,6 +179,7 @@ pub mod pallet {
 		RemoveLiquidity {
 			pool_id: T::PoolId,
 			who: T::AccountId,
+			to: T::AccountId,
 			amounts: Vec<Balance>,
 			fees: Vec<Balance>,
 			new_total_supply: Balance,
@@ -185,6 +188,7 @@ pub mod pallet {
 		RemoveLiquidityOneCurrency {
 			pool_id: T::PoolId,
 			who: T::AccountId,
+			to: T::AccountId,
 			out_index: u32,
 			burn_amount: Balance,
 			out_amount: Balance,
@@ -193,6 +197,7 @@ pub mod pallet {
 		RemoveLiquidityImbalance {
 			pool_id: T::PoolId,
 			who: T::AccountId,
+			to: T::AccountId,
 			amounts: Vec<Balance>,
 			fees: Vec<Balance>,
 			new_d: Balance,
@@ -413,6 +418,7 @@ pub mod pallet {
 			pool_id: T::PoolId,
 			amounts: Vec<Balance>,
 			min_mint_amount: Balance,
+			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -420,7 +426,7 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::inner_add_liquidity(&who, pool_id, &amounts, min_mint_amount)?;
+			Self::inner_add_liquidity(&who, pool_id, &amounts, min_mint_amount, &to)?;
 
 			Ok(())
 		}
@@ -444,6 +450,7 @@ pub mod pallet {
 			to_index: u32,
 			in_amount: Balance,
 			min_out_amount: Balance,
+			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -458,6 +465,7 @@ pub mod pallet {
 				to_index as usize,
 				in_amount,
 				min_out_amount,
+				&to,
 			)?;
 
 			Ok(())
@@ -478,6 +486,7 @@ pub mod pallet {
 			poo_id: T::PoolId,
 			lp_amount: Balance,
 			min_amounts: Vec<Balance>,
+			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -485,7 +494,7 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::inner_remove_liquidity(poo_id, &who, lp_amount, &min_amounts)?;
+			Self::inner_remove_liquidity(poo_id, &who, lp_amount, &min_amounts, &to)?;
 
 			Ok(())
 		}
@@ -507,6 +516,7 @@ pub mod pallet {
 			lp_amount: Balance,
 			index: u32,
 			min_amount: Balance,
+			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -514,7 +524,7 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::inner_remove_liquidity_one_currency(poo_id, &who, lp_amount, index, min_amount)?;
+			Self::inner_remove_liquidity_one_currency(poo_id, &who, lp_amount, index, min_amount, &to)?;
 
 			Ok(())
 		}
@@ -534,6 +544,7 @@ pub mod pallet {
 			pool_id: T::PoolId,
 			amounts: Vec<Balance>,
 			max_burn_amount: Balance,
+			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -541,7 +552,7 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::inner_remove_liquidity_imbalance(&who, pool_id, &amounts, max_burn_amount)?;
+			Self::inner_remove_liquidity_imbalance(&who, pool_id, &amounts, max_burn_amount, &to)?;
 
 			Ok(())
 		}
@@ -566,6 +577,7 @@ pub mod pallet {
 			meta_amounts: Vec<Balance>,
 			base_amounts: Vec<Balance>,
 			min_to_mint: Balance,
+			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -579,6 +591,7 @@ pub mod pallet {
 				meta_amounts,
 				&base_amounts,
 				min_to_mint,
+				&to,
 			)?;
 
 			Ok(())
@@ -603,6 +616,7 @@ pub mod pallet {
 			amount: Balance,
 			min_amounts_meta: Vec<Balance>,
 			min_amounts_base: Vec<Balance>,
+			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -616,6 +630,7 @@ pub mod pallet {
 				amount,
 				&min_amounts_meta,
 				&min_amounts_base,
+				&to,
 			)?;
 
 			Ok(())
@@ -641,6 +656,7 @@ pub mod pallet {
 			amount: Balance,
 			i: u32,
 			min_amount: Balance,
+			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -654,6 +670,7 @@ pub mod pallet {
 				amount,
 				i,
 				min_amount,
+				&to,
 			)?;
 
 			Ok(())
@@ -681,13 +698,14 @@ pub mod pallet {
 			out_index: u32,
 			dx: Balance,
 			min_dy: Balance,
+			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::inner_swap_pool_from_base(&who, pool_id, base_pool_id, in_index, out_index, dx, min_dy)?;
+			Self::inner_swap_pool_from_base(&who, pool_id, base_pool_id, in_index, out_index, dx, min_dy, &to)?;
 
 			Ok(())
 		}
@@ -714,13 +732,14 @@ pub mod pallet {
 			out_index: u32,
 			dx: Balance,
 			min_dy: Balance,
+			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::inner_swap_pool_to_base(&who, pool_id, base_pool_id, in_index, out_index, dx, min_dy)?;
+			Self::inner_swap_pool_to_base(&who, pool_id, base_pool_id, in_index, out_index, dx, min_dy, &to)?;
 
 			Ok(())
 		}
@@ -952,6 +971,7 @@ impl<T: Config> Pallet<T> {
 		pool_id: T::PoolId,
 		amounts: &[Balance],
 		min_mint_amount: Balance,
+		to: &T::AccountId,
 	) -> Result<Balance, sp_runtime::DispatchError> {
 		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> Result<Balance, sp_runtime::DispatchError> {
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
@@ -1016,11 +1036,12 @@ impl<T: Config> Pallet<T> {
 
 			ensure!(min_mint_amount <= mint_amount, Error::<T>::AmountSlippage);
 
-			T::MultiCurrency::deposit(pool.lp_currency_id, who, mint_amount)?;
+			T::MultiCurrency::deposit(pool.lp_currency_id, to, mint_amount)?;
 
 			Self::deposit_event(Event::AddLiquidity {
 				pool_id,
 				who: who.clone(),
+				to: to.clone(),
 				supply_amounts: amounts.to_vec(),
 				fees: fees.to_vec(),
 				new_d: d1,
@@ -1037,6 +1058,7 @@ impl<T: Config> Pallet<T> {
 		j: usize,
 		in_amount: Balance,
 		out_min_amount: Balance,
+		to: &T::AccountId,
 	) -> Result<Balance, sp_runtime::DispatchError> {
 		ensure!(i != j, Error::<T>::SwapSameCurrency);
 
@@ -1088,12 +1110,13 @@ impl<T: Config> Pallet<T> {
 				.and_then(|n| n.checked_sub(admin_fee))
 				.ok_or(Error::<T>::Arithmetic)?;
 
-			T::MultiCurrency::transfer(pool.currency_ids[j], &pool.account, who, dy)
+			T::MultiCurrency::transfer(pool.currency_ids[j], &pool.account, to, dy)
 				.map_err(|_| Error::<T>::InsufficientReserve)?;
 
 			Self::deposit_event(Event::TokenExchange {
 				pool_id,
 				who: who.clone(),
+				to: to.clone(),
 				in_index: i as u32,
 				in_amount,
 				out_index: j as u32,
@@ -1109,6 +1132,7 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		lp_amount: Balance,
 		min_amounts: &[Balance],
+		to: &T::AccountId,
 	) -> DispatchResult {
 		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
@@ -1126,13 +1150,14 @@ impl<T: Config> Pallet<T> {
 			for (i, amount) in amounts.iter().enumerate() {
 				ensure!(*amount >= min_amounts[i], Error::<T>::AmountSlippage);
 				pool.balances[i] = pool.balances[i].checked_sub(*amount).ok_or(Error::<T>::Arithmetic)?;
-				T::MultiCurrency::transfer(pool.currency_ids[i], &pool.account, who, *amount)?;
+				T::MultiCurrency::transfer(pool.currency_ids[i], &pool.account, to, *amount)?;
 			}
 
 			T::MultiCurrency::withdraw(pool.lp_currency_id, who, lp_amount)?;
 			Self::deposit_event(Event::RemoveLiquidity {
 				pool_id,
 				who: who.clone(),
+				to: to.clone(),
 				amounts,
 				fees,
 				new_total_supply: lp_total_supply - lp_amount,
@@ -1147,6 +1172,7 @@ impl<T: Config> Pallet<T> {
 		lp_amount: Balance,
 		index: u32,
 		min_amount: Balance,
+		to: &T::AccountId,
 	) -> Result<Balance, DispatchError> {
 		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> Result<Balance, DispatchError> {
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
@@ -1176,11 +1202,12 @@ impl<T: Config> Pallet<T> {
 				.ok_or(Error::<T>::Arithmetic)?;
 
 			T::MultiCurrency::withdraw(pool.lp_currency_id, who, lp_amount)?;
-			T::MultiCurrency::transfer(pool.currency_ids[index as usize], &pool.account, who, dy)?;
+			T::MultiCurrency::transfer(pool.currency_ids[index as usize], &pool.account, to, dy)?;
 
 			Self::deposit_event(Event::RemoveLiquidityOneCurrency {
 				pool_id,
 				who: who.clone(),
+				to: to.clone(),
 				out_index: index,
 				burn_amount: lp_amount,
 				out_amount: dy,
@@ -1194,6 +1221,7 @@ impl<T: Config> Pallet<T> {
 		pool_id: T::PoolId,
 		amounts: &[Balance],
 		max_burn_amount: Balance,
+		to: &T::AccountId,
 	) -> DispatchResult {
 		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
@@ -1213,13 +1241,14 @@ impl<T: Config> Pallet<T> {
 
 			for (i, balance) in amounts.iter().enumerate() {
 				if *balance > Zero::zero() {
-					T::MultiCurrency::transfer(pool.currency_ids[i], &pool.account, who, *balance)?;
+					T::MultiCurrency::transfer(pool.currency_ids[i], &pool.account, to, *balance)?;
 				}
 			}
 
 			Self::deposit_event(Event::RemoveLiquidityImbalance {
 				pool_id,
 				who: who.clone(),
+				to: to.clone(),
 				amounts: amounts.to_vec(),
 				fees,
 				new_d: d1,
@@ -1237,6 +1266,7 @@ impl<T: Config> Pallet<T> {
 		mut meta_amounts: Vec<Balance>,
 		base_amounts: &[Balance],
 		min_to_mint: Balance,
+		to: &T::AccountId,
 	) -> DispatchResult {
 		let base_pool = Self::pools(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		let pool = Self::pools(pool_id).ok_or(Error::<T>::InvalidPoolId)?;
@@ -1250,7 +1280,7 @@ impl<T: Config> Pallet<T> {
 		}
 		let mut base_lp_received: Balance = Balance::default();
 		if deposit_base {
-			base_lp_received = Self::inner_add_liquidity(who, base_pool_id, base_amounts, 0)?;
+			base_lp_received = Self::inner_add_liquidity(who, base_pool_id, base_amounts, 0, who)?;
 		}
 		let base_lp_prior = <T as Config>::MultiCurrency::free_balance(base_pool.lp_currency_id, who);
 
@@ -1260,7 +1290,7 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 
-		Self::inner_add_liquidity(who, pool_id, &meta_amounts, min_to_mint)?;
+		Self::inner_add_liquidity(who, pool_id, &meta_amounts, min_to_mint, to)?;
 
 		if deposit_base {
 			let base_lp_after = <T as Config>::MultiCurrency::free_balance(base_pool.lp_currency_id, who);
@@ -1284,18 +1314,19 @@ impl<T: Config> Pallet<T> {
 		amount: Balance,
 		min_amounts_meta: &[Balance],
 		min_amounts_base: &[Balance],
+		to: &T::AccountId,
 	) -> DispatchResult {
 		let base_pool = Self::pools(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		let base_lp_amount_before = <T as Config>::MultiCurrency::free_balance(base_pool.lp_currency_id, who);
 
-		Self::inner_remove_liquidity(pool_id, who, amount, min_amounts_meta)?;
+		Self::inner_remove_liquidity(pool_id, who, amount, min_amounts_meta, who)?;
 
 		let base_lp_amount_after = <T as Config>::MultiCurrency::free_balance(base_pool.lp_currency_id, who);
 		let base_lp_amount = base_lp_amount_after
 			.checked_sub(base_lp_amount_before)
 			.ok_or(Error::<T>::Arithmetic)?;
 
-		Self::inner_remove_liquidity(base_pool_id, who, base_lp_amount, min_amounts_base)?;
+		Self::inner_remove_liquidity(base_pool_id, who, base_lp_amount, min_amounts_base, to)?;
 
 		Ok(())
 	}
@@ -1307,20 +1338,21 @@ impl<T: Config> Pallet<T> {
 		amount: Balance,
 		i: u32,
 		min_amount: Balance,
+		to: &T::AccountId,
 	) -> DispatchResult {
 		let base_pool_currency = Self::get_lp_currency(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		let base_pool_currency_index =
 			Self::get_currency_index(pool_id, base_pool_currency).ok_or(Error::<T>::InvalidBasePool)?;
 
 		let base_pool_currency_before = <T as Config>::MultiCurrency::free_balance(base_pool_currency, who);
-		Self::inner_remove_liquidity_one_currency(pool_id, who, amount, base_pool_currency_index, 0)?;
+		Self::inner_remove_liquidity_one_currency(pool_id, who, amount, base_pool_currency_index, 0, who)?;
 		let base_pool_currency_after = <T as Config>::MultiCurrency::free_balance(base_pool_currency, who);
 
 		let base_pool_currency_amount = base_pool_currency_after
 			.checked_sub(base_pool_currency_before)
 			.ok_or(Error::<T>::Arithmetic)?;
 
-		Self::inner_remove_liquidity_one_currency(base_pool_id, who, base_pool_currency_amount, i, min_amount)?;
+		Self::inner_remove_liquidity_one_currency(base_pool_id, who, base_pool_currency_amount, i, min_amount, to)?;
 
 		Ok(())
 	}
@@ -1333,6 +1365,7 @@ impl<T: Config> Pallet<T> {
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
+		to: &T::AccountId,
 	) -> Result<Balance, DispatchError> {
 		let base_pool_len = Self::get_currencies(base_pool_id).len();
 		ensure!(base_pool_len > 0, Error::<T>::InvalidPoolId);
@@ -1345,7 +1378,7 @@ impl<T: Config> Pallet<T> {
 		let mut base_amounts = vec![Balance::default(); base_pool_len];
 		base_amounts[in_index as usize] = dx;
 
-		let base_lp_amount = Self::inner_add_liquidity(who, base_pool_id, &base_amounts, 0)?;
+		let base_lp_amount = Self::inner_add_liquidity(who, base_pool_id, &base_amounts, 0, who)?;
 
 		let mut out_amount: Balance = 0;
 		if base_pool_currency_index != out_index {
@@ -1356,6 +1389,7 @@ impl<T: Config> Pallet<T> {
 				out_index as usize,
 				base_lp_amount,
 				min_dy,
+				to,
 			)?;
 		}
 
@@ -1370,6 +1404,7 @@ impl<T: Config> Pallet<T> {
 		out_index: u32,
 		dx: Balance,
 		min_dy: Balance,
+		to: &T::AccountId,
 	) -> Result<Balance, DispatchError> {
 		let base_pool_currency = Self::get_lp_currency(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		let base_pool_currency_index =
@@ -1384,10 +1419,11 @@ impl<T: Config> Pallet<T> {
 				base_pool_currency_index as usize,
 				dx,
 				0,
+				who,
 			)?;
 		}
 		let out_amount =
-			Self::inner_remove_liquidity_one_currency(base_pool_id, who, base_lp_amount, out_index, min_dy)?;
+			Self::inner_remove_liquidity_one_currency(base_pool_id, who, base_lp_amount, out_index, min_dy, to)?;
 
 		Ok(out_amount)
 	}
