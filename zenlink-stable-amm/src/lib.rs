@@ -1069,16 +1069,16 @@ impl<T: Config> Pallet<T> {
 
 			let in_amount = Self::do_transfer_in(pool.currency_ids[i], who, &pool.account, in_amount)?;
 
-			let normalize_balances = Self::xp(&pool.balances, &pool.token_multipliers).ok_or(Error::<T>::Arithmetic)?;
+			let normalized_balances = Self::xp(&pool.balances, &pool.token_multipliers).ok_or(Error::<T>::Arithmetic)?;
 
 			let x = in_amount
 				.checked_mul(pool.token_multipliers[i])
-				.and_then(|n| n.checked_add(normalize_balances[i]))
+				.and_then(|n| n.checked_add(normalized_balances[i]))
 				.ok_or(Error::<T>::Arithmetic)?;
 
-			let y = Self::get_y(pool, i, j, x, &normalize_balances).ok_or(Error::<T>::Arithmetic)?;
+			let y = Self::get_y(pool, i, j, x, &normalized_balances).ok_or(Error::<T>::Arithmetic)?;
 
-			let mut dy = normalize_balances[j]
+			let mut dy = normalized_balances[j]
 				.checked_sub(y)
 				.and_then(|n| n.checked_sub(One::one()))
 				.ok_or(Error::<T>::Arithmetic)?;
@@ -1497,11 +1497,11 @@ impl<T: Config> Pallet<T> {
 
 		let fee_denominator = FEE_DENOMINATOR;
 
-		let normalize_balances = Self::xp(&pool.balances, &pool.token_multipliers)?;
-		let new_in_balance = normalize_balances[i].checked_add(in_balance.checked_mul(pool.token_multipliers[i])?)?;
+		let normalized_balances = Self::xp(&pool.balances, &pool.token_multipliers)?;
+		let new_in_balance = normalized_balances[i].checked_add(in_balance.checked_mul(pool.token_multipliers[i])?)?;
 
-		let out_balance = Self::get_y(pool, i, j, new_in_balance, &normalize_balances)?;
-		let mut out_amount = normalize_balances[j]
+		let out_balance = Self::get_y(pool, i, j, new_in_balance, &normalized_balances)?;
+		let mut out_amount = normalized_balances[j]
 			.checked_sub(out_balance)?
 			.checked_sub(One::one())?
 			.checked_div(pool.token_multipliers[j])?;
@@ -1560,7 +1560,7 @@ impl<T: Config> Pallet<T> {
 
 		let new_y = Self::get_yd(pool, amp, index, &xp, d1)?;
 
-		let fee_pre_token = U256::from(Self::calculate_fee_per_token(pool)?);
+		let fee_per_token = U256::from(Self::calculate_fee_per_token(pool)?);
 		let fee_denominator = U256::from(FEE_DENOMINATOR);
 
 		for (i, x) in xp.clone().iter().enumerate() {
@@ -1577,7 +1577,7 @@ impl<T: Config> Pallet<T> {
 				)?
 			};
 			xp[i] = xp[i].checked_sub(
-				fee_pre_token
+				fee_per_token
 					.checked_mul(expected_dx)?
 					.checked_div(fee_denominator)
 					.and_then(|n| TryInto::<Balance>::try_into(n).ok())?,
@@ -1603,7 +1603,7 @@ impl<T: Config> Pallet<T> {
 		total_supply: Balance,
 	) -> Option<(Balance, Vec<Balance>, Balance)> {
 		let currencies_len = pool.currency_ids.len();
-		let fee_pre_token = U256::from(Self::calculate_fee_per_token(pool)?);
+		let fee_per_token = U256::from(Self::calculate_fee_per_token(pool)?);
 		let amp = Self::get_a_precise(pool)?;
 
 		let mut new_balances = pool.balances.clone();
@@ -1620,7 +1620,7 @@ impl<T: Config> Pallet<T> {
 		for (i, balance) in pool.balances.iter_mut().enumerate() {
 			let ideal_balance = d1.checked_mul(U256::from(*balance))?.checked_div(d0)?;
 			let diff = Self::distance(U256::from(new_balances[i]), ideal_balance);
-			fees[i] = fee_pre_token
+			fees[i] = fee_per_token
 				.checked_mul(diff)?
 				.checked_div(fee_denominator)
 				.and_then(|n| TryInto::<Balance>::try_into(n).ok())?;
@@ -1742,21 +1742,21 @@ impl<T: Config> Pallet<T> {
 		in_index: usize,
 		out_index: usize,
 		in_balance: Balance,
-		normalize_balances: &[Balance],
+		normalized_balances: &[Balance],
 	) -> Option<Balance> {
 		let pool_currencies_len = pool.currency_ids.len();
 		let n_currencies = U256::from(pool_currencies_len as u64);
 		let amp = Self::get_a_precise(pool)?;
 		let ann = n_currencies.checked_mul(U256::from(amp))?;
-		let d = U256::from(Self::get_d(normalize_balances, amp)?);
+		let d = U256::from(Self::get_d(normalized_balances, amp)?);
 		let mut c = d;
 		let mut sum = U256::default();
 
-		for (i, normalize_balance) in normalize_balances.iter().enumerate().take(pool_currencies_len) {
+		for (i, normalized_balance) in normalized_balances.iter().enumerate().take(pool_currencies_len) {
 			if i == out_index {
 				continue;
 			}
-			let x: Balance = if i == in_index { in_balance } else { *normalize_balance };
+			let x: Balance = if i == in_index { in_balance } else { *normalized_balance };
 
 			sum = sum.checked_add(U256::from(x))?;
 
