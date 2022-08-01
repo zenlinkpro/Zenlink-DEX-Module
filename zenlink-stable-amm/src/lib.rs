@@ -968,7 +968,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn inner_add_liquidity(
+	fn inner_add_liquidity(
 		who: &T::AccountId,
 		pool_id: T::PoolId,
 		amounts: &[Balance],
@@ -1053,7 +1053,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn inner_swap(
+	fn inner_swap(
 		who: &T::AccountId,
 		pool_id: T::PoolId,
 		i: usize,
@@ -1071,7 +1071,8 @@ impl<T: Config> Pallet<T> {
 
 			let in_amount = Self::do_transfer_in(pool.currency_ids[i], who, &pool.account, in_amount)?;
 
-			let normalized_balances = Self::xp(&pool.balances, &pool.token_multipliers).ok_or(Error::<T>::Arithmetic)?;
+			let normalized_balances =
+				Self::xp(&pool.balances, &pool.token_multipliers).ok_or(Error::<T>::Arithmetic)?;
 
 			let x = in_amount
 				.checked_mul(pool.token_multipliers[i])
@@ -1129,7 +1130,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn inner_remove_liquidity(
+	fn inner_remove_liquidity(
 		pool_id: T::PoolId,
 		who: &T::AccountId,
 		lp_amount: Balance,
@@ -1169,7 +1170,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn inner_remove_liquidity_one_currency(
+	fn inner_remove_liquidity_one_currency(
 		pool_id: T::PoolId,
 		who: &T::AccountId,
 		lp_amount: Balance,
@@ -1219,7 +1220,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn inner_remove_liquidity_imbalance(
+	fn inner_remove_liquidity_imbalance(
 		who: &T::AccountId,
 		pool_id: T::PoolId,
 		amounts: &[Balance],
@@ -1263,7 +1264,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn inner_add_pool_and_base_pool_liquidity(
+	fn inner_add_pool_and_base_pool_liquidity(
 		who: &T::AccountId,
 		pool_id: T::PoolId,
 		base_pool_id: T::PoolId,
@@ -1311,7 +1312,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn inner_remove_pool_and_base_pool_liquidity(
+	fn inner_remove_pool_and_base_pool_liquidity(
 		who: &T::AccountId,
 		pool_id: T::PoolId,
 		base_pool_id: T::PoolId,
@@ -1335,7 +1336,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn inner_remove_pool_and_base_pool_liquidity_one_currency(
+	fn inner_remove_pool_and_base_pool_liquidity_one_currency(
 		who: &T::AccountId,
 		pool_id: T::PoolId,
 		base_pool_id: T::PoolId,
@@ -1361,7 +1362,7 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	pub fn inner_swap_pool_from_base(
+	fn inner_swap_pool_from_base(
 		who: &T::AccountId,
 		pool_id: T::PoolId,
 		base_pool_id: T::PoolId,
@@ -1400,7 +1401,7 @@ impl<T: Config> Pallet<T> {
 		Ok(out_amount)
 	}
 
-	pub fn inner_swap_pool_to_base(
+	fn inner_swap_pool_to_base(
 		who: &T::AccountId,
 		pool_id: T::PoolId,
 		base_pool_id: T::PoolId,
@@ -1488,14 +1489,14 @@ impl<T: Config> Pallet<T> {
 		Some((mint_amount, fees))
 	}
 
-	pub fn calculate_swap_amount(
+	pub(crate) fn calculate_swap_amount(
 		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		i: usize,
 		j: usize,
 		in_balance: Balance,
 	) -> Option<Balance> {
 		let n_currencies = pool.currency_ids.len();
-		if  i == j || i >= n_currencies || j >= n_currencies{
+		if i == j || i >= n_currencies || j >= n_currencies {
 			return None;
 		}
 
@@ -1520,7 +1521,7 @@ impl<T: Config> Pallet<T> {
 		Some(out_amount)
 	}
 
-	pub fn calculate_removed_liquidity(
+	pub(crate) fn calculate_removed_liquidity(
 		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		amount: Balance,
 	) -> Option<Vec<Balance>> {
@@ -1540,7 +1541,7 @@ impl<T: Config> Pallet<T> {
 		Some(amounts)
 	}
 
-	pub fn calculate_remove_liquidity_one_token(
+	pub(crate) fn calculate_remove_liquidity_one_token(
 		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		token_amount: Balance,
 		index: u32,
@@ -1650,7 +1651,7 @@ impl<T: Config> Pallet<T> {
 		Some((burn_amount, fees, d1))
 	}
 
-	pub fn get_a_precise(
+	pub(crate) fn get_a_precise(
 		pool: &Pool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 	) -> Option<Number> {
 		let now = T::TimeProvider::now().as_secs() as Number;
@@ -1694,7 +1695,7 @@ impl<T: Config> Pallet<T> {
 		Some(normalized_res)
 	}
 
-	pub fn get_d(balances: &[Balance], amp: Balance) -> Option<Balance> {
+	pub(crate) fn get_d(balances: &[Balance], amp: Balance) -> Option<Balance> {
 		let n_currencies = Balance::from(balances.len() as u64);
 		let sum = Self::sum_of(balances)?;
 		if sum == Balance::default() {
@@ -1878,7 +1879,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// used for rpc
-	pub fn calculate_currency_amount(
+	pub(crate) fn calculate_currency_amount(
 		pool_id: T::PoolId,
 		amounts: Vec<Balance>,
 		deposit: bool,
@@ -1928,7 +1929,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub fn calculate_virtual_price(pool_id: T::PoolId) -> Option<Balance> {
+	pub(crate) fn calculate_virtual_price(pool_id: T::PoolId) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			let d = Self::get_d(
 				&Self::xp(&pool.balances, &pool.token_multipliers)?,
@@ -1950,7 +1951,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub fn get_admin_balance(pool_id: T::PoolId, currency_index: usize) -> Option<Balance> {
+	pub(crate) fn get_admin_balance(pool_id: T::PoolId, currency_index: usize) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			let currencies_len = pool.currency_ids.len();
 			if currency_index >= currencies_len {
