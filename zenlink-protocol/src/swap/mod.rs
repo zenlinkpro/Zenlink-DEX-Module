@@ -17,7 +17,7 @@ mod tests;
 
 impl<T: Config> Pallet<T> {
 	pub(crate) fn account_id() -> T::AccountId {
-		T::PalletId::get().into_account()
+		T::PalletId::get().into_account_truncating()
 	}
 	/// The account ID of a pair account
 	/// only use two byte prefix to support 16 byte account id (used by test)
@@ -27,7 +27,7 @@ impl<T: Config> Pallet<T> {
 		let (asset_0, asset_1) = Self::sort_asset_id(asset_0, asset_1);
 		let pair_hash: T::Hash = T::Hashing::hash_of(&(asset_0, asset_1));
 
-		T::PalletId::get().into_sub_account(pair_hash.as_ref())
+		T::PalletId::get().into_sub_account_truncating(pair_hash.as_ref())
 	}
 
 	/// Sorted the foreign id of assets pair
