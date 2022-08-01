@@ -285,6 +285,8 @@ pub mod pallet {
 		RequireAllCurrencies,
 		/// The symbol of created pool maybe exceed length limit.
 		BadPoolCurrencySymbol,
+		/// The transaction change nothing.
+		InvalidTransaction,
 	}
 
 	#[pallet::call]
@@ -1135,6 +1137,7 @@ impl<T: Config> Pallet<T> {
 		to: &T::AccountId,
 	) -> DispatchResult {
 		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
+			ensure!(!lp_amount.is_zero(), Error::<T>::InvalidTransaction);
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 			let lp_total_supply = T::MultiCurrency::total_issuance(pool.lp_currency_id);
 
@@ -1230,12 +1233,13 @@ impl<T: Config> Pallet<T> {
 			ensure!(total_supply > Zero::zero(), Error::<T>::InsufficientLpReserve);
 			ensure!(amounts.len() == pool.currency_ids.len(), Error::<T>::MismatchParameter);
 
-			let (burn_amount, fees, d1) = Self::calculate_remove_liquidity_imbalance(pool, amounts, total_supply)
+			let (mut burn_amount, fees, d1) = Self::calculate_remove_liquidity_imbalance(pool, amounts, total_supply)
 				.ok_or(Error::<T>::Arithmetic)?;
-			ensure!(
-				burn_amount > Zero::zero() && burn_amount <= max_burn_amount,
-				Error::<T>::AmountSlippage
-			);
+			ensure!(burn_amount > Zero::zero(), Error::<T>::AmountSlippage);
+
+			burn_amount = burn_amount.checked_add(One::one()).ok_or(Error::<T>::Arithmetic)?;
+
+			ensure!(burn_amount <= max_burn_amount, Error::<T>::AmountSlippage);
 
 			T::MultiCurrency::withdraw(pool.lp_currency_id, who, burn_amount)?;
 
@@ -1491,7 +1495,7 @@ impl<T: Config> Pallet<T> {
 		in_balance: Balance,
 	) -> Option<Balance> {
 		let n_currencies = pool.currency_ids.len();
-		if i >= n_currencies || j >= n_currencies {
+		if  i == j || i >= n_currencies || j >= n_currencies{
 			return None;
 		}
 
