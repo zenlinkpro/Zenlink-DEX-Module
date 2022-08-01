@@ -823,7 +823,7 @@ fn remove_liquidity_imbalance_with_max_burn_lp_token_amount_range_should_work() 
 		assert_eq!(balance_after[0] - balance_before[0], 1e18 as Balance);
 		assert_eq!(balance_after[1] - balance_before[1], 1e16 as Balance);
 		let actual_pool_token_burned = balance_before[2] - balance_after[2];
-		assert_eq!(actual_pool_token_burned, 1000934178112841888);
+		assert_eq!(actual_pool_token_burned, 1000934178112841889);
 
 		assert!(actual_pool_token_burned > max_pool_token_amount_to_be_burned_positive_slippage);
 		assert!(actual_pool_token_burned < max_pool_token_amount_to_be_burned_negative_slippage);
@@ -2666,7 +2666,7 @@ fn check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 
 		assert_eq!(
 			user1_pool_lp_balance_before - user1_pool_lp_balance_after,
-			401193808332107345545123455
+			401193808332107345545123456
 		);
 		assert_eq!(
 			user1_token0_balance_after - user1_token0_balance_before,
