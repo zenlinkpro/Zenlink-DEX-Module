@@ -109,13 +109,13 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 	) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			return match pool {
-				Pool::Basic(bp) =>Self::calculate_swap_amount(&bp, i, j, in_balance),
+				Pool::Basic(bp) => Self::calculate_base_swap_amount(&bp, i, j, in_balance),
 				Pool::Meta(mp) => {
-					let virtual_price = Self::get_meta_pool_virtual_price(&mp)?;
+					let virtual_price = Self::meta_pool_virtual_price(&mp)?;
 					let res = Self::calculate_meta_swap_amount(&mp, i, j, in_balance, virtual_price)?;
 					Some(res.0)
 				}
-			}
+			};
 		}
 		None
 	}
@@ -127,15 +127,14 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 	) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			if let Some(res) = match pool {
-				Pool::Basic(bp) => Self::calculate_remove_liquidity_one_token(&bp, amount, index),
+				Pool::Basic(bp) => Self::calculate_base_remove_liquidity_one_token(&bp, amount, index),
 				Pool::Meta(mp) => {
 					let total_supply = T::MultiCurrency::total_issuance(mp.info.lp_currency_id);
-					Self::calculate_meta_pool_remove_liquidity_one_currency(&mp,amount, index as usize, total_supply)
-				},
-			}{
-				return Some(res.0)
+					Self::calculate_meta_remove_liquidity_one_currency(&mp, amount, index as usize, total_supply)
+				}
+			} {
+				return Some(res.0);
 			}
-
 		}
 		None
 	}

@@ -55,7 +55,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn get_currency(pool_id: T::PoolId, index: u32) -> Option<T::CurrencyId> {
 		if let Some(pool) = Self::pools(pool_id) {
-			let currency_ids =pool.get_currency_ids();
+			let currency_ids = pool.get_currency_ids();
 			if currency_ids.len() < index as usize {
 				return Some(currency_ids[index as usize]);
 			}
