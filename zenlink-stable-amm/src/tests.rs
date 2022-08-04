@@ -10,7 +10,7 @@ use super::{
 
 const POOL0ACCOUNTID: AccountId = 33865947477506447919519395693;
 
-type MockPool = Pool<CurrencyId, AccountId, BoundedVec<u8, PoolCurrencySymbolLimit>>;
+type MockPool = BasePool<CurrencyId, AccountId, BoundedVec<u8, PoolCurrencySymbolLimit>>;
 
 const INITIAL_A_VALUE: Balance = 50;
 const SWAP_FEE: Balance = 1e7 as Balance;
@@ -1254,7 +1254,10 @@ fn swap_with_expired_deadline_should_not_work() {
 fn calculate_virtual_price_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_pool();
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1e18 as Balance)
+		);
 	})
 }
 
@@ -1273,7 +1276,7 @@ fn calculate_virtual_price_after_swap_should_work() {
 			u64::MAX
 		));
 		assert_eq!(
-			StableAmm::calculate_virtual_price(pool_id),
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
 			Some(1000050005862349911 as Balance)
 		);
 
@@ -1289,7 +1292,7 @@ fn calculate_virtual_price_after_swap_should_work() {
 		));
 
 		assert_eq!(
-			StableAmm::calculate_virtual_price(pool_id),
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
 			Some(1000100104768517937 as Balance)
 		);
 	})
@@ -1317,7 +1320,10 @@ fn calculate_virtual_price_after_imbalanced_withdrawal_should_work() {
 			u64::MAX,
 		));
 
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1e18 as Balance)
+		);
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
 			Origin::signed(BOB),
@@ -1329,7 +1335,7 @@ fn calculate_virtual_price_after_imbalanced_withdrawal_should_work() {
 		));
 
 		assert_eq!(
-			StableAmm::calculate_virtual_price(pool_id),
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
 			Some(1000100094088440633 as Balance)
 		);
 
@@ -1342,7 +1348,7 @@ fn calculate_virtual_price_after_imbalanced_withdrawal_should_work() {
 			u64::MAX
 		));
 		assert_eq!(
-			StableAmm::calculate_virtual_price(pool_id),
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
 			Some(1000200154928939884 as Balance)
 		);
 	})
@@ -1353,7 +1359,10 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_pool();
 		// pool is 1:1 ratio
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1e18 as Balance)
+		);
 
 		assert_ok!(StableAmm::add_liquidity(
 			Origin::signed(CHARLIE),
@@ -1363,7 +1372,10 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 			CHARLIE,
 			u64::MAX,
 		));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1e18 as Balance)
+		);
 
 		// pool change 2:1 ratio, virtual_price also change
 		assert_ok!(StableAmm::add_liquidity(
@@ -1375,7 +1387,7 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 			u64::MAX,
 		));
 		assert_eq!(
-			StableAmm::calculate_virtual_price(pool_id),
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
 			Some(1000167146429977312 as Balance)
 		);
 
@@ -1389,7 +1401,7 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 			u64::MAX,
 		));
 		assert_eq!(
-			StableAmm::calculate_virtual_price(pool_id),
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
 			Some(1000167146429977312 as Balance)
 		);
 	})
@@ -1417,7 +1429,10 @@ fn calculate_virtual_price_value_not_change_after_balanced_withdrawal_should_not
 			u64::MAX
 		));
 
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1e18 as Balance));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1e18 as Balance)
+		);
 	})
 }
 
@@ -1773,18 +1788,27 @@ fn ramp_a_upwards_should_work() {
 
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5000));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000167146429977312));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1000167146429977312)
+		);
 
 		mine_block_with_timestamp(Timestamp::now() / 1000 + 100000);
 
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5413));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000258443200231295));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1000258443200231295)
+		);
 
 		mine_block_with_timestamp(end_timestamp.into());
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(10000));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000771363829405068));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1000771363829405068)
+		);
 	})
 }
 
@@ -1812,18 +1836,27 @@ fn ramp_a_downward_should_work() {
 		let pool = StableAmm::pools(pool_id).unwrap();
 
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5000));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000167146429977312));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1000167146429977312)
+		);
 
 		mine_block_with_timestamp(Timestamp::now() / 1000 + 100000);
 
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(4794));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000115870150391894));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1000115870150391894)
+		);
 
 		mine_block_with_timestamp(end_timestamp);
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(2500));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(998999574522335473));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(998999574522335473)
+		);
 	})
 }
 
@@ -1945,7 +1978,10 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5000));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000167146429977312));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1000167146429977312)
+		);
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 100;
 		assert_ok!(StableAmm::ramp_a(Origin::root(), pool_id, 100, end_timestamp.into()));
@@ -1955,7 +1991,10 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5003));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000167862696363286));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1000167862696363286)
+		);
 	})
 }
 
@@ -1977,7 +2016,10 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5000));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000167146429977312));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1000167146429977312)
+		);
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 100;
 
@@ -1988,7 +2030,10 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 
 		let pool = StableAmm::pools(pool_id).unwrap();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(4999));
-		assert_eq!(StableAmm::calculate_virtual_price(pool_id), Some(1000166907487883089));
+		assert_eq!(
+			StableAmm::calculate_base_pool_virtual_price_with_id(pool_id),
+			Some(1000166907487883089)
+		);
 	})
 }
 
