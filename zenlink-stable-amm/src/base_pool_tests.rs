@@ -6,6 +6,10 @@ use super::{
 	*,
 };
 
+const INITIAL_A_VALUE: Balance = 50;
+const SWAP_FEE: Balance = 1e7 as Balance;
+const ADMIN_FEE: Balance = 0;
+
 pub fn setup_test_base_pool() -> (PoolId, CurrencyId) {
 	assert_ok!(StableAmm::create_base_pool(
 		Origin::root(),
@@ -31,35 +35,6 @@ pub fn setup_test_base_pool() -> (PoolId, CurrencyId) {
 	));
 	(0, lp_currency_id)
 }
-
-// fn setup_test_pool_and_base_pool() -> (PoolId, PoolId) {
-// 	assert_ok!(StableAmm::create_base_pool(
-// 		Origin::root(),
-// 		vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL)],
-// 		vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL],
-// 		INITIAL_A_VALUE,
-// 		SWAP_FEE,
-// 		ADMIN_FEE,
-// 		ALICE,
-// 		Vec::from("basic_pool_lp"),
-// 	));
-//
-// 	let pool_id = StableAmm::next_pool_id() - 1;
-// 	let first_pool_lp_currency_id = StableAmm::pools(pool_id).unwrap().get_lp_currency();
-//
-// 	assert_ok!(StableAmm::create_base_pool(
-// 		Origin::root(),
-// 		vec![first_pool_lp_currency_id, Token(TOKEN4_SYMBOL)],
-// 		vec![18, TOKEN4_DECIMAL],
-// 		INITIAL_A_VALUE,
-// 		SWAP_FEE,
-// 		ADMIN_FEE,
-// 		ALICE,
-// 		Vec::from("pool_lp"),
-// 	));
-//
-// 	(0, 1)
-// }
 
 #[test]
 fn create_pool_with_incorrect_parameter_should_not_work() {
@@ -1092,7 +1067,7 @@ fn swap_with_expected_amounts_should_work() {
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 
 		let calculated_swap_return = StableAmm::calculate_base_swap_amount(&pool, 0, 1, 1e17 as Balance).unwrap();
-		assert_eq!(calculated_swap_return, 99702611562565289);
+		assert_eq!(calculated_swap_return, 99702611562565288);
 
 		let token_from_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
 		let token_to_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &CHARLIE);
@@ -1111,7 +1086,7 @@ fn swap_with_expected_amounts_should_work() {
 		let token_to_balance_after = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &CHARLIE);
 
 		assert_eq!(token_from_balance_before - token_from_balance_after, 1e17 as Balance);
-		assert_eq!(token_to_balance_after - token_to_balance_before, calculated_swap_return);
+		assert_eq!(token_to_balance_after - token_to_balance_before, 99702611562565289);
 	})
 }
 
@@ -1121,7 +1096,7 @@ fn swap_when_min_amount_receive_not_reached_due_to_front_running_should_not_work
 		let (pool_id, _) = setup_test_base_pool();
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		let calculated_swap_return = StableAmm::calculate_base_swap_amount(&pool, 0, 1, 1e17 as Balance).unwrap();
-		assert_eq!(calculated_swap_return, 99702611562565289);
+		assert_eq!(calculated_swap_return, 99702611562565288);
 
 		assert_ok!(StableAmm::swap(
 			Origin::signed(CHARLIE),
@@ -1161,7 +1136,7 @@ fn swap_with_lower_min_dy_when_transaction_is_front_ran_should_work() {
 
 		// BOB calculates how much token to receive with 1% slippage
 		let calculated_swap_return = StableAmm::calculate_base_swap_amount(&pool, 0, 1, 1e17 as Balance).unwrap();
-		assert_eq!(calculated_swap_return, 99702611562565289);
+		assert_eq!(calculated_swap_return, 99702611562565288);
 		let calculated_swap_return_with_negative_slippage = calculated_swap_return * 99 / 100;
 
 		// CHARLIE swaps before User 1 does
@@ -1218,10 +1193,7 @@ fn swap_with_expired_deadline_should_not_work() {
 fn calculate_virtual_price_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1e18 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1e18 as Balance);
 	})
 }
 
@@ -1239,10 +1211,7 @@ fn calculate_virtual_price_after_swap_should_work() {
 			BOB,
 			u64::MAX
 		));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000050005862349911 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000050005862349911);
 
 		assert_ok!(StableAmm::swap(
 			Origin::signed(BOB),
@@ -1255,10 +1224,7 @@ fn calculate_virtual_price_after_swap_should_work() {
 			u64::MAX
 		));
 
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000100104768517937 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000100104768517937);
 	})
 }
 
@@ -1284,10 +1250,7 @@ fn calculate_virtual_price_after_imbalanced_withdrawal_should_work() {
 			u64::MAX,
 		));
 
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1e18 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1e18 as Balance);
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
 			Origin::signed(BOB),
@@ -1298,10 +1261,7 @@ fn calculate_virtual_price_after_imbalanced_withdrawal_should_work() {
 			u64::MAX
 		));
 
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000100094088440633 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000100094088440633 as Balance);
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
 			Origin::signed(CHARLIE),
@@ -1311,10 +1271,7 @@ fn calculate_virtual_price_after_imbalanced_withdrawal_should_work() {
 			CHARLIE,
 			u64::MAX
 		));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000200154928939884 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000200154928939884);
 	})
 }
 
@@ -1323,10 +1280,7 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();
 		// pool is 1:1 ratio
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1e18 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1e18 as Balance);
 
 		assert_ok!(StableAmm::add_liquidity(
 			Origin::signed(CHARLIE),
@@ -1336,10 +1290,7 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 			CHARLIE,
 			u64::MAX,
 		));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1e18 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1e18 as Balance);
 
 		// pool change 2:1 ratio, virtual_price also change
 		assert_ok!(StableAmm::add_liquidity(
@@ -1350,10 +1301,7 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 			CHARLIE,
 			u64::MAX,
 		));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000167146429977312 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000167146429977312 as Balance);
 
 		// keep 2:1 ratio after deposit, virtual not change.
 		assert_ok!(StableAmm::add_liquidity(
@@ -1364,10 +1312,7 @@ fn calculate_virtual_price_value_unchanged_after_deposits_should_work() {
 			BOB,
 			u64::MAX,
 		));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000167146429977312 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000167146429977312);
 	})
 }
 
@@ -1393,10 +1338,7 @@ fn calculate_virtual_price_value_not_change_after_balanced_withdrawal_should_not
 			u64::MAX
 		));
 
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1e18 as Balance)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1e18 as Balance);
 	})
 }
 
@@ -1404,10 +1346,10 @@ fn calculate_virtual_price_value_not_change_after_balanced_withdrawal_should_not
 fn set_fee_with_non_owner_account_should_not_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();
-		assert_noop!(StableAmm::set_fee(Origin::signed(BOB), pool_id, 0, 0,), BadOrigin);
+		assert_noop!(StableAmm::set_swap_fee(Origin::signed(BOB), pool_id, 0,), BadOrigin);
 
 		assert_noop!(
-			StableAmm::set_fee(Origin::signed(CHARLIE), pool_id, 1e18 as Balance, 0,),
+			StableAmm::set_swap_fee(Origin::signed(CHARLIE), pool_id, 1e18 as Balance),
 			BadOrigin
 		);
 	})
@@ -1419,7 +1361,7 @@ fn set_fee_with_exceed_threshold_should_not_work() {
 		let (pool_id, _) = setup_test_base_pool();
 
 		assert_noop!(
-			StableAmm::set_fee(Origin::root(), pool_id, (1e8 as Balance) + 1, 0,),
+			StableAmm::set_swap_fee(Origin::root(), pool_id, (1e8 as Balance) + 1),
 			Error::<Test>::ExceedThreshold
 		);
 	})
@@ -1430,7 +1372,7 @@ fn set_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();
 
-		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, 1e8 as Balance, 0,));
+		assert_ok!(StableAmm::set_swap_fee(Origin::root(), pool_id, 1e8 as Balance));
 
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 
@@ -1443,12 +1385,9 @@ fn set_admin_fee_with_non_owner_should_not_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();
 
+		assert_noop!(StableAmm::set_admin_fee(Origin::signed(BOB), pool_id, 0,), BadOrigin);
 		assert_noop!(
-			StableAmm::set_fee(Origin::signed(BOB), pool_id, 1e7 as Balance, 0,),
-			BadOrigin
-		);
-		assert_noop!(
-			StableAmm::set_fee(Origin::signed(CHARLIE), pool_id, 1e7 as Balance, 1e10 as Balance,),
+			StableAmm::set_swap_fee(Origin::signed(CHARLIE), pool_id, 1e10 as Balance,),
 			BadOrigin
 		);
 	})
@@ -1460,7 +1399,7 @@ fn set_admin_fee_with_exceed_threshold_should_not_work() {
 		let (pool_id, _) = setup_test_base_pool();
 
 		assert_noop!(
-			StableAmm::set_fee(Origin::root(), pool_id, 1e7 as Balance, (1e10 as Balance) + 1,),
+			StableAmm::set_admin_fee(Origin::root(), pool_id, (1e10 as Balance) + 1,),
 			Error::<Test>::ExceedThreshold
 		);
 	})
@@ -1471,12 +1410,7 @@ fn set_admin_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();
 
-		assert_ok!(StableAmm::set_fee(
-			Origin::root(),
-			pool_id,
-			1e7 as Balance,
-			1e10 as Balance,
-		));
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), pool_id, 1e10 as Balance,));
 
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		assert_eq!(pool.admin_fee, 1e10 as Balance);
@@ -1519,12 +1453,9 @@ fn get_admin_balance_always_zero_when_admin_fee_equal_zero() {
 fn get_admin_balance_with_expected_amount_after_swap_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();
-		assert_ok!(StableAmm::set_fee(
-			Origin::root(),
-			pool_id,
-			1e7 as Balance,
-			1e8 as Balance,
-		));
+		assert_ok!(StableAmm::set_swap_fee(Origin::root(), pool_id, 1e7 as Balance,));
+
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), pool_id, 1e8 as Balance,));
 
 		assert_ok!(StableAmm::swap(
 			Origin::signed(BOB),
@@ -1572,12 +1503,8 @@ fn withdraw_admin_fee_when_no_admin_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
-		assert_ok!(StableAmm::set_fee(
-			Origin::root(),
-			pool_id,
-			1e7 as Balance,
-			1e8 as Balance
-		));
+		assert_ok!(StableAmm::set_swap_fee(Origin::root(), pool_id, 1e7 as Balance,));
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), pool_id, 1e8 as Balance));
 
 		let first_token_balance_before =
 			<Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &pool.admin_fee_receiver);
@@ -1602,12 +1529,8 @@ fn withdraw_admin_fee_with_expected_amount_of_fees_should_work() {
 		let (pool_id, _) = setup_test_base_pool();
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 
-		assert_ok!(StableAmm::set_fee(
-			Origin::root(),
-			pool_id,
-			1e7 as Balance,
-			1e8 as Balance,
-		));
+		assert_ok!(StableAmm::set_swap_fee(Origin::root(), pool_id, 1e7 as Balance,));
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), pool_id, 1e8 as Balance,));
 
 		assert_ok!(StableAmm::swap(
 			Origin::signed(BOB),
@@ -1657,12 +1580,8 @@ fn withdraw_admin_fee_has_no_impact_on_user_withdrawal() {
 		let (pool_id, _) = setup_test_base_pool();
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 
-		assert_ok!(StableAmm::set_fee(
-			Origin::root(),
-			pool_id,
-			1e7 as Balance,
-			1e8 as Balance,
-		));
+		assert_ok!(StableAmm::set_swap_fee(Origin::root(), pool_id, 1e7 as Balance,));
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), pool_id, 1e8 as Balance,));
 
 		assert_ok!(StableAmm::add_liquidity(
 			Origin::signed(BOB),
@@ -1752,27 +1671,18 @@ fn ramp_a_upwards_should_work() {
 
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5000));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000167146429977312)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000167146429977312);
 
 		mine_block_with_timestamp(Timestamp::now() / 1000 + 100000);
 
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5413));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000258443200231295)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000258443200231295);
 
 		mine_block_with_timestamp(end_timestamp.into());
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(10000));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000771363829405068)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000771363829405068);
 	})
 }
 
@@ -1800,27 +1710,18 @@ fn ramp_a_downward_should_work() {
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5000));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000167146429977312)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000167146429977312);
 
 		mine_block_with_timestamp(Timestamp::now() / 1000 + 100000);
 
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(4794));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000115870150391894)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000115870150391894);
 
 		mine_block_with_timestamp(end_timestamp);
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(2500));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(998999574522335473)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 998999574522335473);
 	})
 }
 
@@ -1942,10 +1843,7 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5000));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000167146429977312)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000167146429977312);
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 100;
 		assert_ok!(StableAmm::ramp_a(Origin::root(), pool_id, 100, end_timestamp.into()));
@@ -1955,10 +1853,7 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5003));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000167862696363286)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000167862696363286);
 	})
 }
 
@@ -1980,10 +1875,7 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5000));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000167146429977312)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000167146429977312);
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 100;
 
@@ -1994,10 +1886,7 @@ fn check_maximum_differences_in_a_and_virtual_price_when_time_manipulations_and_
 
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(4999));
-		assert_eq!(
-			StableAmm::calculate_base_virtual_price_with_id(pool_id),
-			Some(1000166907487883089)
-		);
+		assert_eq!(StableAmm::get_virtual_price(pool_id), 1000166907487883089);
 	})
 }
 
@@ -2352,21 +2241,6 @@ fn check_when_ramp_a_downwards_and_tokens_price_unequally() {
 		assert_eq!(pool.balances[0] - context.initial_pool_balances[0], 1992288666354545);
 		assert_eq!(pool.balances[1] - context.initial_pool_balances[1], 0);
 	})
-}
-
-fn mint_more_currencies(accounts: Vec<AccountId>, currencies: Vec<CurrencyId>, balances: Vec<Balance>) {
-	assert_eq!(currencies.len(), balances.len());
-	for account in accounts.iter() {
-		for (i, currency_id) in currencies.iter().enumerate() {
-			assert_ok!(Tokens::set_balance(
-				Origin::root(),
-				*account,
-				*currency_id,
-				balances[i],
-				0,
-			));
-		}
-	}
 }
 
 #[test]
@@ -2831,7 +2705,8 @@ fn check_arithmetic_in_add_liquidity_with_admin_fee_should_successfully() {
 			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
 		);
 
-		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, SWAP_FEE, MAX_ADMIN_FEE,));
+		assert_ok!(StableAmm::set_swap_fee(Origin::root(), pool_id, SWAP_FEE,));
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), pool_id, MAX_ADMIN_FEE,));
 
 		assert_ok!(StableAmm::add_liquidity(
 			Origin::signed(BOB),
@@ -2877,7 +2752,8 @@ fn check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully() {
 			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
 		);
 
-		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, SWAP_FEE, MAX_ADMIN_FEE,));
+		assert_ok!(StableAmm::set_swap_fee(Origin::root(), pool_id, SWAP_FEE,));
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), pool_id, MAX_ADMIN_FEE,));
 
 		assert_ok!(StableAmm::add_liquidity(
 			Origin::signed(BOB),
@@ -2945,7 +2821,8 @@ fn check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_succe
 			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
 		);
 
-		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, SWAP_FEE, MAX_ADMIN_FEE,));
+		assert_ok!(StableAmm::set_swap_fee(Origin::root(), pool_id, SWAP_FEE,));
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), pool_id, MAX_ADMIN_FEE,));
 
 		assert_ok!(StableAmm::add_liquidity(
 			Origin::signed(BOB),
@@ -2991,19 +2868,19 @@ fn check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_succe
 			Origin::signed(CHARLIE),
 			pool_id,
 			user2_pool_lp_balance_before,
-			0,
+			1,
 			0,
 			CHARLIE,
 			u64::MAX
 		));
 
 		let admin_balances = StableAmm::get_admin_balances(pool_id);
-		assert_eq!(admin_balances[0], 162191894424543883363758);
-		assert_eq!(admin_balances[1], 117921007525488838747514);
+		assert_eq!(admin_balances[0], 253156563645258671123072);
+		assert_eq!(admin_balances[1], 117921008529025874896694);
 
 		let balances = StableAMM::pools(pool_id).unwrap().get_pool_info().balances;
-		assert_eq!(balances[0], 43828306204680);
-		assert_eq!(balances[1], 400082079992474511161252486);
+		assert_eq!(balances[0], 17382152193711710630633607);
+		assert_eq!(balances[1], 66);
 	})
 }
 
@@ -3018,7 +2895,8 @@ fn check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_successf
 			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
 		);
 
-		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, SWAP_FEE, MAX_ADMIN_FEE,));
+		assert_ok!(StableAmm::set_swap_fee(Origin::root(), pool_id, SWAP_FEE,));
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), pool_id, MAX_ADMIN_FEE,));
 
 		assert_ok!(StableAmm::add_liquidity(
 			Origin::signed(BOB),
@@ -3089,7 +2967,8 @@ fn check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() {
 			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
 		);
 
-		assert_ok!(StableAmm::set_fee(Origin::root(), pool_id, SWAP_FEE, MAX_ADMIN_FEE,));
+		assert_ok!(StableAmm::set_swap_fee(Origin::root(), pool_id, SWAP_FEE,));
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), pool_id, MAX_ADMIN_FEE,));
 
 		assert_ok!(StableAmm::add_liquidity(
 			Origin::signed(BOB),
@@ -3149,263 +3028,3 @@ fn check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() {
 		assert_eq!(balances[1], 400600099040276221776518758);
 	})
 }
-
-// #[test]
-// fn add_pool_and_base_pool_liquidity_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		let (basic_pool_id, pool_id) = setup_test_pool_and_base_pool();
-//
-// 		let expected_mint_amount =
-// 			StableAmm::calculate_currency_amount(pool_id, vec![3e18 as Balance, 1e6 as Balance],
-// true).unwrap();
-//
-// 		let pool = StableAmm::pools(pool_id).unwrap();
-//
-// 		assert_ok!(StableAmm::add_pool_and_base_pool_liquidity(
-// 			Origin::signed(BOB),
-// 			pool_id,
-// 			basic_pool_id,
-// 			vec![0, 1e6 as Balance],
-// 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
-// 			0,
-// 			CHARLIE,
-// 			u64::MAX
-// 		));
-//
-// 		let lp_amount = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &CHARLIE);
-//
-// 		assert_eq!(lp_amount, expected_mint_amount);
-//
-// 		assert_eq!(lp_amount, 3987053390609794133);
-// 	})
-// }
-//
-// #[test]
-// fn remove_pool_and_base_pool_liquidity_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		let (basic_pool_id, pool_id) = setup_test_pool_and_base_pool();
-// 		let pool = StableAmm::pools(pool_id).unwrap();
-// 		let base_pool = StableAmm::pools(basic_pool_id).unwrap();
-//
-// 		assert_ok!(StableAmm::add_liquidity(
-// 			Origin::signed(BOB),
-// 			basic_pool_id,
-// 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		assert_ok!(StableAmm::add_liquidity(
-// 			Origin::signed(BOB),
-// 			pool_id,
-// 			vec![1e18 as Balance, 1e6 as Balance],
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		assert_ok!(StableAmm::remove_pool_and_base_pool_liquidity(
-// 			Origin::signed(BOB),
-// 			pool_id,
-// 			basic_pool_id,
-// 			1e18 as Balance,
-// 			vec![0, 0],
-// 			vec![0, 0, 0],
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		let balances_after = get_user_token_balances(
-// 			&vec![
-// 				Token(TOKEN1_SYMBOL),
-// 				Token(TOKEN2_SYMBOL),
-// 				Token(TOKEN3_SYMBOL),
-// 				Token(TOKEN4_SYMBOL),
-// 				base_pool.lp_currency_id,
-// 				pool.lp_currency_id,
-// 			],
-// 			&BOB,
-// 		);
-//
-// 		assert_eq!(balances_after[0], 99166666666666666666);
-// 		assert_eq!(balances_after[1], 99166666666666666666);
-// 		assert_eq!(balances_after[2], 99166666);
-// 		assert_eq!(balances_after[3], 99500000);
-// 		assert_eq!(balances_after[4], 2000000000000000000);
-// 		assert_eq!(balances_after[5], 1000000000000000000);
-// 	})
-// }
-//
-// #[test]
-// fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		let (basic_pool_id, pool_id) = setup_test_pool_and_base_pool();
-// 		let pool = StableAmm::pools(pool_id).unwrap();
-// 		let base_pool = StableAmm::pools(basic_pool_id).unwrap();
-//
-// 		assert_ok!(StableAmm::add_liquidity(
-// 			Origin::signed(BOB),
-// 			basic_pool_id,
-// 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		assert_ok!(StableAmm::add_liquidity(
-// 			Origin::signed(BOB),
-// 			pool_id,
-// 			vec![1e18 as Balance, 1e6 as Balance],
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		assert_ok!(StableAmm::remove_pool_and_base_pool_liquidity_one_currency(
-// 			Origin::signed(BOB),
-// 			pool_id,
-// 			basic_pool_id,
-// 			1e18 as Balance,
-// 			0,
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		let balances_after = get_user_token_balances(
-// 			&vec![
-// 				Token(TOKEN1_SYMBOL),
-// 				Token(TOKEN2_SYMBOL),
-// 				Token(TOKEN3_SYMBOL),
-// 				Token(TOKEN4_SYMBOL),
-// 				base_pool.lp_currency_id,
-// 				pool.lp_currency_id,
-// 			],
-// 			&BOB,
-// 		);
-//
-// 		assert_eq!(balances_after[0], 99915975025371929634);
-// 		assert_eq!(balances_after[1], 99000000000000000000);
-// 		assert_eq!(balances_after[2], 99000000);
-// 		assert_eq!(balances_after[3], 99000000);
-// 		assert_eq!(balances_after[4], 2000000000000000000);
-// 		assert_eq!(balances_after[5], 1000000000000000000);
-// 	})
-// }
-//
-// #[test]
-// fn swap_pool_from_base_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		let (basic_pool_id, pool_id) = setup_test_pool_and_base_pool();
-// 		let pool = StableAmm::pools(pool_id).unwrap();
-// 		let base_pool = StableAmm::pools(basic_pool_id).unwrap();
-//
-// 		assert_ok!(StableAmm::add_liquidity(
-// 			Origin::signed(BOB),
-// 			basic_pool_id,
-// 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		assert_ok!(StableAmm::add_liquidity(
-// 			Origin::signed(BOB),
-// 			pool_id,
-// 			vec![1e18 as Balance, 1e6 as Balance],
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		assert_ok!(StableAmm::swap_pool_from_base(
-// 			Origin::signed(BOB),
-// 			pool_id,
-// 			basic_pool_id,
-// 			0,
-// 			1,
-// 			1e16 as Balance,
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		let balances_after = get_user_token_balances(
-// 			&vec![
-// 				Token(TOKEN1_SYMBOL),
-// 				Token(TOKEN2_SYMBOL),
-// 				Token(TOKEN3_SYMBOL),
-// 				Token(TOKEN4_SYMBOL),
-// 				base_pool.lp_currency_id,
-// 				pool.lp_currency_id,
-// 			],
-// 			&BOB,
-// 		);
-//
-// 		assert_eq!(balances_after[0], 98990000000000000000);
-// 		assert_eq!(balances_after[1], 99000000000000000000);
-// 		assert_eq!(balances_after[2], 99000000);
-// 		assert_eq!(balances_after[3], 99009982);
-// 		assert_eq!(balances_after[4], 2000000000000000000);
-// 		assert_eq!(balances_after[5], 2000000000000000000);
-// 	})
-// }
-//
-// #[test]
-// fn swap_pool_to_base_should_work() {
-// 	new_test_ext().execute_with(|| {
-// 		let (basic_pool_id, pool_id) = setup_test_pool_and_base_pool();
-// 		let pool = StableAmm::pools(pool_id).unwrap();
-// 		let base_pool = StableAmm::pools(basic_pool_id).unwrap();
-//
-// 		assert_ok!(StableAmm::add_liquidity(
-// 			Origin::signed(BOB),
-// 			basic_pool_id,
-// 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		assert_ok!(StableAmm::add_liquidity(
-// 			Origin::signed(BOB),
-// 			pool_id,
-// 			vec![1e18 as Balance, 1e6 as Balance],
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		assert_ok!(StableAmm::swap_pool_to_base(
-// 			Origin::signed(BOB),
-// 			pool_id,
-// 			basic_pool_id,
-// 			1,
-// 			0,
-// 			1e6 as Balance,
-// 			0,
-// 			BOB,
-// 			u64::MAX
-// 		));
-//
-// 		let balances_after = get_user_token_balances(
-// 			&vec![
-// 				Token(TOKEN1_SYMBOL),
-// 				Token(TOKEN2_SYMBOL),
-// 				Token(TOKEN3_SYMBOL),
-// 				Token(TOKEN4_SYMBOL),
-// 				base_pool.lp_currency_id,
-// 				pool.lp_currency_id,
-// 			],
-// 			&BOB,
-// 		);
-//
-// 		assert_eq!(balances_after[0], 99881980616021312485);
-// 		assert_eq!(balances_after[1], 99000000000000000000);
-// 		assert_eq!(balances_after[2], 99000000);
-// 		assert_eq!(balances_after[3], 98000000);
-// 		assert_eq!(balances_after[4], 2000000000000000000);
-// 		assert_eq!(balances_after[5], 2000000000000000000);
-// 	})
-// }

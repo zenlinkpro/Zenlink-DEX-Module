@@ -8,7 +8,7 @@ use super::*;
 impl<T: Config> Pallet<T> {
 	pub fn get_virtual_price(pool_id: T::PoolId) -> Balance {
 		if let Some(pool) = Self::pools(pool_id) {
-			return Self::get_pool_virtual_price(&pool).unwrap_or_default() / A_PRECISION;
+			return Self::get_pool_virtual_price(&pool).unwrap_or_default();
 		};
 		Balance::default()
 	}

@@ -1,7 +1,7 @@
 use super::*;
 
 impl<T: Config> Pallet<T> {
-	pub(crate) fn create_base_pool(
+	pub(crate) fn inner_create_base_pool(
 		currency_ids: &[T::CurrencyId],
 		currency_decimals: Vec<u32>,
 		a: Number,
@@ -405,7 +405,7 @@ impl<T: Config> Pallet<T> {
 		let total_supply = T::MultiCurrency::total_issuance(pool.lp_currency_id);
 
 		let amp = Self::get_a_precise(pool)?;
-		let mut xp = Self::xp(&pool.balances, &pool.token_multipliers)?;
+		let xp = Self::xp(&pool.balances, &pool.token_multipliers)?;
 		let d0 = Self::get_d(&xp, amp)?;
 
 		let d1 = U256::from(d0)
@@ -421,6 +421,7 @@ impl<T: Config> Pallet<T> {
 		let fee_per_token = U256::from(Self::calculate_fee_per_token(pool)?);
 		let fee_denominator = U256::from(FEE_DENOMINATOR);
 
+		let mut xp_reduced = vec![Zero::zero(); xp.len()];
 		for (i, x) in xp.clone().iter().enumerate() {
 			let expected_dx = if i as u32 == index {
 				U256::from(*x)
@@ -434,7 +435,7 @@ impl<T: Config> Pallet<T> {
 						.checked_div(U256::from(d0))?,
 				)?
 			};
-			xp[i] = xp[i].checked_sub(
+			xp_reduced[i] = xp[i].checked_sub(
 				fee_per_token
 					.checked_mul(expected_dx)?
 					.checked_div(fee_denominator)
@@ -442,7 +443,7 @@ impl<T: Config> Pallet<T> {
 			)?;
 		}
 
-		let mut dy = xp[index as usize].checked_sub(Self::get_yd(pool, amp, index, &xp, d1)?)?;
+		let mut dy = xp_reduced[index as usize].checked_sub(Self::get_yd(pool, amp, index, &xp_reduced, d1)?)?;
 		dy = dy
 			.checked_sub(One::one())?
 			.checked_div(pool.token_multipliers[index as usize])?;
@@ -480,7 +481,7 @@ impl<T: Config> Pallet<T> {
 			.checked_div(U256::from(FEE_DENOMINATOR))
 			.and_then(|n| TryInto::<Balance>::try_into(n).ok())?;
 
-		out_amount = out_amount.checked_sub(fee)?;
+		out_amount = out_amount.checked_sub(fee).and_then(|n| n.checked_sub(One::one()))?;
 
 		Some(out_amount)
 	}
@@ -597,15 +598,15 @@ impl<T: Config> Pallet<T> {
 		Ok(amount)
 	}
 
-	#[allow(dead_code)]
-	pub(crate) fn calculate_base_virtual_price_with_id(pool_id: T::PoolId) -> Option<Balance> {
-		if let Some(pool) = Self::pools(pool_id) {
-			match pool {
-				Pool::Basic(bp) => Self::calculate_base_virtual_price(&bp),
-				_ => None,
-			}
-		} else {
-			None
-		}
-	}
+	// #[allow(dead_code)]
+	// pub(crate) fn calculate_base_virtual_price_with_id(pool_id: T::PoolId) -> Option<Balance> {
+	// 	if let Some(pool) = Self::pools(pool_id) {
+	// 		match pool {
+	// 			Pool::Basic(bp) => Self::calculate_base_virtual_price(&bp),
+	// 			_ => None,
+	// 		}
+	// 	} else {
+	// 		None
+	// 	}
+	// }
 }

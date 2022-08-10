@@ -1,4 +1,5 @@
 use super::*;
+use crate::traits::StableAmmApi;
 
 impl<T: Config> Pallet<T> {
 	pub(crate) fn meta_pool_add_liquidity(
@@ -11,7 +12,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<Balance, DispatchError> {
 		let n_currencies = meta_pool.info.currency_ids.len();
 		ensure!(n_currencies == amounts.len(), Error::<T>::MismatchParameter);
-		let mut fees = Vec::new();
+		let mut fees = vec![Zero::zero(); n_currencies];
 		let mut d0 = Balance::default();
 		let lp_total_supply = T::MultiCurrency::total_issuance(meta_pool.info.lp_currency_id);
 		let amp = Self::get_a_precise(&meta_pool.info).ok_or(Error::<T>::Arithmetic)?;
@@ -193,7 +194,7 @@ impl<T: Config> Pallet<T> {
 			Self::calculate_meta_remove_liquidity_one_currency(meta_pool, lp_amount, index as usize, total_supply)
 				.ok_or(Error::<T>::Arithmetic)?;
 
-		ensure!(dy > min_amount, Error::<T>::AmountSlippage);
+		ensure!(dy >= min_amount, Error::<T>::AmountSlippage);
 		let fee_denominator = U256::from(FEE_DENOMINATOR);
 
 		meta_pool.info.balances[index as usize] = U256::from(dy_fee)
@@ -336,7 +337,13 @@ impl<T: Config> Pallet<T> {
 			} else {
 				let mut base_amounts = vec![Balance::default(); meta_pool.base_currencies.len()];
 				base_amounts[currency_index_from - base_lp_currency_index] = dx;
-				dx = Self::inner_add_liquidity(who, meta_pool.base_pool_id, &base_amounts, 0, &meta_pool.info.account)?;
+				dx = Self::inner_add_liquidity(
+					&meta_pool.info.account,
+					meta_pool.base_pool_id,
+					&base_amounts,
+					0,
+					&meta_pool.info.account,
+				)?;
 
 				x = U256::from(dx)
 					.checked_mul(U256::from(base_virtual_price))
@@ -394,7 +401,7 @@ impl<T: Config> Pallet<T> {
 				let old_balance = T::MultiCurrency::free_balance(currency_to, &meta_pool.info.account);
 				Self::inner_remove_liquidity_one_currency(
 					meta_pool.base_pool_id,
-					who,
+					&meta_pool.info.account,
 					dy,
 					(currency_index_to - base_lp_currency_index) as u32,
 					0,
@@ -410,7 +417,7 @@ impl<T: Config> Pallet<T> {
 			// swap in base pool
 			dy = T::MultiCurrency::free_balance(currency_to, &meta_pool.info.account);
 			Self::inner_swap(
-				who,
+				&meta_pool.info.account,
 				meta_pool.base_pool_id,
 				currency_index_from - base_lp_currency_index,
 				currency_index_to - base_lp_currency_index,
@@ -546,6 +553,7 @@ impl<T: Config> Pallet<T> {
 				dx_expected
 					.checked_mul(U256::from(fee_per_token))?
 					.checked_div(U256::from(FEE_DENOMINATOR))
+					.and_then(|n| u256_xpi.checked_sub(n))
 					.and_then(|n| TryInto::<Balance>::try_into(n).ok())?,
 			);
 		}
@@ -734,5 +742,136 @@ impl<T: Config> Pallet<T> {
 		dy = dy.checked_div(meta_pool.info.token_multipliers[j])?;
 
 		Some((dy, fee))
+	}
+
+	pub fn calculate_meta_swap_underlying(
+		pool_id: T::PoolId,
+		in_amount: Balance,
+		currency_index_from: usize,
+		currency_index_to: usize,
+	) -> Result<Balance, DispatchError> {
+		let pool = Self::pools(pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+		let meta_pool = match pool {
+			Pool::Basic(_) => None,
+			Pool::Meta(mp) => Some(mp),
+		}
+		.ok_or(Error::<T>::InvalidPoolId)?;
+
+		let base_lp_currency_index = meta_pool
+			.info
+			.currency_ids
+			.len()
+			.checked_sub(One::one())
+			.ok_or(Error::<T>::Arithmetic)?;
+
+		let base_virtual_price = Self::meta_pool_virtual_price(&meta_pool).ok_or(Error::<T>::Arithmetic)?;
+
+		let base_pool_currency_len = meta_pool.base_currencies.len();
+
+		let max_range = base_lp_currency_index + base_pool_currency_len;
+
+		let mut currency_index_from = currency_index_from;
+		let currency_index_to = currency_index_to;
+
+		ensure!(
+			currency_index_from != currency_index_to
+				&& currency_index_from < max_range
+				&& currency_index_to < max_range,
+			Error::<T>::MismatchParameter
+		);
+
+		let xp = Self::meta_pool_xp(
+			&meta_pool.info.balances,
+			&meta_pool.info.token_multipliers,
+			base_virtual_price,
+		)
+		.ok_or(Error::<T>::Arithmetic)?;
+
+		let mut x: Balance;
+		if currency_index_from < base_lp_currency_index {
+			x = in_amount
+				.checked_mul(meta_pool.info.token_multipliers[currency_index_from])
+				.and_then(|n| n.checked_add(xp[currency_index_from]))
+				.ok_or(Error::<T>::Arithmetic)?;
+		} else {
+			currency_index_from = currency_index_from - base_lp_currency_index;
+			if currency_index_to < base_lp_currency_index {
+				let mut base_inputs = vec![Zero::zero(); base_pool_currency_len];
+				base_inputs[currency_index_from] = in_amount;
+				x = U256::from(Self::calculate_currency_amount(
+					meta_pool.base_pool_id,
+					base_inputs,
+					true,
+				)?)
+				.checked_mul(U256::from(base_virtual_price))
+				.and_then(|n| n.checked_div(U256::from(BASE_VIRTUAL_PRICE_PRECISION)))
+				.and_then(|n| TryInto::<Balance>::try_into(n).ok())
+				.ok_or(Error::<T>::Arithmetic)?;
+
+				// when adding to the base pool,you pay approx 50% of the swap fee
+				let base_pool = Self::pools(meta_pool.base_pool_id).ok_or(Error::<T>::InvalidBasePool)?;
+				let base_pool_fee = base_pool.get_fee();
+
+				let x_u256 = U256::from(x);
+				x = x_u256
+					.checked_mul(U256::from(base_pool_fee))
+					.and_then(|n| n.checked_div(U256::from(FEE_DENOMINATOR * 2)))
+					.and_then(|n| x_u256.checked_sub(n))
+					.and_then(|n| n.checked_add(U256::from(xp[base_lp_currency_index])))
+					.and_then(|n| TryInto::<Balance>::try_into(n).ok())
+					.ok_or(Error::<T>::Arithmetic)?;
+			} else {
+				return Self::stable_amm_calculate_swap_amount(
+					meta_pool.base_pool_id,
+					currency_index_from,
+					currency_index_to - base_lp_currency_index,
+					in_amount,
+				)
+				.ok_or(Error::<T>::Arithmetic.into());
+			}
+			currency_index_from = base_lp_currency_index;
+		}
+
+		let mut meta_index_to = base_lp_currency_index;
+		if currency_index_to < base_lp_currency_index {
+			meta_index_to = currency_index_to;
+		}
+
+		let y =
+			Self::get_y(&meta_pool.info, currency_index_from, meta_index_to, x, &xp).ok_or(Error::<T>::Arithmetic)?;
+
+		let mut dy = xp[meta_index_to]
+			.checked_sub(y)
+			.and_then(|n| n.checked_sub(One::one()))
+			.ok_or(Error::<T>::Arithmetic)?;
+
+		let dy_fee = U256::from(dy)
+			.checked_mul(U256::from(meta_pool.info.fee))
+			.and_then(|n| n.checked_div(U256::from(FEE_DENOMINATOR)))
+			.and_then(|n| TryInto::<Balance>::try_into(n).ok())
+			.ok_or(Error::<T>::Arithmetic)?;
+
+		dy = dy.checked_sub(dy_fee).ok_or(Error::<T>::Arithmetic)?;
+
+		if currency_index_to < base_lp_currency_index {
+			dy = dy
+				.checked_div(meta_pool.info.token_multipliers[meta_index_to])
+				.ok_or(Error::<T>::Arithmetic)?;
+		} else {
+			let amount = U256::from(dy)
+				.checked_mul(U256::from(BASE_VIRTUAL_PRICE_PRECISION))
+				.and_then(|n| n.checked_div(U256::from(base_virtual_price)))
+				.and_then(|n| TryInto::<Balance>::try_into(n).ok())
+				.ok_or(Error::<T>::Arithmetic)?;
+
+			dy = Self::stable_amm_calculate_remove_liquidity_one_currency(
+				meta_pool.base_pool_id,
+				amount,
+				(currency_index_to - base_lp_currency_index) as u32,
+			)
+			.ok_or(Error::<T>::Arithmetic)?;
+		}
+
+		Ok(dy)
 	}
 }

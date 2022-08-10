@@ -69,6 +69,13 @@ pub enum Pool<PoolId, CurrencyId, AccountId, BoundString> {
 }
 
 impl<PoolId, CurrencyId: Copy, AccountId: Clone, BoundString> Pool<PoolId, CurrencyId, AccountId, BoundString> {
+	pub fn info(self) -> BasePool<CurrencyId, AccountId, BoundString> {
+		match self {
+			Pool::Basic(bp) => bp,
+			Pool::Meta(mp) => mp.info,
+		}
+	}
+
 	pub fn get_currency_ids(self) -> Vec<CurrencyId> {
 		match self {
 			Pool::Basic(bp) => bp.currency_ids,
@@ -101,6 +108,13 @@ impl<PoolId, CurrencyId: Copy, AccountId: Clone, BoundString> Pool<PoolId, Curre
 		match self {
 			Pool::Basic(bp) => bp.balances.clone(),
 			Pool::Meta(mp) => mp.info.balances.clone(),
+		}
+	}
+
+	pub fn get_fee(&self) -> Number {
+		match self {
+			Pool::Basic(bp) => bp.fee,
+			Pool::Meta(mp) => mp.info.fee,
 		}
 	}
 
