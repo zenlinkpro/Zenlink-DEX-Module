@@ -597,16 +597,4 @@ impl<T: Config> Pallet<T> {
 
 		Ok(amount)
 	}
-
-	// #[allow(dead_code)]
-	// pub(crate) fn calculate_base_virtual_price_with_id(pool_id: T::PoolId) -> Option<Balance> {
-	// 	if let Some(pool) = Self::pools(pool_id) {
-	// 		match pool {
-	// 			Pool::Basic(bp) => Self::calculate_base_virtual_price(&bp),
-	// 			_ => None,
-	// 		}
-	// 	} else {
-	// 		None
-	// 	}
-	// }
 }
