@@ -1872,6 +1872,115 @@ fn get_expected_admin_balance_after_set_admin_fee_should_work() {
 }
 
 #[test]
+fn get_expected_admin_balance_after_remove_one_currency_should_work() {
+	new_test_ext().execute_with(|| {
+		let (_, meta_pool_id) = setup_test_meta_pool();
+
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(0));
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(0));
+
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e8 as Balance),);
+
+		assert_ok!(StableAmm::remove_liquidity_one_currency(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			1e16 as Balance,
+			1,
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(0));
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(49992612012));
+
+		assert_ok!(StableAmm::remove_liquidity_one_currency(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			1e16 as Balance,
+			0,
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(49751463774));
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(49992612012));
+	})
+}
+
+#[test]
+fn get_expected_admin_balance_after_remove_imbalance_should_work() {
+	new_test_ext().execute_with(|| {
+		let (_, meta_pool_id) = setup_test_meta_pool();
+
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(0));
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(0));
+
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e8 as Balance),);
+
+		assert_ok!(StableAmm::remove_liquidity_imbalance(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			vec![4000000000000000, 5000000000000000],
+			Balance::MAX,
+			ALICE,
+			u64::MAX,
+		));
+
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(2500012310));
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(2499987689));
+
+		assert_ok!(StableAmm::remove_liquidity_imbalance(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			vec![5000000000000000, 4000000000000000],
+			Balance::MAX,
+			ALICE,
+			u64::MAX,
+		));
+
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(4988723716));
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(4988674586));
+	})
+}
+
+#[test]
+fn get_expected_admin_balance_after_add_liquidity_should_work() {
+	new_test_ext().execute_with(|| {
+		let (_, meta_pool_id) = setup_test_meta_pool();
+
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(0));
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(0));
+
+		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e8 as Balance),);
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			vec![1e18 as Balance, 2e18 as Balance],
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(2494899977135));
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(2505100022864));
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			vec![2e18 as Balance, 1e18 as Balance],
+			0,
+			ALICE,
+			u64::MAX,
+		));
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(6488370760276));
+		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(6514897563944));
+	})
+}
+
+#[test]
 fn withdraw_admin_balance_with_non_admin_should_revert() {
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
