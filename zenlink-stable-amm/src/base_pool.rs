@@ -422,7 +422,7 @@ impl<T: Config> Pallet<T> {
 		let fee_denominator = U256::from(FEE_DENOMINATOR);
 
 		let mut xp_reduced = vec![Zero::zero(); xp.len()];
-		for (i, x) in xp.clone().iter().enumerate() {
+		for (i, x) in xp.iter().enumerate() {
 			let expected_dx = if i as u32 == index {
 				U256::from(*x)
 					.checked_mul(U256::from(d1))?

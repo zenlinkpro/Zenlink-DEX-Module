@@ -794,7 +794,7 @@ impl<T: Config> Pallet<T> {
 				.and_then(|n| n.checked_add(xp[currency_index_from]))
 				.ok_or(Error::<T>::Arithmetic)?;
 		} else {
-			currency_index_from = currency_index_from - base_lp_currency_index;
+			currency_index_from -= base_lp_currency_index;
 			if currency_index_to < base_lp_currency_index {
 				let mut base_inputs = vec![Zero::zero(); base_pool_currency_len];
 				base_inputs[currency_index_from] = in_amount;
@@ -827,7 +827,7 @@ impl<T: Config> Pallet<T> {
 					currency_index_to - base_lp_currency_index,
 					in_amount,
 				)
-				.ok_or(Error::<T>::Arithmetic.into());
+				.ok_or_else(|| Error::<T>::Arithmetic.into());
 			}
 			currency_index_from = base_lp_currency_index;
 		}
