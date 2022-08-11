@@ -3833,3 +3833,299 @@ fn swap_pool_to_base_should_work() {
 		assert_eq!(balances_after[5], 2000000000000000000);
 	})
 }
+
+#[test]
+fn get_meta_virtual_price_impact_on_base_pool_should_work() {
+	new_test_ext().execute_with(|| {
+		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
+		assert_eq!(StableAmm::get_virtual_price(base_pool_id), 1e18 as Balance);
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			base_pool_id,
+			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		assert_eq!(StableAmm::get_virtual_price(base_pool_id), 1000015381247123616);
+		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1e18 as Balance);
+
+		set_block_timestamp(Timestamp::now() / 1000 + 11 * 3600);
+		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1000007690622981952);
+	})
+}
+
+#[test]
+fn meta_pool_add_liquidity_impact_on_base_pool_price_should_work() {
+	new_test_ext().execute_with(|| {
+		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			base_pool_id,
+			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		set_block_timestamp(Timestamp::now() / 1000 + 11 * 3600);
+		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1000007690622981952);
+
+		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
+		let meta_lp_currency_amount_before = get_user_balance(meta_pool.lp_currency_id, &ALICE);
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			vec![1e18 as Balance, 3e18 as Balance],
+			0,
+			ALICE,
+			u64::MAX,
+		));
+		let meta_lp_currency_amount_after = get_user_balance(meta_pool.lp_currency_id, &ALICE);
+
+		assert_eq!(
+			meta_lp_currency_amount_after - meta_lp_currency_amount_before,
+			3991687236658238901
+		);
+	})
+}
+
+#[test]
+fn meta_pool_remove_liquidity_impact_on_base_pool_price_should_work() {
+	new_test_ext().execute_with(|| {
+		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			base_pool_id,
+			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		set_block_timestamp(Timestamp::now() / 1000 + 11 * 3600);
+		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1000007690622981952);
+
+		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
+		let base_lp_currency_amount_before = get_user_balance(meta_pool.currency_ids[1], &ALICE);
+		let meta_pool_currency_amount_before = get_user_balance(meta_pool.currency_ids[0], &ALICE);
+
+		assert_ok!(StableAmm::remove_liquidity(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			1e16 as Balance,
+			vec![0, 0],
+			ALICE,
+			u64::MAX,
+		));
+		let base_lp_currency_amount_after = get_user_balance(meta_pool.currency_ids[1], &ALICE);
+		let meta_pool_currency_amount_after = get_user_balance(meta_pool.currency_ids[0], &ALICE);
+
+		// meta pool remove liquidity not effect by base price.
+		assert_eq!(
+			base_lp_currency_amount_after - base_lp_currency_amount_before,
+			5000000000000000
+		); //1e18 * (1e16 / 2e18)
+		assert_eq!(
+			meta_pool_currency_amount_after - meta_pool_currency_amount_before,
+			5000000000000000
+		);
+	})
+}
+
+#[test]
+fn meta_pool_remove_liquidity_one_currency_impact_on_base_pool_price_should_work() {
+	new_test_ext().execute_with(|| {
+		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			base_pool_id,
+			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		set_block_timestamp(Timestamp::now() / 1000 + 11 * 3600);
+		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1000007690622981952);
+
+		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
+		let base_lp_currency_amount_before = get_user_balance(meta_pool.currency_ids[1], &ALICE);
+		let meta_pool_currency_amount_before = get_user_balance(meta_pool.currency_ids[0], &ALICE);
+
+		assert_ok!(StableAmm::remove_liquidity_one_currency(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			1e16 as Balance,
+			0,
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		let base_lp_currency_amount_after = get_user_balance(meta_pool.currency_ids[1], &ALICE);
+		let meta_pool_currency_amount_after = get_user_balance(meta_pool.currency_ids[0], &ALICE);
+
+		assert_eq!(base_lp_currency_amount_after - base_lp_currency_amount_before, 0);
+		// if the base price not changed, the result is 9994508116007042
+		assert_eq!(
+			meta_pool_currency_amount_after - meta_pool_currency_amount_before,
+			9994583427668418
+		);
+	})
+}
+
+#[test]
+fn meta_pool_remove_liquidity_imbalance_impact_on_base_pool_price_should_work() {
+	new_test_ext().execute_with(|| {
+		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			base_pool_id,
+			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		set_block_timestamp(Timestamp::now() / 1000 + 11 * 3600);
+		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1000007690622981952);
+
+		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
+		let base_lp_currency_amount_before = get_user_balance(meta_pool.currency_ids[1], &ALICE);
+		let meta_pool_currency_amount_before = get_user_balance(meta_pool.currency_ids[0], &ALICE);
+		let meta_lp_currency_amount_before = get_user_balance(meta_pool.lp_currency_id, &ALICE);
+
+		assert_ok!(StableAmm::remove_liquidity_imbalance(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			vec![5000000000000000, 5000000000000000],
+			Balance::MAX,
+			ALICE,
+			u64::MAX,
+		));
+
+		let base_lp_currency_amount_after = get_user_balance(meta_pool.currency_ids[1], &ALICE);
+		let meta_pool_currency_amount_after = get_user_balance(meta_pool.currency_ids[0], &ALICE);
+		let meta_lp_currency_amount_after = get_user_balance(meta_pool.lp_currency_id, &ALICE);
+
+		assert_eq!(
+			base_lp_currency_amount_after - base_lp_currency_amount_before,
+			5000000000000000
+		);
+		assert_eq!(
+			meta_pool_currency_amount_after - meta_pool_currency_amount_before,
+			5000000000000000
+		);
+		assert_eq!(
+			meta_lp_currency_amount_before - meta_lp_currency_amount_after,
+			10000000000000001
+		);
+	})
+}
+
+#[test]
+fn meta_pool_swap_impact_on_base_pool_price_should_work() {
+	new_test_ext().execute_with(|| {
+		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			base_pool_id,
+			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		set_block_timestamp(Timestamp::now() / 1000 + 11 * 3600);
+		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1000007690622981952);
+
+		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
+		let base_lp_currency_amount_before = get_user_balance(meta_pool.currency_ids[1], &ALICE);
+		let meta_pool_currency_amount_before = get_user_balance(meta_pool.currency_ids[0], &ALICE);
+		let meta_lp_currency_amount_before = get_user_balance(meta_pool.lp_currency_id, &ALICE);
+
+		assert_ok!(StableAmm::swap(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			0,
+			1,
+			1e16 as Balance,
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		let base_lp_currency_amount_after = get_user_balance(meta_pool.currency_ids[1], &ALICE);
+		let meta_pool_currency_amount_after = get_user_balance(meta_pool.currency_ids[0], &ALICE);
+		let meta_lp_currency_amount_after = get_user_balance(meta_pool.lp_currency_id, &ALICE);
+
+		// if base price no change, then get 9988041372295327 base lp after swap.
+		assert_eq!(
+			base_lp_currency_amount_after - base_lp_currency_amount_before,
+			9987890773726400
+		);
+		assert_eq!(
+			meta_pool_currency_amount_before - meta_pool_currency_amount_after,
+			1e16 as Balance
+		);
+		// no impact on meta lp
+		assert_eq!(meta_lp_currency_amount_before - meta_lp_currency_amount_after, 0);
+	})
+}
+
+#[test]
+fn meta_pool_swap_underlying_impact_on_base_pool_price_should_work() {
+	new_test_ext().execute_with(|| {
+		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
+
+		assert_ok!(StableAmm::add_liquidity(
+			Origin::signed(ALICE),
+			base_pool_id,
+			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		set_block_timestamp(Timestamp::now() / 1000 + 11 * 3600);
+		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1000007690622981952);
+
+		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
+		let base_pool = StableAmm::pools(base_pool_id).unwrap().get_pool_info();
+
+		let meta_pool_currency_amount_before = get_user_balance(meta_pool.currency_ids[0], &ALICE);
+		let target_currency_amount_before = get_user_balance(base_pool.currency_ids[0], &ALICE);
+
+		assert_ok!(StableAmm::swap_meta_pool_underlying(
+			Origin::signed(ALICE),
+			meta_pool_id,
+			0,
+			1,
+			1e16 as Balance,
+			0,
+			ALICE,
+			u64::MAX,
+		));
+
+		let meta_pool_currency_amount_after = get_user_balance(meta_pool.currency_ids[0], &ALICE);
+		let target_currency_amount_after = get_user_balance(base_pool.currency_ids[0], &ALICE);
+
+		assert_eq!(
+			meta_pool_currency_amount_before - meta_pool_currency_amount_after,
+			1e16 as Balance
+		);
+		// if base price no change, get 9986043212788621 target amount.
+		assert_eq!(
+			target_currency_amount_after - target_currency_amount_before,
+			9993224247822464
+		);
+	})
+}

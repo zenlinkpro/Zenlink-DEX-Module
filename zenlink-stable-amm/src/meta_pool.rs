@@ -461,7 +461,7 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub(crate) fn meta_pool_virtual_price(
+	pub(crate) fn calculate_meta_virtual_price(
 		meta_pool: &MetaPool<T::PoolId, T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 	) -> Option<Balance> {
 		let base_virtual_price = Self::meta_pool_base_virtual_price(meta_pool)?;
@@ -501,7 +501,7 @@ impl<T: Config> Pallet<T> {
 			let pool = Self::pools(meta_pool.base_pool_id)?;
 			return match pool {
 				Pool::Basic(bp) => Self::calculate_base_virtual_price(&bp),
-				Pool::Meta(mp) => Self::meta_pool_virtual_price(&mp),
+				Pool::Meta(mp) => Self::calculate_meta_virtual_price(&mp),
 			};
 		}
 		Some(meta_pool.base_virtual_price)
@@ -764,7 +764,7 @@ impl<T: Config> Pallet<T> {
 			.checked_sub(One::one())
 			.ok_or(Error::<T>::Arithmetic)?;
 
-		let base_virtual_price = Self::meta_pool_virtual_price(&meta_pool).ok_or(Error::<T>::Arithmetic)?;
+		let base_virtual_price = Self::calculate_meta_virtual_price(&meta_pool).ok_or(Error::<T>::Arithmetic)?;
 
 		let base_pool_currency_len = meta_pool.base_currencies.len();
 

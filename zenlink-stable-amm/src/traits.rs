@@ -111,7 +111,7 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 			return match pool {
 				Pool::Basic(bp) => Self::calculate_base_swap_amount(&bp, i, j, in_balance),
 				Pool::Meta(mp) => {
-					let virtual_price = Self::meta_pool_virtual_price(&mp)?;
+					let virtual_price = Self::calculate_meta_virtual_price(&mp)?;
 					let res = Self::calculate_meta_swap_amount(&mp, i, j, in_balance, virtual_price)?;
 					Some(res.0)
 				}
