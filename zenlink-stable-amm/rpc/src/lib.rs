@@ -19,7 +19,7 @@ use sp_runtime::traits::MaybeDisplay;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
-use stable_amm_runtime_api::StableAmmApi as StableAmmRuntimeApi;
+use zenlink_stable_amm_runtime_api::StableAmmApi as StableAmmRuntimeApi;
 
 #[rpc(client, server)]
 pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {

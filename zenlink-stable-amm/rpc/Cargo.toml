@@ -1,5 +1,5 @@
 [package]
-name = "stable-amm-rpc"
+name = "zenlink-stable-amm-rpc"
 version = "0.1.0"
 edition = "2021"
 
@@ -15,4 +15,4 @@ sp-api = { git = "https://github.com/paritytech/substrate", default-features = f
 sp-rpc = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.22" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.22" }
 
-stable-amm-runtime-api = { path = "./runtime-api", version = "0.1.0"}
+zenlink-stable-amm-runtime-api = { path = "./runtime-api", version = "0.1.0"}
