@@ -1,5 +1,6 @@
 use codec::{Decode, Encode};
 use frame_support::pallet_prelude::*;
+use super::*;
 
 pub type Balance = u128;
 pub type Number = Balance;
