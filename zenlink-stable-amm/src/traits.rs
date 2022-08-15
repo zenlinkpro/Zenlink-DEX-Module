@@ -24,6 +24,11 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		index: u32,
 	) -> Option<Balance>;
 
+	fn stable_amm_calculate_removed_liquidity(
+		pool_id: PoolId,
+		in_balance: Balance,
+	) -> Option<Vec<Balance>>;
+
 	fn currency_index(pool_id: PoolId, currency: CurrencyId) -> Option<u32>;
 
 	fn add_liquidity(
@@ -116,6 +121,20 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 					Some(res.0)
 				}
 			};
+		}
+		None
+	}
+
+	fn stable_amm_calculate_removed_liquidity(
+		pool_id: T::PoolId,
+		in_balance: Balance,
+	) -> Option<Vec<Balance>> {
+		if let Some(pool) = Self::pools(pool_id) {
+			let base_pool =  match pool {
+				Pool::Basic(bp) => bp,
+				Pool::Meta(mp) => mp.info,
+			};
+			return Self::calculate_base_removed_liquidity(&base_pool, in_balance);
 		}
 		None
 	}
