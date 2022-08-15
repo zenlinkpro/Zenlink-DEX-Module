@@ -11,7 +11,7 @@ const SWAP_FEE: Balance = 1e7 as Balance;
 const ADMIN_FEE: Balance = 0;
 
 fn setup_stable_pools() {
-	assert_ok!(StableAMM::create_pool(
+	assert_ok!(StableAMM::create_base_pool(
 		Origin::root(),
 		vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL)],
 		vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL],
@@ -23,18 +23,7 @@ fn setup_stable_pools() {
 	));
 
 	let pool_id = StableAMM::next_pool_id() - 1;
-	let first_pool_lp_currency_id = StableAMM::pools(pool_id).unwrap().lp_currency_id;
-
-	assert_ok!(StableAMM::create_pool(
-		Origin::root(),
-		vec![first_pool_lp_currency_id, Token(TOKEN4_SYMBOL)],
-		vec![18, TOKEN4_DECIMAL],
-		INITIAL_A_VALUE,
-		SWAP_FEE,
-		ADMIN_FEE,
-		USER1,
-		Vec::from("pool_lp"),
-	));
+	let first_pool_lp_currency_id = StableLPV2(pool_id);
 
 	assert_ok!(StableAMM::add_liquidity(
 		Origin::signed(USER1),
@@ -45,10 +34,21 @@ fn setup_stable_pools() {
 		u64::MAX,
 	));
 
+	assert_ok!(StableAMM::create_meta_pool(
+		Origin::root(),
+		vec![Token(TOKEN4_SYMBOL), first_pool_lp_currency_id],
+		vec![TOKEN4_DECIMAL, 18],
+		INITIAL_A_VALUE,
+		SWAP_FEE,
+		ADMIN_FEE,
+		USER1,
+		Vec::from("pool_lp"),
+	));
+
 	assert_ok!(StableAMM::add_liquidity(
 		Origin::signed(USER1),
 		1,
-		vec![1e18 as Balance, 1e6 as Balance],
+		vec![1e6 as Balance, 1e18 as Balance],
 		0,
 		USER1,
 		u64::MAX,
