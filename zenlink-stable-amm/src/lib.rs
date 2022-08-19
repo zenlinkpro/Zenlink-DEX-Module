@@ -256,7 +256,7 @@ pub mod pallet {
 		BadPoolCurrencySymbol,
 		/// The transaction change nothing.
 		InvalidTransaction,
-		/// The base pool lp currency is invalid when crate meta pool.
+		/// The base pool lp currency is invalid when create meta pool.
 		InvalidBasePoolLpCurrency,
 		/// The token index out of range.
 		TokenIndexOutOfRange,
@@ -1167,6 +1167,13 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let base_pool = Self::pools(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		let meta_pool = Self::pools(pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+		match meta_pool {
+			Pool::Basic(_) => Err(Error::<T>::InvalidPoolId),
+			Pool::Meta(ref mp) => {
+				ensure!(mp.base_pool_id == base_pool_id, Error::<T>::MismatchParameter);
+				Ok(())
+			}
+		}?;
 
 		let base_pool_lp_currency = base_pool.get_lp_currency();
 		let meta_pool_currencies = meta_pool.get_currency_ids();
@@ -1243,6 +1250,14 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let base_pool = Self::pools(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		let meta_pool = Self::pools(pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+		match meta_pool {
+			Pool::Basic(_) => Err(Error::<T>::InvalidPoolId),
+			Pool::Meta(ref mp) => {
+				ensure!(mp.base_pool_id == base_pool_id, Error::<T>::MismatchParameter);
+				Ok(())
+			}
+		}?;
+
 		let base_pool_lp_currency = base_pool.get_lp_currency();
 		let meta_pool_currencies = meta_pool.get_currency_ids();
 
@@ -1279,7 +1294,17 @@ impl<T: Config> Pallet<T> {
 		to: &T::AccountId,
 	) -> Result<Balance, DispatchError> {
 		let base_pool = Self::pools(base_pool_id).ok_or(Error::<T>::InvalidBasePool)?.info();
-		let meta_pool = Self::pools(meta_pool_id).ok_or(Error::<T>::InvalidPoolId)?.info();
+		let meta_pool = Self::pools(meta_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+
+		match meta_pool {
+			Pool::Basic(_) => Err(Error::<T>::InvalidPoolId),
+			Pool::Meta(ref mp) => {
+				ensure!(mp.base_pool_id == base_pool_id, Error::<T>::MismatchParameter);
+				Ok(())
+			}
+		}?;
+
+		let meta_pool = meta_pool.info();
 
 		let base_pool_currency = base_pool.lp_currency_id;
 		let mut base_pool_lp_currency_in_meta_index = None;
