@@ -32,7 +32,7 @@ impl<T: Config> Pallet<T> {
 		let mut new_balances = meta_pool.info.balances.clone();
 		for (i, currency) in meta_pool.info.currency_ids.iter().enumerate() {
 			ensure!(
-				!lp_total_supply.is_zero() || amounts[1] > Zero::zero(),
+				!lp_total_supply.is_zero() || amounts[i] > Zero::zero(),
 				Error::<T>::RequireAllCurrencies
 			);
 			if !amounts[i].is_zero() {
@@ -361,7 +361,7 @@ impl<T: Config> Pallet<T> {
 				.and_then(|n| n.checked_sub(One::one()))
 				.ok_or(Error::<T>::Arithmetic)?;
 
-			if currency_index_to == base_lp_currency_index {
+			if currency_index_to >= base_lp_currency_index {
 				dy = U256::from(dy)
 					.checked_mul(U256::from(BASE_VIRTUAL_PRICE_PRECISION))
 					.and_then(|n| n.checked_div(U256::from(base_virtual_price)))
