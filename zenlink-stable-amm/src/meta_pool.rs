@@ -484,7 +484,7 @@ impl<T: Config> Pallet<T> {
 
 	fn meta_pool_xp(balances: &[Balance], rates: &[Balance], base_virtual_price: Balance) -> Option<Vec<Balance>> {
 		let mut xp = Self::xp(balances, rates)?;
-		let base_lp_token_index = balances.len() - 1;
+		let base_lp_token_index = balances.len().checked_sub(1)?;
 		xp[base_lp_token_index] = U256::from(xp[base_lp_token_index])
 			.checked_mul(U256::from(base_virtual_price))
 			.and_then(|n| n.checked_div(U256::from(BASE_VIRTUAL_PRICE_PRECISION)))
@@ -513,6 +513,10 @@ impl<T: Config> Pallet<T> {
 		index: usize,
 		total_supply: Balance,
 	) -> Option<(Balance, Balance)> {
+		if index >= meta_pool.info.currency_ids.len() {
+			return None;
+		}
+
 		let base_virtual_price = Self::meta_pool_base_virtual_price(meta_pool)?;
 
 		let mut xp = Self::meta_pool_xp(
@@ -533,7 +537,7 @@ impl<T: Config> Pallet<T> {
 			.and_then(|n| TryInto::<Balance>::try_into(n).ok())?;
 
 		let mut new_y = Self::get_yd(&meta_pool.info, a_precise, index as u32, &xp, d1)?;
-		let mut xp_reduced = Vec::new();
+		let mut xp_reduced = vec![Zero::zero(); xp.len()];
 
 		for (i, xpi) in xp.iter().enumerate() {
 			let u256_xpi = U256::from(*xpi);
@@ -549,13 +553,11 @@ impl<T: Config> Pallet<T> {
 					.and_then(|n| u256_xpi.checked_sub(n))?
 			};
 
-			xp_reduced.push(
-				dx_expected
-					.checked_mul(U256::from(fee_per_token))?
-					.checked_div(U256::from(FEE_DENOMINATOR))
-					.and_then(|n| u256_xpi.checked_sub(n))
-					.and_then(|n| TryInto::<Balance>::try_into(n).ok())?,
-			);
+			xp_reduced[i] = dx_expected
+				.checked_mul(U256::from(fee_per_token))?
+				.checked_div(U256::from(FEE_DENOMINATOR))
+				.and_then(|n| u256_xpi.checked_sub(n))
+				.and_then(|n| TryInto::<Balance>::try_into(n).ok())?;
 		}
 
 		let mut dy =
@@ -789,6 +791,7 @@ impl<T: Config> Pallet<T> {
 
 		let mut x: Balance;
 		if currency_index_from < base_lp_currency_index {
+			// from currency in meta pool
 			x = in_amount
 				.checked_mul(meta_pool.info.token_multipliers[currency_index_from])
 				.and_then(|n| n.checked_add(xp[currency_index_from]))
@@ -796,6 +799,7 @@ impl<T: Config> Pallet<T> {
 		} else {
 			currency_index_from -= base_lp_currency_index;
 			if currency_index_to < base_lp_currency_index {
+				// from currency in base pool and to currency in meta pool
 				let mut base_inputs = vec![Zero::zero(); base_pool_currency_len];
 				base_inputs[currency_index_from] = in_amount;
 				x = U256::from(Self::calculate_currency_amount(
@@ -821,6 +825,7 @@ impl<T: Config> Pallet<T> {
 					.and_then(|n| TryInto::<Balance>::try_into(n).ok())
 					.ok_or(Error::<T>::Arithmetic)?;
 			} else {
+				// from currency in base pool and to currency in base pool
 				return Self::stable_amm_calculate_swap_amount(
 					meta_pool.base_pool_id,
 					currency_index_from,

@@ -399,7 +399,7 @@ impl<T: Config> Pallet<T> {
 		token_amount: Balance,
 		index: u32,
 	) -> Option<(Balance, Balance)> {
-		if index > pool.currency_ids.len() as u32 {
+		if index >= pool.currency_ids.len() as u32 {
 			return None;
 		}
 		let total_supply = T::MultiCurrency::total_issuance(pool.lp_currency_id);
