@@ -1,11 +1,14 @@
 #[cfg(feature = "std")]
 use std::marker::PhantomData;
 
+use super::*;
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
+use std::time::SystemTime;
 
 use frame_support::{
+	assert_ok,
 	pallet_prelude::GenesisBuild,
 	parameter_types,
 	traits::{ConstU32, Contains},
@@ -219,6 +222,7 @@ pub const TOKEN2_SYMBOL: u8 = 2;
 pub const TOKEN3_SYMBOL: u8 = 3;
 pub const TOKEN4_SYMBOL: u8 = 4;
 
+pub const STABLE_LP_DECIMAL: u32 = 18;
 pub const TOKEN1_DECIMAL: u32 = 18;
 pub const TOKEN2_DECIMAL: u32 = 18;
 pub const TOKEN3_DECIMAL: u32 = 6;
@@ -260,4 +264,66 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.unwrap();
 
 	t.into()
+}
+
+pub const DAYS: u64 = 86400;
+pub const POOL0ACCOUNTID: AccountId = 33865947477506447919519395693;
+pub const POOL1ACCOUNTID: AccountId = 113094109991770785513063346029;
+
+pub fn mine_block() {
+	let now = SystemTime::now()
+		.duration_since(SystemTime::UNIX_EPOCH)
+		.unwrap()
+		.as_secs();
+
+	System::set_block_number(System::block_number() + 1);
+	set_block_timestamp(now);
+}
+
+pub fn mine_block_with_timestamp(timestamp: u64) {
+	System::set_block_number(System::block_number() + 1);
+	set_block_timestamp(timestamp);
+}
+
+// timestamp in second
+pub fn set_block_timestamp(timestamp: u64) {
+	Timestamp::set_timestamp(timestamp * 1000);
+}
+
+pub fn get_user_token_balances(currencies: &[CurrencyId], user: &AccountId) -> Vec<Balance> {
+	let mut res = Vec::new();
+	for currency_id in currencies.iter() {
+		res.push(<Test as Config>::MultiCurrency::free_balance(*currency_id, user));
+	}
+	res
+}
+
+pub fn get_user_balance(currency_id: CurrencyId, user: &AccountId) -> Balance {
+	<Test as Config>::MultiCurrency::free_balance(currency_id, user)
+}
+
+pub type MockPool = Pool<PoolId, CurrencyId, AccountId, BoundedVec<u8, PoolCurrencySymbolLimit>>;
+
+impl MockPool {
+	pub fn get_pool_info(&self) -> BasePool<CurrencyId, AccountId, BoundedVec<u8, PoolCurrencySymbolLimit>> {
+		match self {
+			MockPool::Basic(bp) => (*bp).clone(),
+			MockPool::Meta(mp) => mp.info.clone(),
+		}
+	}
+}
+
+pub fn mint_more_currencies(accounts: Vec<AccountId>, currencies: Vec<CurrencyId>, balances: Vec<Balance>) {
+	assert_eq!(currencies.len(), balances.len());
+	for account in accounts.iter() {
+		for (i, currency_id) in currencies.iter().enumerate() {
+			assert_ok!(Tokens::set_balance(
+				Origin::root(),
+				*account,
+				*currency_id,
+				balances[i],
+				0,
+			));
+		}
+	}
 }
