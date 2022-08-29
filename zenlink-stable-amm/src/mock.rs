@@ -125,6 +125,8 @@ impl orml_tokens::Config for Test {
 	type DustRemovalWhitelist = MockDustRemovalWhitelist;
 	type ReserveIdentifier = ReserveIdentifier;
 	type MaxReserves = ConstU32<100_000>;
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 impl pallet_balances::Config for Test {
