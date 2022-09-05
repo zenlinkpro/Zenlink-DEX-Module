@@ -1,5 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod primitives;
+mod vault_asset;
+
+use pallet::*;
+use primitives::*;
+use vault_asset::*;
+
 use sp_arithmetic::traits::{checked_pow, One, Zero};
 use sp_runtime::traits::{AccountIdConversion, StaticLookup};
 use sp_std::collections::btree_set::BTreeSet;
@@ -7,13 +14,6 @@ use sp_std::collections::btree_set::BTreeSet;
 use frame_support::{dispatch::DispatchResult, pallet_prelude::*, PalletId};
 
 use orml_traits::MultiCurrency;
-
-mod primitives;
-mod vault_asset;
-
-use pallet::*;
-use primitives::*;
-use vault_asset::*;
 
 #[allow(type_alias_bounds)]
 type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
