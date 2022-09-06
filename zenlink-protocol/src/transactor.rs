@@ -19,7 +19,8 @@ enum Error {
 impl From<Error> for XcmError {
 	fn from(e: Error) -> Self {
 		match e {
-			Error::AccountIdConversionFailed => XcmError::FailedToTransactAsset("AccountIdConversionFailed"),
+			Error::AccountIdConversionFailed =>
+				XcmError::FailedToTransactAsset("AccountIdConversionFailed"),
 		}
 	}
 }
@@ -30,10 +31,7 @@ impl<ParaChains: Get<Vec<(MultiLocation, u128)>>> FilterAssetLocation for Truste
 	fn filter_asset_location(_asset: &MultiAsset, origin: &MultiLocation) -> bool {
 		log::info!(target: LOG_TARGET, "filter_asset_location: origin = {:?}", origin);
 
-		ParaChains::get()
-			.iter()
-			.map(|(location, _)| location)
-			.any(|l| *l == *origin)
+		ParaChains::get().iter().map(|(location, _)| location).any(|l| *l == *origin)
 	}
 }
 
@@ -48,55 +46,46 @@ impl<
 	> TransactAsset for TransactorAdaptor<ZenlinkAssets, AccountIdConverter, AccountId>
 {
 	fn deposit_asset(asset: &MultiAsset, who: &MultiLocation) -> XcmResult {
-		log::info!(
-			target: LOG_TARGET,
-			"deposit_asset: asset = {:?}, who = {:?}",
-			asset,
-			who,
-		);
+		log::info!(target: LOG_TARGET, "deposit_asset: asset = {:?}, who = {:?}", asset, who,);
 
-		let who = AccountIdConverter::convert_ref(who).map_err(|()| Error::AccountIdConversionFailed)?;
+		let who =
+			AccountIdConverter::convert_ref(who).map_err(|()| Error::AccountIdConversionFailed)?;
 
 		match &asset.id {
 			XcmAssetId::Concrete(location) => {
 				if let Fungibility::Fungible(amount) = asset.fun {
-					let asset_id =
-						multilocation_to_asset(location).ok_or(XcmError::FailedToTransactAsset("unKnown asset"))?;
+					let asset_id = multilocation_to_asset(location)
+						.ok_or(XcmError::FailedToTransactAsset("unKnown asset"))?;
 
 					ZenlinkAssets::deposit(asset_id, &who, amount)
 						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 				} else {
-					return Err(XcmError::AssetNotFound);
+					return Err(XcmError::AssetNotFound)
 				}
 				Ok(())
-			}
+			},
 			_ => Err(XcmError::AssetNotFound),
 		}
 	}
 
 	fn withdraw_asset(asset: &MultiAsset, who: &MultiLocation) -> Result<Assets, XcmError> {
-		log::info!(
-			target: LOG_TARGET,
-			"withdraw_asset: asset = {:?}, who = {:?}",
-			asset,
-			who,
-		);
+		log::info!(target: LOG_TARGET, "withdraw_asset: asset = {:?}, who = {:?}", asset, who,);
 
-		let who = AccountIdConverter::convert_ref(who).map_err(|()| Error::AccountIdConversionFailed)?;
+		let who =
+			AccountIdConverter::convert_ref(who).map_err(|()| Error::AccountIdConversionFailed)?;
 
 		match &asset.id {
-			XcmAssetId::Concrete(location) => {
+			XcmAssetId::Concrete(location) =>
 				if let Fungibility::Fungible(amount) = asset.fun {
-					let asset_id =
-						multilocation_to_asset(location).ok_or(XcmError::FailedToTransactAsset("unKnown asset"))?;
+					let asset_id = multilocation_to_asset(location)
+						.ok_or(XcmError::FailedToTransactAsset("unKnown asset"))?;
 
 					ZenlinkAssets::withdraw(asset_id, &who, amount)
 						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 					Ok(asset.clone().into())
 				} else {
 					Err(XcmError::NotWithdrawable)
-				}
-			}
+				},
 			_ => Err(XcmError::NotWithdrawable),
 		}
 	}
@@ -104,7 +93,7 @@ impl<
 
 fn multilocation_to_asset(location: &MultiLocation) -> Option<AssetId> {
 	if location.parents != 1 {
-		return None;
+		return None
 	}
 
 	match location.interior {
@@ -112,11 +101,7 @@ fn multilocation_to_asset(location: &MultiLocation) -> Option<AssetId> {
 			Junction::Parachain(chain_id),
 			Junction::PalletInstance(asset_type),
 			Junction::GeneralIndex(asset_index),
-		) => Some(AssetId {
-			chain_id,
-			asset_type,
-			asset_index: asset_index as u64,
-		}),
+		) => Some(AssetId { chain_id, asset_type, asset_index: asset_index as u64 }),
 		_ => None,
 	}
 }

@@ -116,8 +116,8 @@
   - account: the account of swap pair
   - holdingLiquidity: the liquidity of user holding
   - reserve0: the amount of asset0 in swap pair
-  - reserve1: the amount of asset1 in swap pair
-  - asset0 & asset1: the AssetId of asset0 and asset1
+  - reserve1: the amount of ASSET1 in swap pair
+  - asset0 & ASSET1: the AssetId of asset0 and ASSET1
   - totalLiquidity：lptoken total supply
   - lpAssetId: the AssetId of lptoken
   
@@ -132,7 +132,7 @@
           "asset_type": 0,
           "chain_id": 200
         },
-        "asset1": {
+        "ASSET1": {
           "asset_index": 0,
           "asset_type": 0,
           "chain_id": 300
@@ -171,8 +171,8 @@
   - account: the account of swap pair
   - holdingLiquidity: the liquidity of user holding
   - reserve0: the amount of asset0 in swap pair
-  - reserve1: the amount of asset1 in swap pair
-  - asset0 & asset1: the AssetId of asset0 and asset1
+  - reserve1: the amount of ASSET1 in swap pair
+  - asset0 & ASSET1: the AssetId of asset0 and ASSET1
   - totalLiquidity：lptoken total supply
   - lpAssetId: the AssetId of lptoken
   
@@ -187,7 +187,7 @@
           "asset_type": 0,
           "chain_id": 200
         },
-        "asset1": {
+        "ASSET1": {
           "asset_index": 0,
           "asset_type": 0,
           "chain_id": 300
@@ -229,8 +229,8 @@
   - account: the account of swap pair
   - holdingLiquidity: the liquidity of user holding
   - reserve0: the amount of asset0 in swap pair
-  - reserve1: the amount of asset1 in swap pair
-  - asset0 & asset1: the AssetId of asset0 and asset1
+  - reserve1: the amount of ASSET1 in swap pair
+  - asset0 & ASSET1: the AssetId of asset0 and ASSET1
   - totalLiquidity：lptoken total supply
   - lpAssetId: the AssetId of lptoken
     
@@ -244,7 +244,7 @@
         "asset_type": 0,
         "chain_id": 200
       },
-      "asset1": {
+      "ASSET1": {
         "asset_index": 0,
         "asset_type": 0,
         "chain_id": 300

@@ -34,7 +34,8 @@ pub struct BasePool<CurrencyId, AccountId, BoundString> {
 	pub lp_currency_id: CurrencyId,
 	// token i multiplier to reach POOL_TOKEN_COMMON_DECIMALS
 	pub token_multipliers: Vec<Balance>,
-	// effective balance which might different from token balance of the pool account because it hold admin fee as well
+	// effective balance which might different from token balance of the pool account because it
+	// hold admin fee as well
 	pub balances: Vec<Balance>,
 	// swap fee ratio. Change on any action which move balance state far from the ideal state
 	pub fee: Number,
@@ -68,7 +69,9 @@ pub enum Pool<PoolId, CurrencyId, AccountId, BoundString> {
 	Meta(MetaPool<PoolId, CurrencyId, AccountId, BoundString>),
 }
 
-impl<PoolId, CurrencyId: Copy, AccountId: Clone, BoundString> Pool<PoolId, CurrencyId, AccountId, BoundString> {
+impl<PoolId, CurrencyId: Copy, AccountId: Clone, BoundString>
+	Pool<PoolId, CurrencyId, AccountId, BoundString>
+{
 	pub fn info(self) -> BasePool<CurrencyId, AccountId, BoundString> {
 		match self {
 			Pool::Basic(bp) => bp,

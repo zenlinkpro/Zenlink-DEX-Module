@@ -58,7 +58,19 @@ impl Contains<AccountId> for MockDustRemovalWhitelist {
 	}
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, MaxEncodedLen, Ord, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	Eq,
+	PartialEq,
+	Copy,
+	Clone,
+	RuntimeDebug,
+	PartialOrd,
+	MaxEncodedLen,
+	Ord,
+	TypeInfo,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	Forbidden(TokenSymbol),
@@ -68,14 +80,38 @@ pub enum CurrencyId {
 	ZenlinkLp(TokenSymbol, TokenSymbol),
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, MaxEncodedLen, Ord, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	Eq,
+	PartialEq,
+	Copy,
+	Clone,
+	RuntimeDebug,
+	PartialOrd,
+	MaxEncodedLen,
+	Ord,
+	TypeInfo,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum PoolToken {
 	Token(TokenSymbol),
 	StablePoolLp(PoolId),
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, MaxEncodedLen, Ord, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	Eq,
+	PartialEq,
+	Copy,
+	Clone,
+	RuntimeDebug,
+	PartialOrd,
+	MaxEncodedLen,
+	Ord,
+	TypeInfo,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum PoolType {
 	P2(PoolToken, PoolToken),
@@ -192,7 +228,7 @@ pub struct PoolLpGenerate;
 
 impl StablePoolLpCurrencyIdGenerate<CurrencyId, PoolId> for PoolLpGenerate {
 	fn generate_by_pool_id(pool_id: PoolId) -> CurrencyId {
-		return CurrencyId::StableLPV2(pool_id);
+		return CurrencyId::StableLPV2(pool_id)
 	}
 }
 
@@ -203,7 +239,7 @@ where
 	fn validate_pooled_currency(currencies: &[CurrencyId]) -> bool {
 		for currency in currencies.iter() {
 			if let CurrencyId::Forbidden(_) = *currency {
-				return false;
+				return false
 			}
 		}
 		true
@@ -211,11 +247,11 @@ where
 
 	fn validate_pool_lp_currency(currency_id: CurrencyId) -> bool {
 		if let CurrencyId::Token(_) = currency_id {
-			return false;
+			return false
 		}
 
 		if Local::total_issuance(currency_id) > Zero::zero() {
-			return false;
+			return false
 		}
 		true
 	}
@@ -231,7 +267,7 @@ pub fn asset_id_to_currency_id(asset_id: &AssetId) -> Result<CurrencyId, ()> {
 		let token_id = asset_id.asset_index as u8;
 
 		Ok(CurrencyId::Token(token_id))
-	};
+	}
 }
 
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -241,15 +277,13 @@ where
 	Local: MultiCurrency<AccountId, Balance = u128, CurrencyId = CurrencyId>,
 {
 	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
-		asset_id_to_currency_id(&asset_id).map_or(AssetBalance::default(), |currency_id| {
-			Local::free_balance(currency_id, who)
-		})
+		asset_id_to_currency_id(&asset_id)
+			.map_or(AssetBalance::default(), |currency_id| Local::free_balance(currency_id, who))
 	}
 
 	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
-		asset_id_to_currency_id(&asset_id).map_or(AssetBalance::default(), |currency_id| {
-			Local::total_issuance(currency_id)
-		})
+		asset_id_to_currency_id(&asset_id)
+			.map_or(AssetBalance::default(), |currency_id| Local::total_issuance(currency_id))
 	}
 
 	fn local_is_exists(asset_id: AssetId) -> bool {
@@ -327,28 +361,17 @@ pub const TOKEN2_UNIT: u128 = 1_000_000_000_000_000_000;
 pub const TOKEN3_UNIT: u128 = 1_000_000;
 pub const TOKEN4_UNIT: u128 = 1_000_000;
 
-pub const TOKEN1_ASSET_ID: AssetId = AssetId {
-	chain_id: CHAIN_ID,
-	asset_type: LOCAL,
-	asset_index: 1,
-};
+pub const TOKEN1_ASSET_ID: AssetId =
+	AssetId { chain_id: CHAIN_ID, asset_type: LOCAL, asset_index: 1 };
 
-pub const TOKEN2_ASSET_ID: AssetId = AssetId {
-	chain_id: CHAIN_ID,
-	asset_type: LOCAL,
-	asset_index: 2,
-};
+pub const TOKEN2_ASSET_ID: AssetId =
+	AssetId { chain_id: CHAIN_ID, asset_type: LOCAL, asset_index: 2 };
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default()
-		.build_storage::<Test>()
-		.unwrap()
-		.into();
-	pallet_balances::GenesisConfig::<Test> {
-		balances: vec![(USER1, u128::MAX)],
-	}
-	.assimilate_storage(&mut t)
-	.unwrap();
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
+	pallet_balances::GenesisConfig::<Test> { balances: vec![(USER1, u128::MAX)] }
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![

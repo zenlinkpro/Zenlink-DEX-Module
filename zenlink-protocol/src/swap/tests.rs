@@ -10,35 +10,15 @@ use sp_runtime::{traits::Zero, DispatchError::BadOrigin};
 
 const PAIR_DOT_BTC_ACCOUNT: u128 = 111825939709248857954450132390071529325;
 
-const DOT_ASSET_ID: AssetId = AssetId {
-	chain_id: 200,
-	asset_type: LOCAL,
-	asset_index: 2,
-};
+const DOT_ASSET_ID: AssetId = AssetId { chain_id: 200, asset_type: LOCAL, asset_index: 2 };
 
-const KSM_ASSET_ID: AssetId = AssetId {
-	chain_id: 200,
-	asset_type: LOCAL,
-	asset_index: 3,
-};
+const KSM_ASSET_ID: AssetId = AssetId { chain_id: 200, asset_type: LOCAL, asset_index: 3 };
 
-const BTC_ASSET_ID: AssetId = AssetId {
-	chain_id: 300,
-	asset_type: RESERVED,
-	asset_index: 3,
-};
+const BTC_ASSET_ID: AssetId = AssetId { chain_id: 300, asset_type: RESERVED, asset_index: 3 };
 
-const ETH_ASSET_ID: AssetId = AssetId {
-	chain_id: 300,
-	asset_type: NATIVE,
-	asset_index: 0,
-};
+const ETH_ASSET_ID: AssetId = AssetId { chain_id: 300, asset_type: NATIVE, asset_index: 0 };
 
-const DOT_BTC_LP_ID: AssetId = AssetId {
-	chain_id: 0,
-	asset_type: 2,
-	asset_index: 12885034496,
-};
+const DOT_BTC_LP_ID: AssetId = AssetId { chain_id: 0, asset_type: 2, asset_index: 12885034496 };
 
 const PAIR_DOT_BTC: u128 = 111825939709248857954450132390071529325;
 
@@ -71,7 +51,8 @@ fn add_liquidity_should_work() {
 			100
 		));
 
-		let mint_liquidity = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
+		let mint_liquidity =
+			<Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
 
 		assert_eq!(mint_liquidity, 316227766016);
 		let total_supply_dot = 50 * DOT_UNIT;
@@ -88,10 +69,13 @@ fn add_liquidity_should_work() {
 			100
 		));
 
-		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
-		let balance_btc = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
+		let balance_dot =
+			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
+		let balance_btc =
+			<Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
 
-		let mint_liquidity = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
+		let mint_liquidity =
+			<Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
 		assert_eq!(mint_liquidity, 16127616066816);
 
 		assert_eq!(balance_dot, 51000000000000000);
@@ -170,8 +154,8 @@ fn foreign_get_in_price_should_work() {
 		assert_eq!(target_amount, vec![1000000000000000, 99690060]);
 
 		assert!(
-			*target_amount.last().unwrap() < BTC_UNIT * 997 / 1000
-				&& *target_amount.last().unwrap() > BTC_UNIT * 996 / 1000
+			*target_amount.last().unwrap() < BTC_UNIT * 997 / 1000 &&
+				*target_amount.last().unwrap() > BTC_UNIT * 996 / 1000
 		);
 
 		let path = vec![BTC_ASSET_ID, DOT_ASSET_ID];
@@ -182,8 +166,8 @@ fn foreign_get_in_price_should_work() {
 		assert_eq!(target_amount, vec![100000000, 996900609009281]);
 
 		assert!(
-			*target_amount.last().unwrap() < DOT_UNIT * 997 / 1000
-				&& *target_amount.last().unwrap() > DOT_UNIT * 996 / 1000
+			*target_amount.last().unwrap() < DOT_UNIT * 997 / 1000 &&
+				*target_amount.last().unwrap() > DOT_UNIT * 996 / 1000
 		);
 	});
 }
@@ -217,8 +201,8 @@ fn foreign_get_out_price_should_work() {
 		assert_eq!(target_amount, vec![1003010030091274, 100000000]);
 
 		assert!(
-			*target_amount.first().unwrap() > DOT_UNIT * 1003 / 1000
-				&& *target_amount.first().unwrap() < DOT_UNIT * 1004 / 1000
+			*target_amount.first().unwrap() > DOT_UNIT * 1003 / 1000 &&
+				*target_amount.first().unwrap() < DOT_UNIT * 1004 / 1000
 		);
 
 		let path = vec![BTC_ASSET_ID, DOT_ASSET_ID];
@@ -229,8 +213,8 @@ fn foreign_get_out_price_should_work() {
 		assert_eq!(target_amount, vec![100301004, 1000000000000000]);
 
 		assert!(
-			*target_amount.first().unwrap() > BTC_UNIT * 1003 / 1000
-				&& *target_amount.first().unwrap() < BTC_UNIT * 1004 / 1000
+			*target_amount.first().unwrap() > BTC_UNIT * 1003 / 1000 &&
+				*target_amount.first().unwrap() < BTC_UNIT * 1004 / 1000
 		);
 	});
 }
@@ -255,8 +239,10 @@ fn inner_swap_exact_assets_for_assets_should_work() {
 			0,
 			0
 		));
-		let balance_dot = <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
-		let balance_btc = <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
+		let balance_dot =
+			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
+		let balance_btc =
+			<Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
 
 		// println!("balance_dot {} balance_btc {}", balance_dot, balance_btc);
 		assert_eq!(balance_dot, 50000000000000000000);
@@ -406,7 +392,8 @@ fn inner_swap_assets_for_exact_assets_should_work() {
 		assert_eq!(btc_balance, amount_out);
 
 		let amount_in_dot =
-			total_supply_dot - supply_dot - <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &ALICE);
+			total_supply_dot -
+				supply_dot - <Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &ALICE);
 
 		// println!("amount in {}", amount_in_dot);
 		assert_eq!(amount_in_dot, 1003209669015047);
@@ -431,7 +418,8 @@ fn inner_swap_assets_for_exact_assets_should_work() {
 		assert_eq!(dot_balance, amount_out);
 
 		let amount_in_btc =
-			total_supply_btc - supply_btc - <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &ALICE);
+			total_supply_btc -
+				supply_btc - <Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &ALICE);
 
 		// println!("amount in {}", amount_in_btc);
 		assert_eq!(amount_in_btc, 100280779);
@@ -692,11 +680,7 @@ fn bootstrap_contribute_end_should_work() {
 		));
 
 		System::set_block_number(3);
-		assert_ok!(DexPallet::bootstrap_end(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
+		assert_ok!(DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID));
 	})
 }
 
@@ -744,11 +728,7 @@ fn bootstrap_contribute_claim_reward_should_work() {
 		));
 
 		System::set_block_number(3);
-		assert_ok!(DexPallet::bootstrap_end(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
+		assert_ok!(DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID));
 
 		let total_supply = 2000000000000;
 
@@ -757,14 +737,11 @@ fn bootstrap_contribute_claim_reward_should_work() {
 				assert_eq!(x.pair_account, PAIR_DOT_BTC_ACCOUNT);
 				assert_eq!(x.total_supply, total_supply);
 				Ok(())
-			}
+			},
 			_ => Err(()),
 		});
 
-		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE),
-			0
-		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE), 0);
 
 		assert_ok!(DexPallet::bootstrap_claim(
 			Origin::signed(ALICE),
@@ -783,7 +760,13 @@ fn bootstrap_contribute_claim_reward_should_work() {
 		);
 
 		assert_noop!(
-			DexPallet::bootstrap_claim(Origin::signed(ALICE), ALICE, DOT_ASSET_ID, BTC_ASSET_ID, 1000,),
+			DexPallet::bootstrap_claim(
+				Origin::signed(ALICE),
+				ALICE,
+				DOT_ASSET_ID,
+				BTC_ASSET_ID,
+				1000,
+			),
 			Error::<Test>::ZeroContribute
 		);
 		assert_eq!(
@@ -859,11 +842,7 @@ fn refund_in_disable_bootstrap_should_work() {
 
 		System::set_block_number(3);
 
-		assert_ok!(DexPallet::bootstrap_refund(
-			Origin::signed(BOB),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-		));
+		assert_ok!(DexPallet::bootstrap_refund(Origin::signed(BOB), DOT_ASSET_ID, BTC_ASSET_ID,));
 		assert_eq!(
 			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &BOB),
 			supply_dot
@@ -920,11 +899,7 @@ fn disable_bootstrap_removed_after_all_refund_should_work() {
 
 		System::set_block_number(3);
 
-		assert_ok!(DexPallet::bootstrap_refund(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-		));
+		assert_ok!(DexPallet::bootstrap_refund(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID,));
 
 		assert_ok!(DexPallet::create_pair(Origin::root(), DOT_ASSET_ID, BTC_ASSET_ID,));
 	})
@@ -965,7 +940,14 @@ fn bootstrap_pair_deny_swap_should_work() {
 		let amount_out = 1 * DOT_UNIT;
 		let amount_in_max = 1 * ETH_UNIT * 1004 / 1000 * 1004 / 1000;
 		assert_noop!(
-			DexPallet::swap_assets_for_exact_assets(Origin::signed(ALICE), amount_out, amount_in_max, path, BOB, 1000,),
+			DexPallet::swap_assets_for_exact_assets(
+				Origin::signed(ALICE),
+				amount_out,
+				amount_in_max,
+				path,
+				BOB,
+				1000,
+			),
 			Error::<Test>::InvalidPath
 		);
 
@@ -1150,11 +1132,7 @@ fn create_pair_in_disable_bootstrap_should_work() {
 			100
 		));
 
-		assert_ok!(DexPallet::bootstrap_refund(
-			Origin::signed(BOB),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID,
-		));
+		assert_ok!(DexPallet::bootstrap_refund(Origin::signed(BOB), DOT_ASSET_ID, BTC_ASSET_ID,));
 		assert_eq!(
 			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &BOB),
 			supply_dot
@@ -1174,7 +1152,8 @@ fn create_pair_in_disable_bootstrap_should_work() {
 			Error::<Test>::ZeroContribute
 		);
 
-		let mint_liquidity = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
+		let mint_liquidity =
+			<Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
 		assert_eq!(mint_liquidity, 316227766016);
 	})
 }
@@ -1247,11 +1226,7 @@ fn create_bootstrap_in_disable_bootstrap() {
 		));
 
 		System::set_block_number(5);
-		assert_ok!(DexPallet::bootstrap_end(
-			Origin::signed(BOB),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
+		assert_ok!(DexPallet::bootstrap_end(Origin::signed(BOB), DOT_ASSET_ID, BTC_ASSET_ID));
 		assert_ok!(DexPallet::bootstrap_claim(
 			Origin::signed(BOB),
 			BOB,
@@ -1315,15 +1290,10 @@ fn liquidity_at_boundary_should_work() {
 			0,
 			100
 		));
-		let mint_liquidity = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
-		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &ALICE),
-			0
-		);
-		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &ALICE),
-			0
-		);
+		let mint_liquidity =
+			<Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &ALICE), 0);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &ALICE), 0);
 
 		assert_eq!(mint_liquidity, u128::MAX);
 
@@ -1433,11 +1403,7 @@ fn multi_bootstrap_contribute_claim_should_work() {
 		));
 
 		System::set_block_number(3);
-		assert_ok!(DexPallet::bootstrap_end(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
+		assert_ok!(DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID));
 
 		let total_lp = <Test as Config>::MultiAssetsHandler::total_supply(DOT_BTC_LP_ID);
 		assert_eq!(
@@ -1472,13 +1438,13 @@ fn multi_bootstrap_contribute_claim_should_work() {
 		));
 
 		// exact_amount_0 = (amount_0_contribute * accumulated_supply_1 + amount_1_contribute
-		// *accumulated_supply_0) / (accumulated_supply_1 *2) exact_amount_1 = (amount_1_contribute *
-		// accumulated_supply_0 + amount_0_contribute *accumulated_supply_1) / (accumulated_supply_0 *2)
-		// lp = sqrt(exact_amount_0 * exact_amount_1)
+		// *accumulated_supply_0) / (accumulated_supply_1 *2) exact_amount_1 = (amount_1_contribute
+		// * accumulated_supply_0 + amount_0_contribute *accumulated_supply_1) /
+		// (accumulated_supply_0 *2) lp = sqrt(exact_amount_0 * exact_amount_1)
 
 		// (200000000 * 10^18 * 300000000 * 10^18 + 0) / (300000000 * 10^18 *2) =
-		// 100000000000000000000000000 (200000000 * 10^18 * 300000000 * 10^18 + 0) / (300000000 * 10^18 *2)
-		// = 100000000000000000000000000 alice_lp = 100000000000000000000000000
+		// 100000000000000000000000000 (200000000 * 10^18 * 300000000 * 10^18 + 0) / (300000000 *
+		// 10^18 *2) = 100000000000000000000000000 alice_lp = 100000000000000000000000000
 
 		let alice_lp = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
 		assert_eq!(alice_lp, 100000000000000000000000000);
@@ -1571,11 +1537,17 @@ fn bootstrap_charge_reward_should_work() {
 		));
 
 		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(ETH_ASSET_ID, &DexPallet::account_id()),
+			<Test as Config>::MultiAssetsHandler::balance_of(
+				ETH_ASSET_ID,
+				&DexPallet::account_id()
+			),
 			2000 * unit
 		);
 		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(KSM_ASSET_ID, &DexPallet::account_id()),
+			<Test as Config>::MultiAssetsHandler::balance_of(
+				KSM_ASSET_ID,
+				&DexPallet::account_id()
+			),
 			1000 * unit
 		);
 
@@ -1620,11 +1592,17 @@ fn bootstrap_withdraw_reward_after_charge_should_work() {
 		));
 
 		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(ETH_ASSET_ID, &DexPallet::account_id()),
+			<Test as Config>::MultiAssetsHandler::balance_of(
+				ETH_ASSET_ID,
+				&DexPallet::account_id()
+			),
 			0
 		);
 		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(KSM_ASSET_ID, &DexPallet::account_id()),
+			<Test as Config>::MultiAssetsHandler::balance_of(
+				KSM_ASSET_ID,
+				&DexPallet::account_id()
+			),
 			0
 		);
 
@@ -1676,11 +1654,17 @@ fn bootstrap_charge_reward_with_insufficient_account_should_not_work() {
 		);
 
 		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(ETH_ASSET_ID, &DexPallet::account_id()),
+			<Test as Config>::MultiAssetsHandler::balance_of(
+				ETH_ASSET_ID,
+				&DexPallet::account_id()
+			),
 			0
 		);
 		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(KSM_ASSET_ID, &DexPallet::account_id()),
+			<Test as Config>::MultiAssetsHandler::balance_of(
+				KSM_ASSET_ID,
+				&DexPallet::account_id()
+			),
 			0
 		);
 
@@ -1732,11 +1716,17 @@ fn bootstrap_contribute_below_limits_should_not_work() {
 		);
 
 		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &DexPallet::account_id()),
+			<Test as Config>::MultiAssetsHandler::balance_of(
+				DOT_ASSET_ID,
+				&DexPallet::account_id()
+			),
 			0
 		);
 		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &DexPallet::account_id()),
+			<Test as Config>::MultiAssetsHandler::balance_of(
+				BTC_ASSET_ID,
+				&DexPallet::account_id()
+			),
 			0
 		);
 
@@ -1811,11 +1801,7 @@ fn bootstrap_contribute_exceed_limits_should_work() {
 
 		System::set_block_number(3);
 
-		assert_ok!(DexPallet::bootstrap_end(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
+		assert_ok!(DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID));
 
 		assert_ok!(DexPallet::add_liquidity(
 			Origin::signed(CHARLIE),
@@ -1858,8 +1844,8 @@ fn bootstrap_contribute_exceed_limits_should_work() {
 		let alice_lp = <Test as Config>::MultiAssetsHandler::balance_of(DOT_BTC_LP_ID, &ALICE);
 		assert_eq!(alice_lp, 2_828_427_323_371_633_862_327_509u128);
 
-		// bob_lp = sqrt((2000000000000000000000 * 4001000000000000000000000 + 1000000000000000000000 *
-		// 2002000000000000000000000) / (4001000000000000000000000 *2)
+		// bob_lp = sqrt((2000000000000000000000 * 4001000000000000000000000 +
+		// 1000000000000000000000 * 2002000000000000000000000) / (4001000000000000000000000 *2)
 		// * (2000000000000000000000 * 4001000000000000000000000 + 1000000000000000000000 *
 		//   2002000000000000000000000) / (2002000000000000000000000 *2))
 		// = 1767_369_577_951_894_138_583
@@ -1869,10 +1855,10 @@ fn bootstrap_contribute_exceed_limits_should_work() {
 		// bootstrap_mint_lp = 2828427323371633862327510 + 1767369577951894138583 =
 		// sqrt(2002000000000000000000000 × 4001000000000000000000000)
 
-		//bob_reward_eth = 1767369577951894138582 * 20000000000000000000000 / (2828427323371633862327510 +
-		// 1767369577951894138583) = 12_489_385_146_220_937_273 bob_reward_ksm = 1767369577951894138582 *
-		// 10000000000000000000000 / (2828427323371633862327510 + 1767369577951894138583) =
-		// 6_244_692_573_110_468_636
+		//bob_reward_eth = 1767369577951894138582 * 20000000000000000000000 /
+		// (2828427323371633862327510 + 1767369577951894138583) = 12_489_385_146_220_937_273
+		// bob_reward_ksm = 1767369577951894138582 * 10000000000000000000000 /
+		// (2828427323371633862327510 + 1767369577951894138583) = 6_244_692_573_110_468_636
 		assert_eq!(
 			<Test as Config>::MultiAssetsHandler::balance_of(ETH_ASSET_ID, &BOB),
 			12_489_385_146_220_937_273
@@ -1941,11 +1927,7 @@ fn bootstrap_zero_reward_claim_should_work() {
 
 		System::set_block_number(3);
 
-		assert_ok!(DexPallet::bootstrap_end(
-			Origin::signed(ALICE),
-			DOT_ASSET_ID,
-			BTC_ASSET_ID
-		));
+		assert_ok!(DexPallet::bootstrap_end(Origin::signed(ALICE), DOT_ASSET_ID, BTC_ASSET_ID));
 
 		assert_ok!(DexPallet::bootstrap_claim(
 			Origin::signed(ALICE),
@@ -1981,13 +1963,7 @@ fn bootstrap_zero_reward_claim_should_work() {
 		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(ETH_ASSET_ID, &BOB), 0);
 		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(KSM_ASSET_ID, &BOB), 0);
 
-		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(ETH_ASSET_ID, &ALICE),
-			0
-		);
-		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(KSM_ASSET_ID, &ALICE),
-			0
-		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(ETH_ASSET_ID, &ALICE), 0);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(KSM_ASSET_ID, &ALICE), 0);
 	})
 }

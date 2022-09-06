@@ -33,9 +33,10 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn desired_in_amount(desired_amount: AssetBalance, path: Vec<AssetId>) -> AssetBalance {
-		Self::get_amount_in_by_path(desired_amount, &path).map_or(AssetBalance::default(), |amounts| {
-			*amounts.first().unwrap_or(&AssetBalance::default())
-		})
+		Self::get_amount_in_by_path(desired_amount, &path)
+			.map_or(AssetBalance::default(), |amounts| {
+				*amounts.first().unwrap_or(&AssetBalance::default())
+			})
 	}
 
 	pub fn get_estimate_lptoken(
@@ -60,23 +61,30 @@ impl<T: Config> Pallet<T> {
 					reserve_1,
 				)
 				.map_or(Zero::zero(), |(amount_0, amount_1)| {
-					Self::calculate_liquidity(amount_0, amount_1, reserve_0, reserve_1, metadata.total_supply)
+					Self::calculate_liquidity(
+						amount_0,
+						amount_1,
+						reserve_0,
+						reserve_1,
+						metadata.total_supply,
+					)
 				})
-			}
+			},
 			_ => Zero::zero(),
 		}
 	}
 
-	pub fn get_pair_by_asset_id(asset_0: AssetId, asset_1: AssetId) -> Option<PairInfo<T::AccountId, AssetBalance>> {
+	pub fn get_pair_by_asset_id(
+		asset_0: AssetId,
+		asset_1: AssetId,
+	) -> Option<PairInfo<T::AccountId, AssetBalance>> {
 		let pair_account = Self::pair_account_id(asset_0, asset_1);
 		let lp_asset_id = Self::lp_asset_id(&asset_0, &asset_1);
 
 		let status = match Self::pair_status(Self::sort_asset_id(asset_0, asset_1)) {
 			Trading(_) => 0,
 			Bootstrap(_) => 1,
-			Disable => {
-				return None;
-			}
+			Disable => return None,
 		};
 
 		Some(PairInfo {
@@ -102,7 +110,7 @@ impl<T: Config> Pallet<T> {
 					} else {
 						None
 					}
-				}
+				},
 				_ => None,
 			})
 			.map(|(para_id, account)| {

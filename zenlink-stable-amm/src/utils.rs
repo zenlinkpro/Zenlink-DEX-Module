@@ -13,7 +13,7 @@ impl<T: Config> Pallet<T> {
 		let n_currencies = Balance::from(balances.len() as u64);
 		let sum = Self::sum_of(balances)?;
 		if sum == Balance::default() {
-			return Some(Balance::default());
+			return Some(Balance::default())
 		}
 		let mut d_prev: U256;
 		let mut d = U256::from(sum);
@@ -41,16 +41,14 @@ impl<T: Config> Pallet<T> {
 				.and_then(|n| n.checked_div(a_precision))
 				.and_then(|n| {
 					n.checked_add(
-						U256::from(n_currencies)
-							.checked_add(U256::from(1u32))?
-							.checked_mul(d_p)?,
+						U256::from(n_currencies).checked_add(U256::from(1u32))?.checked_mul(d_p)?,
 					)
 				})?;
 
 			d = numerator.checked_div(denominator)?;
 
 			if Self::distance::<U256>(d, d_prev) <= U256::from(1u32) {
-				return TryInto::<Balance>::try_into(d).ok();
+				return TryInto::<Balance>::try_into(d).ok()
 			}
 		}
 		None
@@ -71,17 +69,17 @@ impl<T: Config> Pallet<T> {
 		let mut c = d;
 		let mut sum = U256::default();
 
-		for (i, normalized_balance) in normalized_balances.iter().enumerate().take(pool_currencies_len) {
+		for (i, normalized_balance) in
+			normalized_balances.iter().enumerate().take(pool_currencies_len)
+		{
 			if i == out_index {
-				continue;
+				continue
 			}
 			let x: Balance = if i == in_index { in_balance } else { *normalized_balance };
 
 			sum = sum.checked_add(U256::from(x))?;
 
-			c = c
-				.checked_mul(d)?
-				.checked_div(U256::from(x).checked_mul(n_currencies)?)?;
+			c = c.checked_mul(d)?.checked_div(U256::from(x).checked_mul(n_currencies)?)?;
 		}
 		let a_percision = U256::from(A_PRECISION);
 		c = c
@@ -100,7 +98,7 @@ impl<T: Config> Pallet<T> {
 				.checked_add(c)?
 				.checked_div(U256::from(2u32).checked_mul(y)?.checked_add(b)?.checked_sub(d)?)?;
 			if Self::distance(last_y, y) <= U256::from(1) {
-				return TryInto::<Balance>::try_into(y).ok();
+				return TryInto::<Balance>::try_into(y).ok()
 			}
 		}
 
@@ -116,7 +114,7 @@ impl<T: Config> Pallet<T> {
 	) -> Option<Balance> {
 		let currencies_len = pool.currency_ids.len();
 		if index >= currencies_len as u32 {
-			return None;
+			return None
 		}
 
 		let n_currencies = U256::from(currencies_len as u64);
@@ -128,7 +126,7 @@ impl<T: Config> Pallet<T> {
 
 		for (i, x) in xp.iter().enumerate() {
 			if i as u32 == index {
-				continue;
+				continue
 			}
 			s = s.checked_add(U256::from(*x))?;
 			c = c
@@ -147,14 +145,11 @@ impl<T: Config> Pallet<T> {
 		for _i in 0..MAX_ITERATION {
 			y_prev = y;
 			y = y.checked_mul(y)?.checked_add(c)?.checked_div(
-				U256::from(2u32)
-					.checked_mul(y)?
-					.checked_add(b)?
-					.checked_sub(U256::from(d))?,
+				U256::from(2u32).checked_mul(y)?.checked_add(b)?.checked_sub(U256::from(d))?,
 			)?;
 
 			if Self::distance(y, y_prev) <= U256::from(1) {
-				return TryInto::<Balance>::try_into(y).ok();
+				return TryInto::<Balance>::try_into(y).ok()
 			}
 		}
 
@@ -176,12 +171,11 @@ impl<T: Config> Pallet<T> {
 		amount: Balance,
 	) -> Result<Balance, Error<T>> {
 		let to_prior_balance = T::MultiCurrency::free_balance(currency_id, to);
-		T::MultiCurrency::transfer(currency_id, from, to, amount).map_err(|_| Error::<T>::InsufficientReserve)?;
+		T::MultiCurrency::transfer(currency_id, from, to, amount)
+			.map_err(|_| Error::<T>::InsufficientReserve)?;
 		let to_new_balance = T::MultiCurrency::free_balance(currency_id, to);
 
-		to_new_balance
-			.checked_sub(to_prior_balance)
-			.ok_or(Error::<T>::Arithmetic)
+		to_new_balance.checked_sub(to_prior_balance).ok_or(Error::<T>::Arithmetic)
 	}
 
 	pub(crate) fn get_a_precise(
@@ -190,7 +184,7 @@ impl<T: Config> Pallet<T> {
 		let now = T::TimeProvider::now().as_secs() as Number;
 
 		if now >= pool.future_a_time {
-			return Some(pool.future_a);
+			return Some(pool.future_a)
 		}
 
 		let future_a = U256::from(pool.future_a);
@@ -207,7 +201,7 @@ impl<T: Config> Pallet<T> {
 						.checked_mul(now.checked_sub(initial_a_time)?)?
 						.checked_div(future_a_time.checked_sub(initial_a_time)?)?,
 				)
-				.and_then(|n| TryInto::<Balance>::try_into(n).ok());
+				.and_then(|n| TryInto::<Balance>::try_into(n).ok())
 		}
 
 		initial_a
@@ -221,7 +215,12 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub(crate) fn get_pool_virtual_price(
-		pool: &Pool<T::PoolId, T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
+		pool: &Pool<
+			T::PoolId,
+			T::CurrencyId,
+			T::AccountId,
+			BoundedVec<u8, T::PoolCurrencySymbolLimit>,
+		>,
 	) -> Option<Balance> {
 		match pool {
 			Pool::Basic(bp) => Self::calculate_base_virtual_price(bp),
@@ -234,12 +233,15 @@ impl<T: Config> Pallet<T> {
 	) -> Option<Balance> {
 		let n_pooled_currency = Balance::from(pool.currency_ids.len() as u64);
 
-		pool.fee
-			.checked_mul(n_pooled_currency)?
-			.checked_div(Balance::from(4u32).checked_mul(n_pooled_currency.checked_sub(One::one())?)?)
+		pool.fee.checked_mul(n_pooled_currency)?.checked_div(
+			Balance::from(4u32).checked_mul(n_pooled_currency.checked_sub(One::one())?)?,
+		)
 	}
 
-	pub(crate) fn distance<Number: PartialOrd + Sub<Output = Number>>(x: Number, y: Number) -> Number {
+	pub(crate) fn distance<Number: PartialOrd + Sub<Output = Number>>(
+		x: Number,
+		y: Number,
+	) -> Number {
 		if x > y {
 			x - y
 		} else {

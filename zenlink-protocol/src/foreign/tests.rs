@@ -6,36 +6,16 @@ use frame_support::{assert_noop, assert_ok};
 use super::{mock::*, AssetId, Error, MultiAssetsHandler};
 
 // Native Currency
-const DEV_ASSET_ID: AssetId = AssetId {
-	chain_id: 0,
-	asset_type: NATIVE,
-	asset_index: 0,
-};
+const DEV_ASSET_ID: AssetId = AssetId { chain_id: 0, asset_type: NATIVE, asset_index: 0 };
 
 // Foreign Liquidity
-const LP_ASSET_ID: AssetId = AssetId {
-	chain_id: 100,
-	asset_type: LIQUIDITY,
-	asset_index: 1,
-};
+const LP_ASSET_ID: AssetId = AssetId { chain_id: 100, asset_type: LIQUIDITY, asset_index: 1 };
 
-const DOT_ASSET_ID: AssetId = AssetId {
-	chain_id: 200,
-	asset_type: LOCAL,
-	asset_index: 2,
-};
+const DOT_ASSET_ID: AssetId = AssetId { chain_id: 200, asset_type: LOCAL, asset_index: 2 };
 
-const BTC_ASSET_ID: AssetId = AssetId {
-	chain_id: 300,
-	asset_type: RESERVED,
-	asset_index: 3,
-};
+const BTC_ASSET_ID: AssetId = AssetId { chain_id: 300, asset_type: RESERVED, asset_index: 3 };
 
-const ETH_ASSET_ID: AssetId = AssetId {
-	chain_id: 400,
-	asset_type: NATIVE,
-	asset_index: 0,
-};
+const ETH_ASSET_ID: AssetId = AssetId { chain_id: 400, asset_type: NATIVE, asset_index: 0 };
 
 const ALICE: u128 = 1;
 const BOB: u128 = 2;
@@ -231,21 +211,9 @@ fn foreign_multi_asset_total_supply_should_work() {
 		assert_eq!(
 			DexPallet::foreign_list(),
 			vec![
-				AssetId {
-					chain_id: 200,
-					asset_type: LOCAL,
-					asset_index: 2
-				},
-				AssetId {
-					chain_id: 300,
-					asset_type: RESERVED,
-					asset_index: 3
-				},
-				AssetId {
-					chain_id: 400,
-					asset_type: NATIVE,
-					asset_index: 0
-				}
+				AssetId { chain_id: 200, asset_type: LOCAL, asset_index: 2 },
+				AssetId { chain_id: 300, asset_type: RESERVED, asset_index: 3 },
+				AssetId { chain_id: 400, asset_type: NATIVE, asset_index: 0 }
 			]
 		);
 	});
@@ -255,19 +223,13 @@ fn foreign_multi_asset_total_supply_should_work() {
 fn foreign_multi_asset_withdraw_to_zenlink_module_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(<Test as Config>::MultiAssetsHandler::total_supply(DOT_ASSET_ID), 0);
-		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &ALICE),
-			0
-		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &ALICE), 0);
 
 		assert_ok!(<Test as Config>::MultiAssetsHandler::deposit(DOT_ASSET_ID, &ALICE, 100));
 		assert_ok!(<Test as Config>::MultiAssetsHandler::withdraw(DOT_ASSET_ID, &ALICE, 50));
 
 		assert_eq!(<Test as Config>::MultiAssetsHandler::total_supply(DOT_ASSET_ID), 50);
-		assert_eq!(
-			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &ALICE),
-			50
-		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &ALICE), 50);
 	});
 }
 
@@ -278,12 +240,7 @@ fn foreign_multi_asset_transfer_should_work() {
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &ALICE), 100);
 		assert_eq!(DexPallet::foreign_total_supply(DOT_ASSET_ID), 100);
 
-		assert_ok!(<Test as Config>::MultiAssetsHandler::transfer(
-			DOT_ASSET_ID,
-			&ALICE,
-			&BOB,
-			50
-		));
+		assert_ok!(<Test as Config>::MultiAssetsHandler::transfer(DOT_ASSET_ID, &ALICE, &BOB, 50));
 
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &ALICE), 50);
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &BOB), 50);

@@ -62,7 +62,14 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type StablePoolId: Parameter + Codec + Copy + Ord + AtLeast32BitUnsigned + Zero + One + Default;
+		type StablePoolId: Parameter
+			+ Codec
+			+ Copy
+			+ Ord
+			+ AtLeast32BitUnsigned
+			+ Zero
+			+ One
+			+ Default;
 
 		type Balance: Parameter
 			+ Member
@@ -77,11 +84,22 @@ pub mod pallet {
 			+ Into<AssetBalance>
 			+ TypeInfo;
 
-		type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize + Ord + TypeInfo + MaxEncodedLen;
+		type CurrencyId: Parameter
+			+ Member
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ Ord
+			+ TypeInfo
+			+ MaxEncodedLen;
 
 		type NormalAmm: ExportZenlink<AccountIdOf<Self>>;
 
-		type StableAMM: StableAmmApi<Self::StablePoolId, Self::CurrencyId, AccountIdOf<Self>, Self::Balance>;
+		type StableAMM: StableAmmApi<
+			Self::StablePoolId,
+			Self::CurrencyId,
+			AccountIdOf<Self>,
+			Self::Balance,
+		>;
 	}
 
 	#[pallet::pallet]
@@ -129,12 +147,14 @@ pub mod pallet {
 				match route {
 					Route::Stable(stable_path) => {
 						(amount_out) = Self::stable_swap(&who, stable_path, amount_out, &receiver)?;
-					}
+					},
 					Route::Normal(path) => {
-						let amounts = T::NormalAmm::get_amount_out_by_path(amount_out.into(), path)?;
+						let amounts =
+							T::NormalAmm::get_amount_out_by_path(amount_out.into(), path)?;
 						Self::swap(&who, amount_out, path, &receiver)?;
-						amount_out = T::Balance::from(*amounts.last().ok_or(Error::<T>::InvalidPath)?);
-					}
+						amount_out =
+							T::Balance::from(*amounts.last().ok_or(Error::<T>::InvalidPath)?);
+					},
 				}
 			}
 
@@ -154,13 +174,25 @@ impl<T: Config> Pallet<T> {
 	) -> Result<T::Balance, DispatchError> {
 		let out_amount = match path.mode {
 			StableSwapMode::Single => {
-				let from_index = Self::currency_index_from_stable_pool(path.pool_id, path.from_currency)?;
-				let to_index = Self::currency_index_from_stable_pool(path.pool_id, path.to_currency)?;
-				T::StableAMM::swap(who, path.pool_id, from_index, to_index, amount_in, Zero::zero(), to)?
-			}
+				let from_index =
+					Self::currency_index_from_stable_pool(path.pool_id, path.from_currency)?;
+				let to_index =
+					Self::currency_index_from_stable_pool(path.pool_id, path.to_currency)?;
+				T::StableAMM::swap(
+					who,
+					path.pool_id,
+					from_index,
+					to_index,
+					amount_in,
+					Zero::zero(),
+					to,
+				)?
+			},
 			StableSwapMode::FromBase => {
-				let from_index = Self::currency_index_from_stable_pool(path.base_pool_id, path.from_currency)?;
-				let to_index = Self::currency_index_from_stable_pool(path.pool_id, path.to_currency)?;
+				let from_index =
+					Self::currency_index_from_stable_pool(path.base_pool_id, path.from_currency)?;
+				let to_index =
+					Self::currency_index_from_stable_pool(path.pool_id, path.to_currency)?;
 
 				T::StableAMM::swap_pool_from_base(
 					who,
@@ -172,10 +204,12 @@ impl<T: Config> Pallet<T> {
 					Zero::zero(),
 					to,
 				)?
-			}
+			},
 			StableSwapMode::ToBase => {
-				let from_index = Self::currency_index_from_stable_pool(path.pool_id, path.from_currency)?;
-				let to_index = Self::currency_index_from_stable_pool(path.base_pool_id, path.to_currency)?;
+				let from_index =
+					Self::currency_index_from_stable_pool(path.pool_id, path.from_currency)?;
+				let to_index =
+					Self::currency_index_from_stable_pool(path.base_pool_id, path.to_currency)?;
 				T::StableAMM::swap_pool_to_base(
 					who,
 					path.pool_id,
@@ -186,19 +220,31 @@ impl<T: Config> Pallet<T> {
 					Zero::zero(),
 					to,
 				)?
-			}
+			},
 		};
 		Ok(out_amount)
 	}
 
-	fn swap(who: &T::AccountId, amount_in: T::Balance, path: &[AssetId], to: &T::AccountId) -> DispatchResult {
-		T::NormalAmm::inner_swap_exact_assets_for_assets(who, amount_in.into(), Zero::zero(), path, to)
+	fn swap(
+		who: &T::AccountId,
+		amount_in: T::Balance,
+		path: &[AssetId],
+		to: &T::AccountId,
+	) -> DispatchResult {
+		T::NormalAmm::inner_swap_exact_assets_for_assets(
+			who,
+			amount_in.into(),
+			Zero::zero(),
+			path,
+			to,
+		)
 	}
 
 	fn currency_index_from_stable_pool(
 		pool_id: T::StablePoolId,
 		currency_id: T::CurrencyId,
 	) -> Result<u32, DispatchError> {
-		T::StableAMM::currency_index(pool_id, currency_id).ok_or_else(|| Error::<T>::MismatchPoolAndCurrencyId.into())
+		T::StableAMM::currency_index(pool_id, currency_id)
+			.ok_or_else(|| Error::<T>::MismatchPoolAndCurrencyId.into())
 	}
 }
