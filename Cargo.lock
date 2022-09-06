@@ -3566,7 +3566,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zenlink-vault-assets"
+name = "zenlink-vault"
 version = "0.1.0"
 dependencies = [
  "frame-benchmarking",

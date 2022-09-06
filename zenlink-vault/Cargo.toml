@@ -1,5 +1,5 @@
 [package]
-name = "zenlink-vault-assets"
+name = "zenlink-vault"
 version = "0.1.0"
 authors = ["Zenlink Developers"]
 edition = "2021"
