@@ -11,7 +11,10 @@ use pallet::*;
 use primitives::*;
 use vault::*;
 
-use sp_arithmetic::traits::{checked_pow, Zero};
+use sp_arithmetic::{
+	traits::{checked_pow, Zero},
+	Rounding,
+};
 use sp_runtime::traits::{AccountIdConversion, StaticLookup};
 use sp_std::collections::btree_set::BTreeSet;
 
@@ -389,21 +392,27 @@ impl<T: Config> Pallet<T> {
 		let pallet_account = T::PalletId::get().into_account_truncating();
 		let reserve = T::MultiAsset::free_balance(asset_id, &pallet_account);
 
-		let share = balance_mul_div(reserve, 1e18 as Balance, asset_circulation)?;
+		let share = balance_mul_div(reserve, 1e18 as Balance, asset_circulation, Rounding::Down)?;
 		let asset_meta = Self::asset_ratio(asset_id)?;
 		if share < 1e17 as Balance {
-			Some(asset_meta.min_penalty_ratio)
-		} else if share > 5e17 as Balance {
 			Some(asset_meta.max_penalty_ratio)
+		} else if share > 5e17 as Balance {
+			Some(asset_meta.min_penalty_ratio)
 		} else {
 			let step = balance_mul_div(
 				asset_meta.max_penalty_ratio.checked_sub(asset_meta.min_penalty_ratio)?,
 				1e18 as Balance,
 				4e17 as Balance,
+				Rounding::Down,
 			)?;
 
-			balance_mul_div(share.checked_sub(1e17 as Balance)?, step, 1e18 as Balance)
-				.and_then(|n| asset_meta.max_penalty_ratio.checked_sub(n))
+			balance_mul_div(
+				share.checked_sub(1e17 as Balance)?,
+				step,
+				1e18 as Balance,
+				Rounding::Down,
+			)
+			.and_then(|n| asset_meta.max_penalty_ratio.checked_sub(n))
 		}
 	}
 
@@ -412,7 +421,8 @@ impl<T: Config> Pallet<T> {
 		amounts: Balance,
 	) -> Option<(Balance, Balance)> {
 		let fee_ratio = Self::withdraw_fee_ratio(asset_id)?;
-		let withdraw_fee_amount = balance_mul_div(amounts, fee_ratio, 1e18 as Balance)?;
+		let withdraw_fee_amount =
+			balance_mul_div(amounts, fee_ratio, 1e18 as Balance, Rounding::Down)?;
 		let withdraw_amount = amounts.checked_sub(withdraw_fee_amount)?;
 		Some((withdraw_amount, withdraw_fee_amount))
 	}
@@ -433,6 +443,70 @@ impl<T: Config> Pallet<T> {
 		let vault_asset_total_supply = T::MultiAsset::total_issuance(underlying_asset);
 		Ok(vault_asset_total_supply)
 	}
+
+	fn convert_to_shares_impl(
+		underlying_asset_id: T::AssetId,
+		amounts: Balance,
+		rounding: Rounding,
+	) -> Result<Balance, DispatchError> {
+		let vault_asset_total_supply = Self::vault_asset_total_supply(underlying_asset_id)?;
+		if amounts == Zero::zero() || vault_asset_total_supply == Zero::zero() {
+			let underlying_asset = Self::asset(underlying_asset_id)?;
+			let vault_asset_decimal = Self::asset_decimal(underlying_asset_id)?;
+			let underlying_asset_decimal = Self::asset_decimal(underlying_asset)?;
+
+			let calculate_fn = || {
+				balance_mul_div(
+					amounts,
+					checked_pow(10, vault_asset_decimal as usize)?,
+					checked_pow(10, underlying_asset_decimal as usize)?,
+					rounding,
+				)
+			};
+
+			calculate_fn().ok_or_else(|| Error::<T>::Math.into())
+		} else {
+			balance_mul_div(
+				amounts,
+				vault_asset_total_supply,
+				Self::total_assets(underlying_asset_id)?,
+				rounding,
+			)
+			.ok_or_else(|| Error::<T>::Math.into())
+		}
+	}
+
+	fn convert_to_assets_impl(
+		underlying_asset_id: T::AssetId,
+		shares: Balance,
+		rounding: Rounding,
+	) -> Result<Balance, DispatchError> {
+		let vault_asset = Self::asset(underlying_asset_id)?;
+		let vault_asset_total_supply = T::MultiAsset::total_issuance(vault_asset);
+		if vault_asset_total_supply.is_zero() {
+			let vault_asset_decimal = Self::asset_decimal(vault_asset)?;
+			let underlying_asset_decimal = Self::asset_decimal(underlying_asset_id)?;
+
+			let calculate_fn = || {
+				balance_mul_div(
+					shares,
+					checked_pow(10, underlying_asset_decimal as usize)?,
+					checked_pow(10, vault_asset_decimal as usize)?,
+					rounding,
+				)
+			};
+
+			calculate_fn().ok_or_else(|| Error::<T>::Math.into())
+		} else {
+			balance_mul_div(
+				shares,
+				Self::total_assets(underlying_asset_id)?,
+				vault_asset_total_supply,
+				rounding,
+			)
+			.ok_or_else(|| Error::<T>::Math.into())
+		}
+	}
 }
 
 impl<T: Config> Vault<T> for Pallet<T> {
@@ -449,58 +523,14 @@ impl<T: Config> Vault<T> for Pallet<T> {
 		underlying_asset_id: T::AssetId,
 		amounts: Balance,
 	) -> Result<Balance, DispatchError> {
-		let vault_asset_total_supply = Self::vault_asset_total_supply(underlying_asset_id)?;
-		if amounts == Zero::zero() || vault_asset_total_supply == Zero::zero() {
-			let underlying_asset = Self::asset(underlying_asset_id)?;
-			let vault_asset_decimal = Self::asset_decimal(underlying_asset_id)?;
-			let underlying_asset_decimal = Self::asset_decimal(underlying_asset)?;
-
-			let calculate_fn = || {
-				balance_mul_div(
-					amounts,
-					checked_pow(10, vault_asset_decimal as usize)?,
-					checked_pow(10, underlying_asset_decimal as usize)?,
-				)
-			};
-
-			calculate_fn().ok_or_else(|| Error::<T>::Math.into())
-		} else {
-			balance_mul_div(
-				amounts,
-				vault_asset_total_supply,
-				Self::total_assets(underlying_asset_id)?,
-			)
-			.ok_or_else(|| Error::<T>::Math.into())
-		}
+		Self::convert_to_shares_impl(underlying_asset_id, amounts, Rounding::Down)
 	}
 
 	fn convert_to_assets(
 		underlying_asset_id: T::AssetId,
 		shares: Balance,
 	) -> Result<Balance, DispatchError> {
-		let vault_asset = Self::asset(underlying_asset_id)?;
-		let vault_asset_total_supply = T::MultiAsset::total_issuance(vault_asset);
-		if vault_asset_total_supply.is_zero() {
-			let vault_asset_decimal = Self::asset_decimal(vault_asset)?;
-			let underlying_asset_decimal = Self::asset_decimal(underlying_asset_id)?;
-
-			let calculate_fn = || {
-				balance_mul_div(
-					shares,
-					checked_pow(10, underlying_asset_decimal as usize)?,
-					checked_pow(10, vault_asset_decimal as usize)?,
-				)
-			};
-
-			calculate_fn().ok_or_else(|| Error::<T>::Math.into())
-		} else {
-			balance_mul_div(
-				shares,
-				Self::total_assets(underlying_asset_id)?,
-				vault_asset_total_supply,
-			)
-			.ok_or_else(|| Error::<T>::Math.into())
-		}
+		Self::convert_to_assets_impl(underlying_asset_id, shares, Rounding::Down)
 	}
 
 	fn max_deposit(
@@ -534,7 +564,7 @@ impl<T: Config> Vault<T> for Pallet<T> {
 		underlying_asset_id: T::AssetId,
 		shares: Balance,
 	) -> Result<Balance, DispatchError> {
-		Self::convert_to_assets(underlying_asset_id, shares)
+		Self::convert_to_assets_impl(underlying_asset_id, shares, Rounding::Up)
 	}
 
 	fn max_withdraw(
@@ -552,7 +582,7 @@ impl<T: Config> Vault<T> for Pallet<T> {
 		underlying_asset_id: T::AssetId,
 		amounts: Balance,
 	) -> Result<Balance, DispatchError> {
-		Self::convert_to_shares(underlying_asset_id, amounts)
+		Self::convert_to_shares_impl(underlying_asset_id, amounts, Rounding::Up)
 	}
 
 	fn max_redeem(
@@ -567,7 +597,7 @@ impl<T: Config> Vault<T> for Pallet<T> {
 		underlying_asset_id: T::AssetId,
 		shares: Balance,
 	) -> Result<Balance, DispatchError> {
-		Self::convert_to_assets(underlying_asset_id, shares)
+		Self::convert_to_assets_impl(underlying_asset_id, shares, Rounding::Down)
 	}
 
 	fn deposit(

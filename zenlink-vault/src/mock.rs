@@ -182,12 +182,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![
-			(ALICE, CurrencyId::Token(TOKEN1_SYMBOL), TOKEN1_UNIT * 1_00_000_000),
-			(ALICE, CurrencyId::Token(TOKEN2_SYMBOL), TOKEN2_UNIT * 1_00_000_000),
-			(BOB, CurrencyId::Token(TOKEN1_SYMBOL), TOKEN1_UNIT * 1_00),
-			(BOB, CurrencyId::Token(TOKEN2_SYMBOL), TOKEN2_UNIT * 1_00),
-			(CHARLIE, CurrencyId::Token(TOKEN1_SYMBOL), TOKEN1_UNIT * 1_00_000_000),
-			(CHARLIE, CurrencyId::Token(TOKEN2_SYMBOL), TOKEN2_UNIT * 1_00_000_000),
+			(ALICE, CurrencyId::Token(TOKEN1_SYMBOL), TOKEN1_UNIT * 50),
+			(ALICE, CurrencyId::Token(TOKEN2_SYMBOL), TOKEN2_UNIT * 50),
+			(BOB, CurrencyId::Token(TOKEN1_SYMBOL), TOKEN1_UNIT * 30),
+			(BOB, CurrencyId::Token(TOKEN2_SYMBOL), TOKEN2_UNIT * 30),
+			(CHARLIE, CurrencyId::Token(TOKEN1_SYMBOL), TOKEN1_UNIT * 20),
+			(CHARLIE, CurrencyId::Token(TOKEN2_SYMBOL), TOKEN2_UNIT * 20),
 		],
 	}
 	.assimilate_storage(&mut t)

@@ -1,13 +1,10 @@
 use super::*;
-use sp_core::U256;
+use sp_arithmetic::{helpers_128bit::*, Rounding};
 
 pub type Balance = u128;
 
-pub fn balance_mul_div(x: Balance, y: Balance, z: Balance) -> Option<Balance> {
-	U256::from(x)
-		.checked_mul(U256::from(y))
-		.and_then(|n| n.checked_div(U256::from(z)))
-		.and_then(|n| TryInto::<Balance>::try_into(n).ok())
+pub fn balance_mul_div(x: Balance, y: Balance, z: Balance, rounding: Rounding) -> Option<Balance> {
+	multiply_by_rational_with_rounding(x, y, z, rounding)
 }
 
 /// The metadata about asset.
