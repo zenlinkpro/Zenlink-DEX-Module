@@ -1563,14 +1563,6 @@ fn get_admin_balance_with_expected_amount_after_swap_should_work() {
 }
 
 #[test]
-fn withdraw_admin_fee_with_non_owner_should_not_work() {
-	new_test_ext().execute_with(|| {
-		let (pool_id, _) = setup_test_base_pool();
-		assert_noop!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), pool_id), BadOrigin);
-		assert_noop!(StableAmm::withdraw_admin_fee(Origin::signed(CHARLIE), pool_id), BadOrigin);
-	})
-}
-
 fn withdraw_admin_fee_when_no_admin_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();

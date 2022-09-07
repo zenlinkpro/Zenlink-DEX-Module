@@ -2039,14 +2039,7 @@ fn get_expected_admin_balance_after_add_liquidity_should_work() {
 	})
 }
 
-fn withdraw_admin_balance_with_non_admin_should_revert() {
-	new_test_ext().execute_with(|| {
-		let (_, meta_pool_id) = setup_test_meta_pool();
-
-		assert_noop!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), meta_pool_id), BadOrigin);
-	})
-}
-
+#[test]
 fn withdraw_admin_balance_with_zero_admin_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
