@@ -990,7 +990,7 @@ pub mod pallet {
 
 		/// Withdraw the admin fee from pool to admin fee receiver.
 		///
-		/// Only called by admin.
+		/// Can called by anyone.
 		///
 		/// # Argument
 		///
@@ -998,7 +998,7 @@ pub mod pallet {
 		#[pallet::weight(1_000_000)]
 		#[transactional]
 		pub fn withdraw_admin_fee(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
-			ensure_root(origin)?;
+			ensure_signed(origin)?;
 
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 				let general_pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;

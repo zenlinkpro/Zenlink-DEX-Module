@@ -1981,18 +1981,6 @@ fn get_expected_admin_balance_after_add_liquidity_should_work() {
 }
 
 #[test]
-fn withdraw_admin_balance_with_non_admin_should_revert() {
-	new_test_ext().execute_with(|| {
-		let (_, meta_pool_id) = setup_test_meta_pool();
-
-		assert_noop!(
-			StableAmm::withdraw_admin_fee(Origin::signed(BOB), meta_pool_id),
-			BadOrigin
-		);
-	})
-}
-
-#[test]
 fn withdraw_admin_balance_with_zero_admin_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
@@ -2003,7 +1991,7 @@ fn withdraw_admin_balance_with_zero_admin_fee_should_work() {
 
 		let unchanged_balance_before = get_user_token_balances(&unchanged_token, &ALICE);
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::root(), meta_pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), meta_pool_id));
 
 		let unchanged_balance_after = get_user_token_balances(&unchanged_token, &ALICE);
 
@@ -2048,7 +2036,7 @@ fn withdraw_admin_balance_with_expected_amount_after_swap_should_work() {
 
 		let fee_tokens_balance_before = get_user_token_balances(&fee_tokens, &ALICE);
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::root(), meta_pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), meta_pool_id));
 
 		let fee_tokens_balance_after = get_user_token_balances(&fee_tokens, &ALICE);
 
@@ -2098,7 +2086,7 @@ fn withdraw_admin_balance_with_expected_amount_after_swap_underlying_should_work
 
 		let fee_tokens_balance_before = get_user_token_balances(&fee_tokens, &ALICE);
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::root(), meta_pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), meta_pool_id));
 
 		let fee_tokens_balance_after = get_user_token_balances(&fee_tokens, &ALICE);
 
@@ -2150,7 +2138,7 @@ fn withdraw_admin_balance_has_no_impact_on_user_withdrawal_should_work() {
 			));
 		}
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::root(), meta_pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), meta_pool_id));
 
 		let impacted_tokens = vec![meta_pool.currency_ids[0], meta_pool.currency_ids[1]];
 		let impacted_tokens_balance_before = get_user_token_balances(&impacted_tokens, &BOB);

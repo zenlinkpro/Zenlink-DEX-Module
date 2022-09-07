@@ -1487,18 +1487,6 @@ fn get_admin_balance_with_expected_amount_after_swap_should_work() {
 }
 
 #[test]
-fn withdraw_admin_fee_with_non_owner_should_not_work() {
-	new_test_ext().execute_with(|| {
-		let (pool_id, _) = setup_test_base_pool();
-		assert_noop!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), pool_id), BadOrigin);
-		assert_noop!(
-			StableAmm::withdraw_admin_fee(Origin::signed(CHARLIE), pool_id),
-			BadOrigin
-		);
-	})
-}
-
-#[test]
 fn withdraw_admin_fee_when_no_admin_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();
@@ -1511,7 +1499,7 @@ fn withdraw_admin_fee_when_no_admin_fee_should_work() {
 		let second_token_balance_before =
 			<Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &pool.admin_fee_receiver);
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::root(), pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), pool_id));
 
 		let first_token_balance_after =
 			<Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &pool.admin_fee_receiver);
@@ -1562,7 +1550,7 @@ fn withdraw_admin_fee_with_expected_amount_of_fees_should_work() {
 		let second_token_balance_before =
 			<Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &pool.admin_fee_receiver);
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::root(), pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), pool_id));
 
 		let first_token_balance_after =
 			<Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &pool.admin_fee_receiver);
@@ -1616,14 +1604,14 @@ fn withdraw_admin_fee_has_no_impact_on_user_withdrawal() {
 			));
 		}
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::root(), pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), pool_id));
 
 		let first_token_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN1_SYMBOL), &BOB);
 		let second_token_balance_before = <Test as Config>::MultiCurrency::free_balance(Token(TOKEN2_SYMBOL), &BOB);
 
 		let pool_token_balance = <Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &BOB);
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::root(), pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), pool_id));
 
 		assert_ok!(StableAmm::remove_liquidity(
 			Origin::signed(BOB),
