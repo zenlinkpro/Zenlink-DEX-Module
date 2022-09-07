@@ -8,7 +8,7 @@ use super::*;
 impl<T: Config> Pallet<T> {
 	pub fn get_virtual_price(pool_id: T::PoolId) -> Balance {
 		if let Some(pool) = Self::pools(pool_id) {
-			return Self::get_pool_virtual_price(&pool).unwrap_or_default();
+			return Self::get_pool_virtual_price(&pool).unwrap_or_default()
 		};
 		Balance::default()
 	}
@@ -19,7 +19,7 @@ impl<T: Config> Pallet<T> {
 				Pool::Basic(bp) => bp,
 				Pool::Meta(mp) => mp.info,
 			};
-			return Self::get_a_precise(&pool).unwrap_or_default() / A_PRECISION;
+			return Self::get_a_precise(&pool).unwrap_or_default() / A_PRECISION
 		};
 		Balance::default()
 	}
@@ -30,14 +30,14 @@ impl<T: Config> Pallet<T> {
 				Pool::Basic(bp) => bp,
 				Pool::Meta(mp) => mp.info,
 			};
-			return Self::get_a_precise(&pool).unwrap_or_default();
+			return Self::get_a_precise(&pool).unwrap_or_default()
 		};
 		Balance::default()
 	}
 
 	pub fn get_currencies(pool_id: T::PoolId) -> Vec<T::CurrencyId> {
 		if let Some(pool) = Self::pools(pool_id) {
-			return pool.get_currency_ids();
+			return pool.get_currency_ids()
 		};
 		Vec::new()
 	}
@@ -46,7 +46,7 @@ impl<T: Config> Pallet<T> {
 		if let Some(pool) = Self::pools(pool_id) {
 			for (i, c) in pool.get_currency_ids().iter().enumerate() {
 				if *c == currency_id {
-					return Some(i as u32);
+					return Some(i as u32)
 				}
 			}
 		};
@@ -57,7 +57,7 @@ impl<T: Config> Pallet<T> {
 		if let Some(pool) = Self::pools(pool_id) {
 			let currency_ids = pool.get_currency_ids();
 			if currency_ids.len() < index as usize {
-				return Some(currency_ids[index as usize]);
+				return Some(currency_ids[index as usize])
 			}
 		};
 		None
@@ -65,28 +65,28 @@ impl<T: Config> Pallet<T> {
 
 	pub fn get_lp_currency(pool_id: T::PoolId) -> Option<T::CurrencyId> {
 		if let Some(pool) = Self::pools(pool_id) {
-			return Some(pool.get_lp_currency());
+			return Some(pool.get_lp_currency())
 		};
 		None
 	}
 
 	pub fn get_currency_precision_multipliers(pool_id: T::PoolId) -> Vec<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
-			return pool.get_token_multipliers();
+			return pool.get_token_multipliers()
 		};
 		Vec::new()
 	}
 
 	pub fn get_currency_balances(pool_id: T::PoolId) -> Vec<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
-			return pool.get_balances();
+			return pool.get_balances()
 		};
 		Vec::new()
 	}
 
 	pub fn get_number_of_currencies(pool_id: T::PoolId) -> u32 {
 		if let Some(pool) = Self::pools(pool_id) {
-			return pool.get_currency_ids().len() as u32;
+			return pool.get_currency_ids().len() as u32
 		};
 		0
 	}

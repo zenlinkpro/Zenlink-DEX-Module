@@ -44,7 +44,11 @@ impl<T: Config> Pallet<T> {
 
 	/// Increase the total supply of the foreign
 	/// Note: no need check Exists, because it be created when it not exist
-	pub(crate) fn foreign_mint(id: AssetId, owner: &T::AccountId, amount: AssetBalance) -> DispatchResult {
+	pub(crate) fn foreign_mint(
+		id: AssetId,
+		owner: &T::AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
 		if !Self::foreign_list().contains(&id) {
 			<ForeignList<T>>::mutate(|assets| assets.push(id));
 		}
@@ -71,7 +75,11 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Decrease the total supply of the foreign
-	pub(crate) fn foreign_burn(id: AssetId, owner: &T::AccountId, amount: AssetBalance) -> DispatchResult {
+	pub(crate) fn foreign_burn(
+		id: AssetId,
+		owner: &T::AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
 		ensure!(Self::foreign_list().contains(&id), Error::<T>::AssetNotExists);
 		let new_balance = <ForeignLedger<T>>::get((id, owner))
 			.checked_sub(amount)

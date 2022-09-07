@@ -14,7 +14,9 @@ use frame_support::{
 	inherent::Vec,
 	pallet_prelude::*,
 	sp_runtime::SaturatedConversion,
-	traits::{Currency, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get, WithdrawReasons},
+	traits::{
+		Currency, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get, WithdrawReasons,
+	},
 	PalletId, RuntimeDebug,
 };
 use sp_core::U256;
@@ -112,7 +114,8 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn foreign_meta)]
 	/// TWOX-NOTE: `AssetId` is trusted, so this is safe.
-	pub type ForeignMeta<T: Config> = StorageMap<_, Twox64Concat, AssetId, AssetBalance, ValueQuery>;
+	pub type ForeignMeta<T: Config> =
+		StorageMap<_, Twox64Concat, AssetId, AssetBalance, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn foreign_list)]
@@ -147,8 +150,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn bootstrap_personal_supply)]
-	pub type BootstrapPersonalSupply<T: Config> =
-		StorageMap<_, Blake2_128Concat, ((AssetId, AssetId), T::AccountId), (AssetBalance, AssetBalance), ValueQuery>;
+	pub type BootstrapPersonalSupply<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		((AssetId, AssetId), T::AccountId),
+		(AssetBalance, AssetBalance),
+		ValueQuery,
+	>;
 
 	/// End status of bootstrap
 	///
@@ -165,13 +173,23 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_bootstrap_rewards)]
-	pub type BootstrapRewards<T: Config> =
-		StorageMap<_, Twox64Concat, (AssetId, AssetId), BTreeMap<AssetId, AssetBalance>, ValueQuery>;
+	pub type BootstrapRewards<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		(AssetId, AssetId),
+		BTreeMap<AssetId, AssetBalance>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_bootstrap_limits)]
-	pub type BootstrapLimits<T: Config> =
-		StorageMap<_, Twox64Concat, (AssetId, AssetId), BTreeMap<AssetId, AssetBalance>, ValueQuery>;
+	pub type BootstrapLimits<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		(AssetId, AssetId),
+		BTreeMap<AssetId, AssetBalance>,
+		ValueQuery,
+	>;
 
 	#[pallet::genesis_config]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
@@ -190,10 +208,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self {
-				fee_receiver: None,
-				fee_point: 5,
-			}
+			Self { fee_receiver: None, fee_point: 5 }
 		}
 	}
 
@@ -413,7 +428,7 @@ pub mod pallet {
 				Some(r) => {
 					let account = T::Lookup::lookup(r)?;
 					Some(account)
-				}
+				},
 				None => None,
 			};
 
@@ -494,12 +509,14 @@ pub mod pallet {
 			ensure!(Some(true) == checked, Error::<T>::NativeBalanceTooLow);
 			ensure!(balance >= amount, Error::<T>::InsufficientAssetBalance);
 
-			let xcm_target = T::Conversion::reverse(recipient.clone()).map_err(|_| Error::<T>::AccountIdBadLocation)?;
+			let xcm_target = T::Conversion::reverse(recipient.clone())
+				.map_err(|_| Error::<T>::AccountIdBadLocation)?;
 
 			let xcm = Self::make_xcm_transfer_to_parachain(&asset_id, para_id, xcm_target, amount)
 				.map_err(|_| Error::<T>::AssetNotExists)?;
 
-			let xcm_origin = T::Conversion::reverse(who.clone()).map_err(|_| Error::<T>::AccountIdBadLocation)?;
+			let xcm_origin = T::Conversion::reverse(who.clone())
+				.map_err(|_| Error::<T>::AccountIdBadLocation)?;
 
 			log::info! {
 				target: LOG_TARGET,
@@ -515,7 +532,7 @@ pub mod pallet {
 					));
 
 					Ok(())
-				}
+				},
 				Outcome::Incomplete(weight, err) => {
 					log::info! {
 						target: LOG_TARGET,
@@ -524,7 +541,7 @@ pub mod pallet {
 					}
 
 					Err(Error::<T>::ExecutionFailed.into())
-				}
+				},
 
 				Outcome::Error(err) => {
 					log::info! {
@@ -534,7 +551,7 @@ pub mod pallet {
 					}
 
 					Err(Error::<T>::ExecutionFailed.into())
-				}
+				},
 			}
 		}
 
@@ -547,12 +564,13 @@ pub mod pallet {
 		/// - `asset_0`: Asset which make up Pair
 		/// - `asset_1`: Asset which make up Pair
 		#[pallet::weight(T::WeightInfo::create_pair())]
-		pub fn create_pair(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
+		pub fn create_pair(
+			origin: OriginFor<T>,
+			asset_0: AssetId,
+			asset_1: AssetId,
+		) -> DispatchResult {
 			ensure_root(origin)?;
-			ensure!(
-				asset_0.is_support() && asset_1.is_support(),
-				Error::<T>::UnsupportedAssetType
-			);
+			ensure!(asset_0.is_support() && asset_1.is_support(), Error::<T>::UnsupportedAssetType);
 
 			ensure!(asset_0 != asset_1, Error::<T>::DeniedCreatePair);
 
@@ -562,7 +580,7 @@ pub mod pallet {
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 			PairStatuses::<T>::try_mutate(pair, |status| match status {
 				Trading(_) => Err(Error::<T>::PairAlreadyExists),
-				Bootstrap(params) => {
+				Bootstrap(params) =>
 					if Self::bootstrap_disable(params) {
 						BootstrapEndStatus::<T>::insert(pair, Bootstrap((*params).clone()));
 
@@ -573,15 +591,14 @@ pub mod pallet {
 						Ok(())
 					} else {
 						Err(Error::<T>::PairAlreadyExists)
-					}
-				}
+					},
 				Disable => {
 					*status = Trading(PairMetadata {
 						pair_account: Self::pair_account_id(pair.0, pair.1),
 						total_supply: Zero::zero(),
 					});
 					Ok(())
-				}
+				},
 			})?;
 
 			Self::mutate_lp_pairs(asset_0, asset_1);
@@ -616,10 +633,7 @@ pub mod pallet {
 			#[pallet::compact] amount_1_min: AssetBalance,
 			#[pallet::compact] deadline: T::BlockNumber,
 		) -> DispatchResult {
-			ensure!(
-				asset_0.is_support() && asset_1.is_support(),
-				Error::<T>::UnsupportedAssetType
-			);
+			ensure!(asset_0.is_support() && asset_1.is_support(), Error::<T>::UnsupportedAssetType);
 			let who = ensure_signed(origin)?;
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
@@ -660,10 +674,7 @@ pub mod pallet {
 			recipient: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] deadline: T::BlockNumber,
 		) -> DispatchResult {
-			ensure!(
-				asset_0.is_support() && asset_1.is_support(),
-				Error::<T>::UnsupportedAssetType
-			);
+			ensure!(asset_0.is_support() && asset_1.is_support(), Error::<T>::UnsupportedAssetType);
 			let who = ensure_signed(origin)?;
 			let recipient = T::Lookup::lookup(recipient)?;
 			let now = frame_system::Pallet::<T>::block_number();
@@ -705,7 +716,13 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::inner_swap_exact_assets_for_assets(&who, amount_in, amount_out_min, &path, &recipient)
+			Self::inner_swap_exact_assets_for_assets(
+				&who,
+				amount_in,
+				amount_out_min,
+				&path,
+				&recipient,
+			)
 		}
 
 		/// Buy amount of foreign by path.
@@ -733,7 +750,13 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::inner_swap_assets_for_exact_assets(&who, amount_out, amount_in_max, &path, &recipient)
+			Self::inner_swap_assets_for_exact_assets(
+				&who,
+				amount_out,
+				amount_in_max,
+				&path,
+				&recipient,
+			)
 		}
 
 		/// Create bootstrap pair
@@ -768,11 +791,12 @@ pub mod pallet {
 
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 
-			let (target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1) = if pair.0 == asset_0 {
-				(target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1)
-			} else {
-				(target_supply_1, target_supply_0, capacity_supply_1, capacity_supply_0)
-			};
+			let (target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1) =
+				if pair.0 == asset_0 {
+					(target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1)
+				} else {
+					(target_supply_1, target_supply_0, capacity_supply_1, capacity_supply_0)
+				};
 
 			PairStatuses::<T>::try_mutate(pair, |status| match status {
 				Trading(_) => Err(Error::<T>::PairAlreadyExists),
@@ -790,7 +814,7 @@ pub mod pallet {
 						let exist_rewards = BootstrapRewards::<T>::get(pair);
 						for (_, exist_reward) in exist_rewards {
 							if exist_reward != Zero::zero() {
-								return Err(Error::<T>::ExistRewardsInBootstrap);
+								return Err(Error::<T>::ExistRewardsInBootstrap)
 							}
 						}
 
@@ -811,7 +835,7 @@ pub mod pallet {
 					} else {
 						Err(Error::<T>::PairAlreadyExists)
 					}
-				}
+				},
 				Disable => {
 					*status = Bootstrap(BootstrapParameter {
 						target_supply: (target_supply_0, target_supply_1),
@@ -829,10 +853,13 @@ pub mod pallet {
 							.collect::<BTreeMap<AssetId, AssetBalance>>(),
 					);
 
-					BootstrapLimits::<T>::insert(pair, limits.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>());
+					BootstrapLimits::<T>::insert(
+						pair,
+						limits.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>(),
+					);
 
 					Ok(())
-				}
+				},
 			})?;
 
 			Self::deposit_event(Event::BootstrapCreated(
@@ -877,7 +904,13 @@ pub mod pallet {
 			let now = frame_system::Pallet::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
-			Self::do_bootstrap_contribute(who, asset_0, asset_1, amount_0_contribute, amount_1_contribute)
+			Self::do_bootstrap_contribute(
+				who,
+				asset_0,
+				asset_1,
+				amount_0_contribute,
+				amount_1_contribute,
+			)
 		}
 
 		/// Claim lp asset from a bootstrap pair
@@ -913,7 +946,11 @@ pub mod pallet {
 		/// - `asset_1`: Asset which make up bootstrap pair
 		#[pallet::weight(T::WeightInfo::bootstrap_end())]
 		#[frame_support::transactional]
-		pub fn bootstrap_end(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
+		pub fn bootstrap_end(
+			origin: OriginFor<T>,
+			asset_0: AssetId,
+			asset_1: AssetId,
+		) -> DispatchResult {
 			ensure_signed(origin)?;
 			Self::mutate_lp_pairs(asset_0, asset_1);
 
@@ -951,11 +988,12 @@ pub mod pallet {
 			ensure_root(origin)?;
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 
-			let (target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1) = if pair.0 == asset_0 {
-				(target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1)
-			} else {
-				(target_supply_1, target_supply_0, capacity_supply_1, capacity_supply_0)
-			};
+			let (target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1) =
+				if pair.0 == asset_0 {
+					(target_supply_0, target_supply_1, capacity_supply_0, capacity_supply_1)
+				} else {
+					(target_supply_1, target_supply_0, capacity_supply_1, capacity_supply_0)
+				};
 
 			let pair_account = Self::pair_account_id(asset_0, asset_1);
 			PairStatuses::<T>::try_mutate(pair, |status| match status {
@@ -973,7 +1011,7 @@ pub mod pallet {
 					let exist_rewards = BootstrapRewards::<T>::get(pair);
 					for (_, exist_reward) in exist_rewards {
 						if exist_reward != Zero::zero() {
-							return Err(Error::<T>::ExistRewardsInBootstrap);
+							return Err(Error::<T>::ExistRewardsInBootstrap)
 						}
 					}
 
@@ -985,10 +1023,13 @@ pub mod pallet {
 							.collect::<BTreeMap<AssetId, AssetBalance>>(),
 					);
 
-					BootstrapLimits::<T>::insert(pair, limits.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>());
+					BootstrapLimits::<T>::insert(
+						pair,
+						limits.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>(),
+					);
 
 					Ok(())
-				}
+				},
 				Disable => Err(Error::<T>::NotInBootstrap),
 			})?;
 
@@ -1013,7 +1054,11 @@ pub mod pallet {
 		/// - `asset_1`: Asset which make up bootstrap pair
 		#[pallet::weight(T::WeightInfo::bootstrap_refund())]
 		#[frame_support::transactional]
-		pub fn bootstrap_refund(origin: OriginFor<T>, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
+		pub fn bootstrap_refund(
+			origin: OriginFor<T>,
+			asset_0: AssetId,
+			asset_1: AssetId,
+		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_bootstrap_refund(who, asset_0, asset_1)
 		}
@@ -1030,16 +1075,15 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			BootstrapRewards::<T>::try_mutate(pair, |rewards| -> DispatchResult {
-				ensure!(
-					rewards.len() == charge_rewards.len(),
-					Error::<T>::ChargeRewardParamsError
-				);
+				ensure!(rewards.len() == charge_rewards.len(), Error::<T>::ChargeRewardParamsError);
 
 				for (asset_id, amount) in &charge_rewards {
-					let already_charge_amount = rewards.get(asset_id).ok_or(Error::<T>::NoRewardTokens)?;
+					let already_charge_amount =
+						rewards.get(asset_id).ok_or(Error::<T>::NoRewardTokens)?;
 
 					T::MultiAssetsHandler::transfer(*asset_id, &who, &Self::account_id(), *amount)?;
-					let new_charge_amount = already_charge_amount.checked_add(*amount).ok_or(Error::<T>::Overflow)?;
+					let new_charge_amount =
+						already_charge_amount.checked_add(*amount).ok_or(Error::<T>::Overflow)?;
 
 					rewards.insert(*asset_id, new_charge_amount);
 				}
@@ -1066,7 +1110,12 @@ pub mod pallet {
 
 			BootstrapRewards::<T>::try_mutate(pair, |rewards| -> DispatchResult {
 				for (asset_id, amount) in rewards {
-					T::MultiAssetsHandler::transfer(*asset_id, &Self::account_id(), &recipient, *amount)?;
+					T::MultiAssetsHandler::transfer(
+						*asset_id,
+						&Self::account_id(),
+						&recipient,
+						*amount,
+					)?;
 
 					*amount = Zero::zero();
 				}

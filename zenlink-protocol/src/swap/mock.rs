@@ -14,8 +14,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	pallet_prelude::GenesisBuild,
 	parameter_types,
-	traits::ConstU32,
-	traits::Contains,
+	traits::{ConstU32, Contains},
 	PalletId,
 };
 use sp_core::H256;
@@ -27,15 +26,27 @@ use sp_runtime::{
 
 use crate as pallet_zenlink;
 pub use crate::{
-	AssetBalance, AssetId, Config, LocalAssetHandler, MultiAssetsHandler, Pallet, ParaId, ZenlinkMultiAssets,
-	LIQUIDITY, LOCAL, NATIVE, RESERVED,
+	AssetBalance, AssetId, Config, LocalAssetHandler, MultiAssetsHandler, Pallet, ParaId,
+	ZenlinkMultiAssets, LIQUIDITY, LOCAL, NATIVE, RESERVED,
 };
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, MaxEncodedLen, Ord, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	Eq,
+	PartialEq,
+	Copy,
+	Clone,
+	RuntimeDebug,
+	PartialOrd,
+	MaxEncodedLen,
+	Ord,
+	TypeInfo,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	Token(u8),
@@ -148,10 +159,7 @@ impl Config for Test {
 pub type DexPallet = Pallet<Test>;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default()
-		.build_storage::<Test>()
-		.unwrap()
-		.into();
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
 	pallet_balances::GenesisConfig::<Test> {
 		balances: vec![
 			(1, 34028236692093846346337460743176821145),
@@ -174,12 +182,9 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
-	pallet_zenlink::GenesisConfig::<Test> {
-		fee_receiver: None,
-		fee_point: 5,
-	}
-	.assimilate_storage(&mut t)
-	.unwrap();
+	pallet_zenlink::GenesisConfig::<Test> { fee_receiver: None, fee_point: 5 }
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 	t.into()
 }
@@ -198,7 +203,7 @@ fn asset_id_to_currency_id(asset_id: &AssetId) -> Result<CurrencyId, ()> {
 		let token_id = asset_id.asset_index as u8;
 
 		Ok(CurrencyId::Token(token_id))
-	};
+	}
 }
 
 impl<Local> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
@@ -206,15 +211,13 @@ where
 	Local: MultiCurrency<AccountId, Balance = u128, CurrencyId = CurrencyId>,
 {
 	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
-		asset_id_to_currency_id(&asset_id).map_or(AssetBalance::default(), |currency_id| {
-			Local::free_balance(currency_id, who)
-		})
+		asset_id_to_currency_id(&asset_id)
+			.map_or(AssetBalance::default(), |currency_id| Local::free_balance(currency_id, who))
 	}
 
 	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
-		asset_id_to_currency_id(&asset_id).map_or(AssetBalance::default(), |currency_id| {
-			Local::total_issuance(currency_id)
-		})
+		asset_id_to_currency_id(&asset_id)
+			.map_or(AssetBalance::default(), |currency_id| Local::total_issuance(currency_id))
 	}
 
 	fn local_is_exists(asset_id: AssetId) -> bool {

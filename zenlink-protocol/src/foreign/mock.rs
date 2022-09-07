@@ -10,7 +10,10 @@ use sp_runtime::{
 };
 
 use crate as pallet_zenlink;
-pub use crate::{Config, MultiAssetsHandler, Pallet, ParaId, ZenlinkMultiAssets, LIQUIDITY, LOCAL, NATIVE, RESERVED};
+pub use crate::{
+	Config, MultiAssetsHandler, Pallet, ParaId, ZenlinkMultiAssets, LIQUIDITY, LOCAL, NATIVE,
+	RESERVED,
+};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -88,10 +91,7 @@ impl Config for Test {
 pub type DexPallet = Pallet<Test>;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default()
-		.build_storage::<Test>()
-		.unwrap()
-		.into();
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
 	pallet_balances::GenesisConfig::<Test> {
 		balances: vec![
 			(1, 34028236692093846346337460743176821145),

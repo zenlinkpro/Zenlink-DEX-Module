@@ -54,11 +54,7 @@ impl<T: Config> Pallet<T> {
 
 		let index = currency_0 + currency_1 + discr;
 
-		AssetId {
-			chain_id: T::SelfParaId::get(),
-			asset_type: LOCAL,
-			asset_index: index,
-		}
+		AssetId { chain_id: T::SelfParaId::get(), asset_type: LOCAL, asset_index: index }
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -93,12 +89,20 @@ impl<T: Config> Pallet<T> {
 					Error::<T>::InsufficientAssetBalance
 				);
 
-				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
+				let lp_asset_id =
+					Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
-				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, parameter.total_supply)?;
+				let mint_fee = Self::mint_protocol_fee(
+					reserve_0,
+					reserve_1,
+					asset_0,
+					asset_1,
+					parameter.total_supply,
+				)?;
 				if let Some(fee_to) = Self::fee_meta().0 {
 					if mint_fee > 0 && Self::fee_meta().1 > 0 {
-						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee).map(|_| mint_fee)?;
+						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee)
+							.map(|_| mint_fee)?;
 						parameter.total_supply = parameter
 							.total_supply
 							.checked_add(mint_fee)
@@ -106,8 +110,13 @@ impl<T: Config> Pallet<T> {
 					}
 				}
 
-				let mint_liquidity =
-					Self::calculate_liquidity(amount_0, amount_1, reserve_0, reserve_1, parameter.total_supply);
+				let mint_liquidity = Self::calculate_liquidity(
+					amount_0,
+					amount_1,
+					reserve_0,
+					reserve_1,
+					parameter.total_supply,
+				);
 				ensure!(mint_liquidity > Zero::zero(), Error::<T>::Overflow);
 
 				parameter.total_supply = parameter
@@ -115,7 +124,8 @@ impl<T: Config> Pallet<T> {
 					.checked_add(mint_liquidity)
 					.ok_or(Error::<T>::Overflow)?;
 
-				T::MultiAssetsHandler::deposit(lp_asset_id, who, mint_liquidity).map(|_| mint_liquidity)?;
+				T::MultiAssetsHandler::deposit(lp_asset_id, who, mint_liquidity)
+					.map(|_| mint_liquidity)?;
 
 				T::MultiAssetsHandler::transfer(asset_0, who, &parameter.pair_account, amount_0)?;
 				T::MultiAssetsHandler::transfer(asset_1, who, &parameter.pair_account, amount_1)?;
@@ -123,8 +133,10 @@ impl<T: Config> Pallet<T> {
 				if let Some(_fee_to) = Self::fee_meta().0 {
 					if Self::fee_meta().1 > 0 {
 						// update reserve_0 and reserve_1
-						let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
-						let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
+						let reserve_0 =
+							T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
+						let reserve_1 =
+							T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
 						let last_k_value = U256::from(reserve_0)
 							.checked_mul(U256::from(reserve_1))
@@ -165,21 +177,37 @@ impl<T: Config> Pallet<T> {
 				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
 				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
-				let amount_0 = Self::calculate_share_amount(remove_liquidity, parameter.total_supply, reserve_0);
-				let amount_1 = Self::calculate_share_amount(remove_liquidity, parameter.total_supply, reserve_1);
+				let amount_0 = Self::calculate_share_amount(
+					remove_liquidity,
+					parameter.total_supply,
+					reserve_0,
+				);
+				let amount_1 = Self::calculate_share_amount(
+					remove_liquidity,
+					parameter.total_supply,
+					reserve_1,
+				);
 
 				ensure!(
 					amount_0 >= amount_0_min && amount_1 >= amount_1_min,
 					Error::<T>::InsufficientTargetAmount
 				);
 
-				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
+				let lp_asset_id =
+					Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
-				let mint_fee = Self::mint_protocol_fee(reserve_0, reserve_1, asset_0, asset_1, parameter.total_supply)?;
+				let mint_fee = Self::mint_protocol_fee(
+					reserve_0,
+					reserve_1,
+					asset_0,
+					asset_1,
+					parameter.total_supply,
+				)?;
 				if let Some(fee_to) = Self::fee_meta().0 {
 					if mint_fee > 0 && Self::fee_meta().1 > 0 {
 						//Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
-						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee).map(|_| mint_fee)?;
+						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee)
+							.map(|_| mint_fee)?;
 						parameter.total_supply = parameter
 							.total_supply
 							.checked_add(mint_fee)
@@ -193,16 +221,29 @@ impl<T: Config> Pallet<T> {
 					.ok_or(Error::<T>::InsufficientLiquidity)?;
 
 				// Self::mutate_liquidity(asset_0, asset_1, who, remove_liquidity, false)?;
-				T::MultiAssetsHandler::withdraw(lp_asset_id, who, remove_liquidity).map(|_| remove_liquidity)?;
+				T::MultiAssetsHandler::withdraw(lp_asset_id, who, remove_liquidity)
+					.map(|_| remove_liquidity)?;
 
-				T::MultiAssetsHandler::transfer(asset_0, &parameter.pair_account, recipient, amount_0)?;
-				T::MultiAssetsHandler::transfer(asset_1, &parameter.pair_account, recipient, amount_1)?;
+				T::MultiAssetsHandler::transfer(
+					asset_0,
+					&parameter.pair_account,
+					recipient,
+					amount_0,
+				)?;
+				T::MultiAssetsHandler::transfer(
+					asset_1,
+					&parameter.pair_account,
+					recipient,
+					amount_1,
+				)?;
 
 				if let Some(_fee_to) = Self::fee_meta().0 {
 					if Self::fee_meta().1 > 0 {
 						// update reserve_0 and reserve_1
-						let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
-						let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
+						let reserve_0 =
+							T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
+						let reserve_1 =
+							T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
 						let last_k_value = U256::from(reserve_0)
 							.checked_mul(U256::from(reserve_1))
@@ -237,10 +278,7 @@ impl<T: Config> Pallet<T> {
 		recipient: &T::AccountId,
 	) -> DispatchResult {
 		let amounts = Self::get_amount_out_by_path(amount_in, path)?;
-		ensure!(
-			amounts[amounts.len() - 1] >= amount_out_min,
-			Error::<T>::InsufficientTargetAmount
-		);
+		ensure!(amounts[amounts.len() - 1] >= amount_out_min, Error::<T>::InsufficientTargetAmount);
 
 		let pair_account = Self::pair_account_id(path[0], path[1]);
 
@@ -379,12 +417,12 @@ impl<T: Config> Pallet<T> {
 		reserve_1: AssetBalance,
 	) -> Result<(AssetBalance, AssetBalance), DispatchError> {
 		if reserve_0 == Zero::zero() || reserve_1 == Zero::zero() {
-			return Ok((amount_0_desired, amount_1_desired));
+			return Ok((amount_0_desired, amount_1_desired))
 		}
 		let amount_1_optimal = Self::calculate_share_amount(amount_0_desired, reserve_0, reserve_1);
 		if amount_1_optimal <= amount_1_desired {
 			ensure!(amount_1_optimal >= amount_1_min, Error::<T>::IncorrectAssetAmountRange);
-			return Ok((amount_0_desired, amount_1_optimal));
+			return Ok((amount_0_desired, amount_1_optimal))
 		}
 		let amount_0_optimal = Self::calculate_share_amount(amount_1_desired, reserve_1, reserve_0);
 		ensure!(
@@ -469,10 +507,7 @@ impl<T: Config> Pallet<T> {
 			let reserve_0 = T::MultiAssetsHandler::balance_of(path[i], &pair_account);
 			let reserve_1 = T::MultiAssetsHandler::balance_of(path[i - 1], &pair_account);
 
-			ensure!(
-				reserve_1 > Zero::zero() && reserve_0 > Zero::zero(),
-				Error::<T>::InvalidPath
-			);
+			ensure!(reserve_1 > Zero::zero() && reserve_0 > Zero::zero(), Error::<T>::InvalidPath);
 
 			let amount = Self::get_amount_in(out_vec[len - 1 - i], reserve_1, reserve_0)?;
 			ensure!(amount > One::one(), Error::<T>::InvalidPath);
@@ -483,9 +518,8 @@ impl<T: Config> Pallet<T> {
 				.ok_or(Error::<T>::Overflow)?;
 
 			let reserve_1_after_swap = reserve_1.checked_add(amount).ok_or(Error::<T>::Overflow)?;
-			let reserve_0_after_swap = reserve_0
-				.checked_sub(out_vec[len - 1 - i])
-				.ok_or(Error::<T>::Overflow)?;
+			let reserve_0_after_swap =
+				reserve_0.checked_sub(out_vec[len - 1 - i]).ok_or(Error::<T>::Overflow)?;
 
 			let invariant_after_swap: U256 = U256::from(reserve_1_after_swap)
 				.checked_mul(U256::from(reserve_0_after_swap))
@@ -517,10 +551,7 @@ impl<T: Config> Pallet<T> {
 			let reserve_0 = T::MultiAssetsHandler::balance_of(path[i], &pair_account);
 			let reserve_1 = T::MultiAssetsHandler::balance_of(path[i + 1], &pair_account);
 
-			ensure!(
-				reserve_1 > Zero::zero() && reserve_0 > Zero::zero(),
-				Error::<T>::InvalidPath
-			);
+			ensure!(reserve_1 > Zero::zero() && reserve_0 > Zero::zero(), Error::<T>::InvalidPath);
 
 			let amount = Self::get_amount_out(out_vec[i], reserve_0, reserve_1)?;
 			ensure!(amount > Zero::zero(), Error::<T>::InvalidPath);
@@ -530,7 +561,8 @@ impl<T: Config> Pallet<T> {
 				.checked_mul(U256::from(reserve_1))
 				.ok_or(Error::<T>::Overflow)?;
 
-			let reserve_0_after_swap = reserve_0.checked_add(out_vec[i]).ok_or(Error::<T>::Overflow)?;
+			let reserve_0_after_swap =
+				reserve_0.checked_add(out_vec[i]).ok_or(Error::<T>::Overflow)?;
 			let reserve_1_after_swap = reserve_1.checked_sub(amount).ok_or(Error::<T>::Overflow)?;
 
 			let invariant_after_swap: U256 = U256::from(reserve_1_after_swap)
@@ -548,7 +580,11 @@ impl<T: Config> Pallet<T> {
 		Ok(out_vec)
 	}
 
-	fn swap(amounts: &[AssetBalance], path: &[AssetId], recipient: &T::AccountId) -> DispatchResult {
+	fn swap(
+		amounts: &[AssetBalance],
+		path: &[AssetId],
+		recipient: &T::AccountId,
+	) -> DispatchResult {
 		for i in 0..(amounts.len() - 1) {
 			let input = path[i];
 			let output = path[i + 1];
@@ -565,9 +601,23 @@ impl<T: Config> Pallet<T> {
 
 			if i < (amounts.len() - 2) {
 				let mid_account = Self::pair_account_id(output, path[i + 2]);
-				Self::pair_swap(asset_0, asset_1, &pair_account, amount0_out, amount1_out, &mid_account)?;
+				Self::pair_swap(
+					asset_0,
+					asset_1,
+					&pair_account,
+					amount0_out,
+					amount1_out,
+					&mid_account,
+				)?;
 			} else {
-				Self::pair_swap(asset_0, asset_1, &pair_account, amount0_out, amount1_out, recipient)?;
+				Self::pair_swap(
+					asset_0,
+					asset_1,
+					&pair_account,
+					amount0_out,
+					amount1_out,
+					recipient,
+				)?;
 			};
 		}
 		Ok(())
@@ -617,14 +667,13 @@ impl<T: Config> Pallet<T> {
 		let mut bootstrap_parameter = match Self::pair_status(pair) {
 			PairStatus::Bootstrap(bootstrap_parameter) => {
 				ensure!(
-					frame_system::Pallet::<T>::block_number() < bootstrap_parameter.end_block_number,
+					frame_system::Pallet::<T>::block_number() <
+						bootstrap_parameter.end_block_number,
 					Error::<T>::NotInBootstrap
 				);
 				bootstrap_parameter
-			}
-			_ => {
-				return Err(Error::<T>::NotInBootstrap.into());
-			}
+			},
+			_ => return Err(Error::<T>::NotInBootstrap.into()),
 		};
 		let (mut amount_0_contribute, mut amount_1_contribute) = if pair.0 == asset_0 {
 			(amount_0_contribute, amount_1_contribute)
@@ -634,8 +683,8 @@ impl<T: Config> Pallet<T> {
 
 		if amount_0_contribute
 			.checked_add(bootstrap_parameter.accumulated_supply.0)
-			.ok_or(Error::<T>::Overflow)?
-			> bootstrap_parameter.capacity_supply.0
+			.ok_or(Error::<T>::Overflow)? >
+			bootstrap_parameter.capacity_supply.0
 		{
 			amount_0_contribute = bootstrap_parameter
 				.capacity_supply
@@ -646,8 +695,8 @@ impl<T: Config> Pallet<T> {
 
 		if amount_1_contribute
 			.checked_add(bootstrap_parameter.accumulated_supply.1)
-			.ok_or(Error::<T>::Overflow)?
-			> bootstrap_parameter.capacity_supply.1
+			.ok_or(Error::<T>::Overflow)? >
+			bootstrap_parameter.capacity_supply.1
 		{
 			amount_1_contribute = bootstrap_parameter
 				.capacity_supply
@@ -662,14 +711,10 @@ impl<T: Config> Pallet<T> {
 		);
 
 		BootstrapPersonalSupply::<T>::try_mutate((pair, &who), |contribution| {
-			contribution.0 = contribution
-				.0
-				.checked_add(amount_0_contribute)
-				.ok_or(Error::<T>::Overflow)?;
-			contribution.1 = contribution
-				.1
-				.checked_add(amount_1_contribute)
-				.ok_or(Error::<T>::Overflow)?;
+			contribution.0 =
+				contribution.0.checked_add(amount_0_contribute).ok_or(Error::<T>::Overflow)?;
+			contribution.1 =
+				contribution.1.checked_add(amount_1_contribute).ok_or(Error::<T>::Overflow)?;
 
 			let pair_account = Self::account_id();
 
@@ -706,9 +751,12 @@ impl<T: Config> Pallet<T> {
 		match Self::pair_status(pair) {
 			Bootstrap(bootstrap_parameter) => {
 				ensure!(
-					frame_system::Pallet::<T>::block_number() >= bootstrap_parameter.end_block_number
-						&& bootstrap_parameter.accumulated_supply.0 >= bootstrap_parameter.target_supply.0
-						&& bootstrap_parameter.accumulated_supply.1 >= bootstrap_parameter.target_supply.1,
+					frame_system::Pallet::<T>::block_number() >=
+						bootstrap_parameter.end_block_number &&
+						bootstrap_parameter.accumulated_supply.0 >=
+							bootstrap_parameter.target_supply.0 &&
+						bootstrap_parameter.accumulated_supply.1 >=
+							bootstrap_parameter.target_supply.1,
 					Error::<T>::UnqualifiedBootstrap
 				);
 
@@ -723,7 +771,8 @@ impl<T: Config> Pallet<T> {
 				ensure!(total_lp_supply > Zero::zero(), Error::<T>::Overflow);
 
 				let pair_account = Self::pair_account_id(pair.0, pair.1);
-				let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
+				let lp_asset_id =
+					Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
 				T::MultiAssetsHandler::transfer(
 					pair.0,
@@ -739,14 +788,12 @@ impl<T: Config> Pallet<T> {
 					bootstrap_parameter.accumulated_supply.1,
 				)?;
 
-				T::MultiAssetsHandler::deposit(lp_asset_id, &pair_account, total_lp_supply).map(|_| total_lp_supply)?;
+				T::MultiAssetsHandler::deposit(lp_asset_id, &pair_account, total_lp_supply)
+					.map(|_| total_lp_supply)?;
 
 				PairStatuses::<T>::insert(
 					pair,
-					Trading(PairMetadata {
-						pair_account,
-						total_supply: total_lp_supply,
-					}),
+					Trading(PairMetadata { pair_account, total_supply: total_lp_supply }),
 				);
 
 				BootstrapEndStatus::<T>::insert(pair, Bootstrap(bootstrap_parameter.clone()));
@@ -760,7 +807,7 @@ impl<T: Config> Pallet<T> {
 				));
 
 				Ok(())
-			}
+			},
 			_ => Err(Error::<T>::NotInBootstrap.into()),
 		}
 	}
@@ -773,180 +820,216 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		match Self::pair_status(pair) {
-			Trading(_) => BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
-				if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
-					if let Bootstrap(bootstrap_parameter) = Self::bootstrap_end_status(pair) {
-						ensure!(
-							!Self::bootstrap_disable(&bootstrap_parameter),
-							Error::<T>::DisableBootstrap
-						);
-						let exact_amount_0 = U256::from(amount_0_contribute)
-							.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.1))
-							.and_then(|n| {
-								n.checked_add(
-									U256::from(amount_1_contribute)
-										.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.0))
-										.ok_or(Error::<T>::Overflow)
-										.ok()?,
-								)
-							})
-							.and_then(|r| {
-								r.checked_div(
-									U256::from(bootstrap_parameter.accumulated_supply.1)
-										.checked_mul(U256::from(2u128))
-										.ok_or(Error::<T>::Overflow)
-										.ok()?,
-								)
-							})
-							.ok_or(Error::<T>::Overflow)?;
+			Trading(_) =>
+				BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| {
+					if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
+						if let Bootstrap(bootstrap_parameter) = Self::bootstrap_end_status(pair) {
+							ensure!(
+								!Self::bootstrap_disable(&bootstrap_parameter),
+								Error::<T>::DisableBootstrap
+							);
+							let exact_amount_0 = U256::from(amount_0_contribute)
+								.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.1))
+								.and_then(|n| {
+									n.checked_add(
+										U256::from(amount_1_contribute)
+											.checked_mul(U256::from(
+												bootstrap_parameter.accumulated_supply.0,
+											))
+											.ok_or(Error::<T>::Overflow)
+											.ok()?,
+									)
+								})
+								.and_then(|r| {
+									r.checked_div(
+										U256::from(bootstrap_parameter.accumulated_supply.1)
+											.checked_mul(U256::from(2u128))
+											.ok_or(Error::<T>::Overflow)
+											.ok()?,
+									)
+								})
+								.ok_or(Error::<T>::Overflow)?;
 
-						let exact_amount_1 = U256::from(amount_1_contribute)
-							.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.0))
-							.and_then(|n| {
-								n.checked_add(
-									U256::from(amount_0_contribute)
-										.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.1))
-										.ok_or(Error::<T>::Overflow)
-										.ok()?,
-								)
-							})
-							.and_then(|r| {
-								r.checked_div(
-									U256::from(bootstrap_parameter.accumulated_supply.0)
-										.checked_mul(U256::from(2u128))
-										.ok_or(Error::<T>::Overflow)
-										.ok()?,
-								)
-							})
-							.ok_or(Error::<T>::Overflow)?;
+							let exact_amount_1 = U256::from(amount_1_contribute)
+								.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.0))
+								.and_then(|n| {
+									n.checked_add(
+										U256::from(amount_0_contribute)
+											.checked_mul(U256::from(
+												bootstrap_parameter.accumulated_supply.1,
+											))
+											.ok_or(Error::<T>::Overflow)
+											.ok()?,
+									)
+								})
+								.and_then(|r| {
+									r.checked_div(
+										U256::from(bootstrap_parameter.accumulated_supply.0)
+											.checked_mul(U256::from(2u128))
+											.ok_or(Error::<T>::Overflow)
+											.ok()?,
+									)
+								})
+								.ok_or(Error::<T>::Overflow)?;
 
-						let claim_liquidity = exact_amount_0
-							.checked_mul(exact_amount_1)
-							.map(|n| n.integer_sqrt())
-							.and_then(|r| TryInto::<AssetBalance>::try_into(r).ok())
-							.ok_or(Error::<T>::Overflow)?;
+							let claim_liquidity = exact_amount_0
+								.checked_mul(exact_amount_1)
+								.map(|n| n.integer_sqrt())
+								.and_then(|r| TryInto::<AssetBalance>::try_into(r).ok())
+								.ok_or(Error::<T>::Overflow)?;
 
-						let pair_account = Self::pair_account_id(pair.0, pair.1);
-						let lp_asset_id = Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
+							let pair_account = Self::pair_account_id(pair.0, pair.1);
+							let lp_asset_id =
+								Self::lp_pairs(pair).ok_or(Error::<T>::InsufficientAssetBalance)?;
 
-						T::MultiAssetsHandler::transfer(lp_asset_id, &pair_account, &recipient, claim_liquidity)?;
+							T::MultiAssetsHandler::transfer(
+								lp_asset_id,
+								&pair_account,
+								&recipient,
+								claim_liquidity,
+							)?;
 
-						let bootstrap_total_liquidity = U256::from(bootstrap_parameter.accumulated_supply.0)
-							.checked_mul(U256::from(bootstrap_parameter.accumulated_supply.1))
-							.map(|n| n.integer_sqrt())
-							.and_then(|r| TryInto::<AssetBalance>::try_into(r).ok())
-							.ok_or(Error::<T>::Overflow)?;
+							let bootstrap_total_liquidity =
+								U256::from(bootstrap_parameter.accumulated_supply.0)
+									.checked_mul(U256::from(
+										bootstrap_parameter.accumulated_supply.1,
+									))
+									.map(|n| n.integer_sqrt())
+									.and_then(|r| TryInto::<AssetBalance>::try_into(r).ok())
+									.ok_or(Error::<T>::Overflow)?;
 
-						Self::bootstrap_distribute_reward(
-							&who,
-							&bootstrap_parameter.pair_account,
-							pair.0,
-							pair.1,
-							claim_liquidity,
-							bootstrap_total_liquidity,
-						)?;
+							Self::bootstrap_distribute_reward(
+								&who,
+								&bootstrap_parameter.pair_account,
+								pair.0,
+								pair.1,
+								claim_liquidity,
+								bootstrap_total_liquidity,
+							)?;
 
-						Self::deposit_event(Event::BootstrapClaim(
-							pair_account,
-							who.clone(),
-							recipient,
-							pair.0,
-							pair.1,
-							amount_0_contribute,
-							amount_1_contribute,
-							claim_liquidity,
-						));
+							Self::deposit_event(Event::BootstrapClaim(
+								pair_account,
+								who.clone(),
+								recipient,
+								pair.0,
+								pair.1,
+								amount_0_contribute,
+								amount_1_contribute,
+								claim_liquidity,
+							));
 
-						Ok(())
+							Ok(())
+						} else {
+							Err(Error::<T>::NotInBootstrap.into())
+						}
 					} else {
-						Err(Error::<T>::NotInBootstrap.into())
+						Err(Error::<T>::ZeroContribute.into())
 					}
-				} else {
-					Err(Error::<T>::ZeroContribute.into())
-				}
-			}),
+				}),
 			_ => Err(Error::<T>::NotInBootstrap.into()),
 		}
 	}
 
-	pub(crate) fn do_bootstrap_refund(who: T::AccountId, asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
+	pub(crate) fn do_bootstrap_refund(
+		who: T::AccountId,
+		asset_0: AssetId,
+		asset_1: AssetId,
+	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 
 		match Self::pair_status(pair) {
 			Bootstrap(params) => {
 				ensure!(Self::bootstrap_disable(&params), Error::<T>::DenyRefund);
-			}
-			_ => {
+			},
+			_ =>
 				if let Bootstrap(bootstrap_parameter) = Self::bootstrap_end_status(pair) {
 					ensure!(Self::bootstrap_disable(&bootstrap_parameter), Error::<T>::DenyRefund);
 				} else {
-					return Err(Error::<T>::DenyRefund.into());
-				}
-			}
+					return Err(Error::<T>::DenyRefund.into())
+				},
 		};
 
-		BootstrapPersonalSupply::<T>::try_mutate_exists((pair, &who), |contribution| -> DispatchResult {
-			if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
-				let pair_account = Self::account_id();
-				T::MultiAssetsHandler::transfer(pair.0, &pair_account, &who, amount_0_contribute)?;
-				T::MultiAssetsHandler::transfer(pair.1, &pair_account, &who, amount_1_contribute)?;
+		BootstrapPersonalSupply::<T>::try_mutate_exists(
+			(pair, &who),
+			|contribution| -> DispatchResult {
+				if let Some((amount_0_contribute, amount_1_contribute)) = contribution.take() {
+					let pair_account = Self::account_id();
+					T::MultiAssetsHandler::transfer(
+						pair.0,
+						&pair_account,
+						&who,
+						amount_0_contribute,
+					)?;
+					T::MultiAssetsHandler::transfer(
+						pair.1,
+						&pair_account,
+						&who,
+						amount_1_contribute,
+					)?;
 
-				PairStatuses::<T>::try_mutate(pair, |status| -> DispatchResult {
-					if let Bootstrap(parameter) = status {
-						parameter.accumulated_supply.0 = parameter
-							.accumulated_supply
-							.0
-							.checked_sub(amount_0_contribute)
-							.ok_or(Error::<T>::Overflow)?;
+					PairStatuses::<T>::try_mutate(pair, |status| -> DispatchResult {
+						if let Bootstrap(parameter) = status {
+							parameter.accumulated_supply.0 = parameter
+								.accumulated_supply
+								.0
+								.checked_sub(amount_0_contribute)
+								.ok_or(Error::<T>::Overflow)?;
 
-						parameter.accumulated_supply.1 = parameter
-							.accumulated_supply
-							.1
-							.checked_sub(amount_1_contribute)
-							.ok_or(Error::<T>::Overflow)?;
-					}
+							parameter.accumulated_supply.1 = parameter
+								.accumulated_supply
+								.1
+								.checked_sub(amount_1_contribute)
+								.ok_or(Error::<T>::Overflow)?;
+						}
+						Ok(())
+					})?;
+
+					*contribution = None;
+
+					Self::deposit_event(Event::BootstrapRefund(
+						pair_account,
+						who.clone(),
+						pair.0,
+						pair.1,
+						amount_0_contribute,
+						amount_1_contribute,
+					));
+
 					Ok(())
-				})?;
-
-				*contribution = None;
-
-				Self::deposit_event(Event::BootstrapRefund(
-					pair_account,
-					who.clone(),
-					pair.0,
-					pair.1,
-					amount_0_contribute,
-					amount_1_contribute,
-				));
-
-				Ok(())
-			} else {
-				Err(Error::<T>::ZeroContribute.into())
-			}
-		})?;
+				} else {
+					Err(Error::<T>::ZeroContribute.into())
+				}
+			},
+		)?;
 
 		Ok(())
 	}
 
 	// After end block, bootstrap has not enough asset. Is will become disable.
-	pub(crate) fn bootstrap_disable(params: &BootstrapParameter<AssetBalance, T::BlockNumber, T::AccountId>) -> bool {
+	pub(crate) fn bootstrap_disable(
+		params: &BootstrapParameter<AssetBalance, T::BlockNumber, T::AccountId>,
+	) -> bool {
 		let now = frame_system::Pallet::<T>::block_number();
-		if now > params.end_block_number
-			&& (params.accumulated_supply.0 < params.target_supply.0
-				|| params.accumulated_supply.1 < params.target_supply.1)
+		if now > params.end_block_number &&
+			(params.accumulated_supply.0 < params.target_supply.0 ||
+				params.accumulated_supply.1 < params.target_supply.1)
 		{
-			return true;
+			return true
 		}
 		false
 	}
 
-	pub(crate) fn bootstrap_check_limits(asset_0: AssetId, asset_1: AssetId, account: &T::AccountId) -> bool {
+	pub(crate) fn bootstrap_check_limits(
+		asset_0: AssetId,
+		asset_1: AssetId,
+		account: &T::AccountId,
+	) -> bool {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		let limits = Self::get_bootstrap_limits(pair);
 
 		for (asset_id, limit) in limits.into_iter() {
 			if T::MultiAssetsHandler::balance_of(asset_id, account) < limit {
-				return false;
+				return false
 			}
 		}
 
@@ -991,11 +1074,17 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> ExportZenlink<T::AccountId> for Pallet<T> {
-	fn get_amount_in_by_path(amount_out: AssetBalance, path: &[AssetId]) -> Result<Vec<AssetBalance>, DispatchError> {
+	fn get_amount_in_by_path(
+		amount_out: AssetBalance,
+		path: &[AssetId],
+	) -> Result<Vec<AssetBalance>, DispatchError> {
 		Self::get_amount_in_by_path(amount_out, path)
 	}
 
-	fn get_amount_out_by_path(amount_in: AssetBalance, path: &[AssetId]) -> Result<Vec<AssetBalance>, DispatchError> {
+	fn get_amount_out_by_path(
+		amount_in: AssetBalance,
+		path: &[AssetId],
+	) -> Result<Vec<AssetBalance>, DispatchError> {
 		Self::get_amount_out_by_path(amount_in, path)
 	}
 
@@ -1061,11 +1150,17 @@ impl<T: Config> ExportZenlink<T::AccountId> for Pallet<T> {
 }
 
 impl<AccountId> ExportZenlink<AccountId> for () {
-	fn get_amount_in_by_path(_amount_out: AssetBalance, _path: &[AssetId]) -> Result<Vec<AssetBalance>, DispatchError> {
+	fn get_amount_in_by_path(
+		_amount_out: AssetBalance,
+		_path: &[AssetId],
+	) -> Result<Vec<AssetBalance>, DispatchError> {
 		unimplemented!()
 	}
 
-	fn get_amount_out_by_path(_amount_in: AssetBalance, _path: &[AssetId]) -> Result<Vec<AssetBalance>, DispatchError> {
+	fn get_amount_out_by_path(
+		_amount_in: AssetBalance,
+		_path: &[AssetId],
+	) -> Result<Vec<AssetBalance>, DispatchError> {
 		unimplemented!()
 	}
 

@@ -130,18 +130,12 @@ fn swap_exact_token_for_tokens_through_stable_pool_should_work() {
 			u64::MAX,
 		));
 
-		assert_eq!(
-			Tokens::accounts(USER1, Token(TOKEN1_SYMBOL)).free,
-			token1_balance_before
-		);
+		assert_eq!(Tokens::accounts(USER1, Token(TOKEN1_SYMBOL)).free, token1_balance_before);
 		assert_eq!(
 			Tokens::accounts(USER1, Token(TOKEN2_SYMBOL)).free,
 			token2_balance_before - 1e16 as Balance
 		);
-		assert_eq!(
-			Tokens::accounts(USER1, Token(TOKEN3_SYMBOL)).free,
-			token3_balance_before
-		);
+		assert_eq!(Tokens::accounts(USER1, Token(TOKEN3_SYMBOL)).free, token3_balance_before);
 		assert_eq!(
 			Tokens::accounts(USER2, Token(TOKEN4_SYMBOL)).free,
 			token4_balance_before + 9854

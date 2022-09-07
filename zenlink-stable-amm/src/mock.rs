@@ -59,7 +59,19 @@ impl Contains<AccountId> for MockDustRemovalWhitelist {
 	}
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, MaxEncodedLen, Ord, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	Eq,
+	PartialEq,
+	Copy,
+	Clone,
+	RuntimeDebug,
+	PartialOrd,
+	MaxEncodedLen,
+	Ord,
+	TypeInfo,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CurrencyId {
 	Forbidden(TokenSymbol),
@@ -68,14 +80,38 @@ pub enum CurrencyId {
 	StableLPV2(PoolId),
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, MaxEncodedLen, Ord, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	Eq,
+	PartialEq,
+	Copy,
+	Clone,
+	RuntimeDebug,
+	PartialOrd,
+	MaxEncodedLen,
+	Ord,
+	TypeInfo,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum PoolToken {
 	Token(TokenSymbol),
 	StablePoolLp(PoolId),
 }
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, MaxEncodedLen, Ord, TypeInfo)]
+#[derive(
+	Encode,
+	Decode,
+	Eq,
+	PartialEq,
+	Copy,
+	Clone,
+	RuntimeDebug,
+	PartialOrd,
+	MaxEncodedLen,
+	Ord,
+	TypeInfo,
+)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum PoolType {
 	P2(PoolToken, PoolToken),
@@ -170,7 +206,7 @@ pub struct PoolLpGenerate;
 
 impl StablePoolLpCurrencyIdGenerate<CurrencyId, PoolId> for PoolLpGenerate {
 	fn generate_by_pool_id(pool_id: PoolId) -> CurrencyId {
-		return CurrencyId::StableLPV2(pool_id);
+		return CurrencyId::StableLPV2(pool_id)
 	}
 }
 
@@ -181,7 +217,7 @@ where
 	fn validate_pooled_currency(currencies: &[CurrencyId]) -> bool {
 		for currency in currencies.iter() {
 			if let CurrencyId::Forbidden(_) = *currency {
-				return false;
+				return false
 			}
 		}
 		true
@@ -189,11 +225,11 @@ where
 
 	fn validate_pool_lp_currency(currency_id: CurrencyId) -> bool {
 		if let CurrencyId::Token(_) = currency_id {
-			return false;
+			return false
 		}
 
 		if Local::total_issuance(currency_id) > Zero::zero() {
-			return false;
+			return false
 		}
 		true
 	}
@@ -236,15 +272,10 @@ pub const TOKEN3_UNIT: u128 = 1_000_000;
 pub const TOKEN4_UNIT: u128 = 1_000_000;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default()
-		.build_storage::<Test>()
-		.unwrap()
-		.into();
-	pallet_balances::GenesisConfig::<Test> {
-		balances: vec![(ALICE, u128::MAX)],
-	}
-	.assimilate_storage(&mut t)
-	.unwrap();
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
+	pallet_balances::GenesisConfig::<Test> { balances: vec![(ALICE, u128::MAX)] }
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![
@@ -273,10 +304,7 @@ pub const POOL0ACCOUNTID: AccountId = 33865947477506447919519395693;
 pub const POOL1ACCOUNTID: AccountId = 113094109991770785513063346029;
 
 pub fn mine_block() {
-	let now = SystemTime::now()
-		.duration_since(SystemTime::UNIX_EPOCH)
-		.unwrap()
-		.as_secs();
+	let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
 
 	System::set_block_number(System::block_number() + 1);
 	set_block_timestamp(now);
@@ -307,7 +335,9 @@ pub fn get_user_balance(currency_id: CurrencyId, user: &AccountId) -> Balance {
 pub type MockPool = Pool<PoolId, CurrencyId, AccountId, BoundedVec<u8, PoolCurrencySymbolLimit>>;
 
 impl MockPool {
-	pub fn get_pool_info(&self) -> BasePool<CurrencyId, AccountId, BoundedVec<u8, PoolCurrencySymbolLimit>> {
+	pub fn get_pool_info(
+		&self,
+	) -> BasePool<CurrencyId, AccountId, BoundedVec<u8, PoolCurrencySymbolLimit>> {
 		match self {
 			MockPool::Basic(bp) => (*bp).clone(),
 			MockPool::Meta(mp) => mp.info.clone(),
@@ -315,17 +345,17 @@ impl MockPool {
 	}
 }
 
-pub fn mint_more_currencies(accounts: Vec<AccountId>, currencies: Vec<CurrencyId>, balances: Vec<Balance>) {
+pub fn mint_more_currencies(
+	accounts: Vec<AccountId>,
+	currencies: Vec<CurrencyId>,
+	balances: Vec<Balance>,
+) {
 	assert_eq!(currencies.len(), balances.len());
 	for account in accounts.iter() {
 		for (i, currency_id) in currencies.iter().enumerate() {
-			assert_ok!(Tokens::set_balance(
-				Origin::root(),
-				*account,
-				*currency_id,
-				balances[i],
-				0,
-			));
+			assert_ok!(
+				Tokens::set_balance(Origin::root(), *account, *currency_id, balances[i], 0,)
+			);
 		}
 	}
 }

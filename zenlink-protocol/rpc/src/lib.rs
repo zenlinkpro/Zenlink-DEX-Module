@@ -24,7 +24,12 @@ use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeAp
 #[rpc(client, server)]
 pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
 	#[method(name = "zenlinkProtocol_getBalance")]
-	fn get_balance(&self, asset_id: AssetId, account: AccountId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
+	fn get_balance(
+		&self,
+		asset_id: AssetId,
+		account: AccountId,
+		at: Option<BlockHash>,
+	) -> RpcResult<NumberOrHex>;
 
 	#[method(name = "zenlinkProtocol_getSovereignsInfo")]
 	fn get_sovereigns_info(
@@ -77,14 +82,12 @@ pub struct ZenlinkProtocol<C, M> {
 
 impl<C, M> ZenlinkProtocol<C, M> {
 	pub fn new(client: Arc<C>) -> Self {
-		Self {
-			client,
-			_marker: Default::default(),
-		}
+		Self { client, _marker: Default::default() }
 	}
 }
 
-impl<C, Block, AccountId> ZenlinkProtocolApiServer<<Block as BlockT>::Hash, AccountId> for ZenlinkProtocol<C, Block>
+impl<C, Block, AccountId> ZenlinkProtocolApiServer<<Block as BlockT>::Hash, AccountId>
+	for ZenlinkProtocol<C, Block>
 where
 	Block: BlockT,
 	AccountId: Codec,
@@ -175,7 +178,9 @@ where
 			.map(|infos| {
 				infos
 					.into_iter()
-					.map(|(para_id, account, asset_balance)| (para_id, account, asset_balance.into()))
+					.map(|(para_id, account, asset_balance)| {
+						(para_id, account, asset_balance.into())
+					})
 					.collect::<Vec<_>>()
 			})
 			.map_err(runtime_error_into_rpc_err)
