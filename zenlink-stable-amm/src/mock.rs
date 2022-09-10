@@ -198,6 +198,7 @@ impl Config for Test {
 	type TimeProvider = Timestamp;
 	type PoolCurrencySymbolLimit = PoolCurrencySymbolLimit;
 	type PalletId = StableAmmPalletId;
+	type WeightInfo = ();
 }
 
 pub struct EnsurePoolAssetImpl<Local>(PhantomData<Local>);

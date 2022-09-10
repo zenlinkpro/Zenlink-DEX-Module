@@ -63,8 +63,8 @@ pub use zenlink_protocol;
 
 pub use orml_tokens;
 
-use chain_primitives::*;
 use orml_traits::{parameter_type_with_key, MultiCurrency};
+use primitives::*;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;

@@ -138,3 +138,70 @@ impl TryFrom<ZenlinkAssetId> for CurrencyId {
 		}
 	}
 }
+
+impl TryFrom<u64> for CurrencyId {
+	type Error = ();
+
+	fn try_from(id: u64) -> Result<Self, Self::Error> {
+		let c_discr = ((id & 0x0000_0000_0000_ff00) >> 8) as u8;
+
+		let t_discr = ((id & 0x0000_0000_0000_00ff) >> 00) as u8;
+
+		let token_symbol = TokenSymbol::try_from(t_discr)?;
+
+		match c_discr {
+			0 => Ok(Self::Native(token_symbol)),
+			1 => Ok(Self::Foregin(token_symbol)),
+			2 => Ok(Self::Token(token_symbol)),
+			3 => {
+				let token_symbol_num_1 = ((id & 0x0000_0000_00ff_0000) >> 16) as u8;
+				let token_symbol_num_2 = ((id & 0x0000_00ff_0000_0000) >> 32) as u8;
+				let token_symbol_1 = TokenSymbol::try_from(token_symbol_num_1)?;
+				let token_symbol_2 = TokenSymbol::try_from(token_symbol_num_2)?;
+
+				Ok(Self::LPToken(token_symbol_1, token_symbol_2))
+			},
+			4 => {
+				let pool_id = ((id & 0xffff_ffff_ffff_0000) >> 16) as u32;
+				Ok(Self::StableLpToken(pool_id))
+			},
+			_ => Err(()),
+		}
+	}
+}
+
+impl Default for CurrencyId {
+	fn default() -> Self {
+		CurrencyId::Native(TokenSymbol::Dev)
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use core::convert::TryFrom;
+
+	use crate::{CurrencyId, TokenSymbol};
+
+	#[test]
+	fn convert_to_stable_lp_token_should_work() {
+		// 0x1_0400
+		let currency_id0 = CurrencyId::try_from(66560);
+		assert_eq!(currency_id0, Ok(CurrencyId::StableLpToken(1)));
+		// 0x0_0400
+		let currency_id1 = CurrencyId::try_from(1024);
+		assert_eq!(currency_id1, Ok(CurrencyId::StableLpToken(0)))
+	}
+
+	#[test]
+	fn convert_to_token_should_work() {
+		// 0x0201
+		let currency_id0 = CurrencyId::try_from(513);
+		assert_eq!(currency_id0, Ok(CurrencyId::Token(TokenSymbol::LOCAL1)));
+		// 0x0202
+		let currency_id1 = CurrencyId::try_from(514);
+		assert_eq!(currency_id1, Ok(CurrencyId::Token(TokenSymbol::LOCAL2)));
+
+		let currency_id1 = CurrencyId::try_from(515);
+		assert_eq!(currency_id1, Ok(CurrencyId::Token(TokenSymbol::LOCAL3)));
+	}
+}

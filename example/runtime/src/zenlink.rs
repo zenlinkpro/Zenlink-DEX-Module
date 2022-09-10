@@ -5,7 +5,7 @@ use super::*;
 use sp_runtime::{DispatchError, DispatchResult};
 use sp_std::marker::PhantomData;
 
-use chain_primitives::*;
+use primitives::*;
 use zenlink_protocol::*;
 use zenlink_stable_amm::traits::{StablePoolLpCurrencyIdGenerate, ValidateCurrency};
 

@@ -12,5 +12,5 @@ members = [
 	"zenlink-vault",
 	"example/node",
 	"example/runtime",
-	"example/chain_primitives"
+	"example/primitives"
 ]

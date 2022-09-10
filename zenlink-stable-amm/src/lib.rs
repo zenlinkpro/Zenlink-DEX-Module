@@ -22,6 +22,7 @@ mod base_pool;
 mod meta_pool;
 mod primitives;
 mod utils;
+mod weights;
 
 use frame_support::{
 	dispatch::{Codec, DispatchResult},
@@ -38,6 +39,7 @@ use sp_std::{ops::Sub, vec, vec::Vec};
 pub use pallet::*;
 use primitives::*;
 use traits::{StablePoolLpCurrencyIdGenerate, ValidateCurrency};
+pub use weights::WeightInfo;
 
 #[allow(type_alias_bounds)]
 type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
@@ -84,6 +86,9 @@ pub mod pallet {
 		/// This pallet ID.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+
+		/// Weight information for extrinsics in this pallet.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::pallet]
@@ -280,7 +285,7 @@ pub mod pallet {
 		/// - `admin_fee_receiver`: The admin fee receiver of created pool.
 		/// - `lp_currency_symbol`: The symbol of created pool lp currency.
 		/// - `lp_currency_decimal`: The decimal of created pool lp currency.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::create_base_pool())]
 		#[transactional]
 		pub fn create_base_pool(
 			origin: OriginFor<T>,
@@ -346,7 +351,7 @@ pub mod pallet {
 		/// - `admin_fee_receiver`: The admin fee receiver of created pool.
 		/// - `lp_currency_symbol`: The symbol of created pool lp currency.
 		/// - `lp_currency_decimal`: The decimal of created pool lp currency.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::create_meta_pool())]
 		#[transactional]
 		pub fn create_meta_pool(
 			origin: OriginFor<T>,
@@ -421,7 +426,7 @@ pub mod pallet {
 		/// - `amounts`: Supply amounts of currencies.
 		/// - `min_mint_amount`: The min amount of lp currency get.
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::add_liquidity())]
 		#[transactional]
 		pub fn add_liquidity(
 			origin: OriginFor<T>,
@@ -451,7 +456,7 @@ pub mod pallet {
 		/// - `in_amount`: The amounts of currencies swap.
 		/// - `min_mint_amount`: The min amount of receive currency.
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::swap())]
 		#[transactional]
 		pub fn swap(
 			origin: OriginFor<T>,
@@ -489,7 +494,7 @@ pub mod pallet {
 		/// - `lp_amount`: The amounts of lp currency.
 		/// - `min_amounts`: The min amounts of pool's currencies to get.
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::remove_liquidity())]
 		#[transactional]
 		pub fn remove_liquidity(
 			origin: OriginFor<T>,
@@ -518,7 +523,7 @@ pub mod pallet {
 		/// - `index`: The index of receive currency.
 		/// - `min_amount`: The min amounts of received currency;
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::remove_liquidity_one_currency())]
 		#[transactional]
 		pub fn remove_liquidity_one_currency(
 			origin: OriginFor<T>,
@@ -549,7 +554,7 @@ pub mod pallet {
 		/// - `amounts`: The specify amounts of receive currencies.
 		/// - `max_burn_amount`: The max amount of burned lp currency.
 		/// - `deadline`: Height of the cutoff block of this transaction
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::remove_liquidity_imbalance())]
 		#[transactional]
 		pub fn remove_liquidity_imbalance(
 			origin: OriginFor<T>,
@@ -580,7 +585,7 @@ pub mod pallet {
 		/// - `base_amounts`: Supply amounts of currencies to base pool.
 		/// - `min_to_mint`: The min amount of pool lp currency get.
 		/// - `deadline`: Height of the cutoff block of this transaction.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::add_pool_and_base_pool_liquidity())]
 		#[transactional]
 		pub fn add_pool_and_base_pool_liquidity(
 			origin: OriginFor<T>,
@@ -619,7 +624,7 @@ pub mod pallet {
 		/// - `min_amounts_meta`: The min amounts of pool's currencies to get.
 		/// - `min_amounts_base`: The min amounts of basic pool's currencies to get.
 		/// - `deadline`: Height of the cutoff block of this transaction.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::remove_pool_and_base_pool_liquidity())]
 		#[transactional]
 		pub fn remove_pool_and_base_pool_liquidity(
 			origin: OriginFor<T>,
@@ -659,7 +664,7 @@ pub mod pallet {
 		/// - `i`: The index of target currency in basic pool.
 		/// - `min_amount`: The min amounts of received currency.
 		/// - `deadline`: Height of the cutoff block of this transaction.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::remove_pool_and_base_pool_liquidity_one_currency())]
 		#[transactional]
 		pub fn remove_pool_and_base_pool_liquidity_one_currency(
 			origin: OriginFor<T>,
@@ -700,7 +705,7 @@ pub mod pallet {
 		/// - `dx`: The amounts of swap currency.
 		/// - `min_dy`: The min amounts of target currency.
 		/// - `deadline`: Height of the cutoff block of this transaction.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::swap_pool_from_base())]
 		#[transactional]
 		pub fn swap_pool_from_base(
 			origin: OriginFor<T>,
@@ -743,7 +748,7 @@ pub mod pallet {
 		/// - `dx`: The amounts of swap currency.
 		/// - `min_dy`: The min amounts of target currency.
 		/// - `deadline`: Height of the cutoff block of this transaction.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::swap_pool_to_base())]
 		#[transactional]
 		pub fn swap_pool_to_base(
 			origin: OriginFor<T>,
@@ -774,7 +779,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::swap_meta_pool_underlying())]
 		#[transactional]
 		pub fn swap_meta_pool_underlying(
 			origin: OriginFor<T>,
@@ -1019,7 +1024,7 @@ pub mod pallet {
 		/// # Argument
 		///
 		/// - `pool_id`: The id of pool.
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::withdraw_admin_fee())]
 		#[transactional]
 		pub fn withdraw_admin_fee(origin: OriginFor<T>, pool_id: T::PoolId) -> DispatchResult {
 			ensure_signed(origin)?;
