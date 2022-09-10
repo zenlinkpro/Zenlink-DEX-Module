@@ -45,12 +45,17 @@ benchmarks! {
 	}:_(RawOrigin::Root, 5)
 
 	create_pair {
+		let caller: T::AccountId = whitelisted_caller();
+
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
 
 	} : _(RawOrigin::Root, ASSET_0, ASSET_1)
 
 	bootstrap_create {
-
-	}: _(RawOrigin::Root, ASSET_0, ASSET_1, 1000, 1000, 1000_000_000, 1000_000_000, 100u128.saturated_into())
+		let reward:Vec<AssetId> =  vec![ASSET_0];
+		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
+	}: _(RawOrigin::Root, ASSET_0, ASSET_1, 1000, 1000, 1000_000_000, 1000_000_000, 100u128.saturated_into(), reward, reward_amounts)
 
 	bootstrap_contribute{
 		let caller: T::AccountId = whitelisted_caller();
@@ -58,6 +63,8 @@ benchmarks! {
 		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
 		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
 
+		let reward:Vec<AssetId> =  vec![ASSET_0];
+		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_create(
 			(RawOrigin::Root).into(),
 			ASSET_0,
@@ -66,7 +73,10 @@ benchmarks! {
 			1000,
 			1000_000_000,
 			1000_000_000,
-			100u128.saturated_into()));
+			100u128.saturated_into(),
+			reward,
+			reward_amounts,
+		));
 
 	}: _(RawOrigin::Signed(caller.clone()), ASSET_0, ASSET_1, UNIT, UNIT, 100u128.saturated_into())
 
@@ -76,6 +86,9 @@ benchmarks! {
 		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
 		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
 
+		let reward:Vec<AssetId> =  vec![ASSET_0];
+		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
+
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_create(
 			(RawOrigin::Root).into(),
 			ASSET_0,
@@ -84,7 +97,9 @@ benchmarks! {
 			1000,
 			10*UNIT,
 			10*UNIT,
-			99u128.saturated_into()
+			99u128.saturated_into(),
+			reward,
+			reward_amounts,
 		));
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(
@@ -112,6 +127,9 @@ benchmarks! {
 		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
 		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
 
+		let reward:Vec<AssetId> =  vec![ASSET_0];
+		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
+
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_create(
 			(RawOrigin::Root).into(),
 			ASSET_0,
@@ -120,7 +138,9 @@ benchmarks! {
 			1000,
 			10*UNIT,
 			10*UNIT,
-			99u128.saturated_into()
+			99u128.saturated_into(),
+			reward,
+			reward_amounts,
 		));
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(
@@ -138,6 +158,9 @@ benchmarks! {
 	bootstrap_update{
 		let caller: T::AccountId = whitelisted_caller();
 
+		let reward:Vec<AssetId> =  vec![ASSET_0];
+		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
+
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_create(
 			(RawOrigin::Root).into(),
 			ASSET_0,
@@ -146,9 +169,12 @@ benchmarks! {
 			1000,
 			10*UNIT,
 			10*UNIT,
-			99u128.saturated_into()
+			99u128.saturated_into(),
+			reward.clone(),
+			reward_amounts.clone(),
 		));
-	}:_(RawOrigin::Root, ASSET_0, ASSET_1, 1000, 1000, 1000_000_000, 1000_000_000, 100u128.saturated_into())
+
+	}:_(RawOrigin::Root, ASSET_0, ASSET_1, 1000, 1000, 1000_000_000, 1000_000_000, 100u128.saturated_into(), reward, reward_amounts)
 
 	bootstrap_refund{
 		let caller: T::AccountId = whitelisted_caller();
@@ -156,6 +182,9 @@ benchmarks! {
 		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
 		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
 
+		let reward:Vec<AssetId> =  vec![ASSET_0];
+		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
+
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_create(
 			(RawOrigin::Root).into(),
 			ASSET_0,
@@ -164,7 +193,9 @@ benchmarks! {
 			2*UNIT,
 			10*UNIT,
 			10*UNIT,
-			99u128.saturated_into()
+			99u128.saturated_into(),
+			reward,
+			reward_amounts,
 		));
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(

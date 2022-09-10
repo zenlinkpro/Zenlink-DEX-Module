@@ -8,6 +8,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod weights;
 pub mod xcm_config;
+pub mod zenlink;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use smallvec::smallvec;
@@ -27,7 +28,7 @@ use sp_version::RuntimeVersion;
 
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::Everything,
+	traits::{Contains, Everything},
 	weights::{
 		constants::WEIGHT_PER_SECOND, ConstantMultiplier, DispatchClass, Weight,
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -40,6 +41,7 @@ use frame_system::{
 };
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
+use xcm::v1::MultiLocation;
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 #[cfg(any(feature = "std", test))]
@@ -56,6 +58,13 @@ use xcm_executor::XcmExecutor;
 
 /// Import the template pallet.
 pub use pallet_template;
+
+pub use zenlink_protocol;
+
+pub use orml_tokens;
+
+use chain_primitives::*;
+use orml_traits::{parameter_type_with_key, MultiCurrency};
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -459,6 +468,35 @@ impl pallet_template::Config for Runtime {
 	type Event = Event;
 }
 
+parameter_type_with_key! {
+	pub OrmlExistentialDeposits: |_currency_id: CurrencyId| -> u128 {
+		0
+	};
+}
+
+pub struct OrmlDustRemovalWhitelist;
+impl Contains<AccountId> for OrmlDustRemovalWhitelist {
+	fn contains(_a: &AccountId) -> bool {
+		true
+	}
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = i128;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = OrmlExistentialDeposits;
+	type OnDust = ();
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
+	type MaxLocks = MaxLocks;
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = [u8; 8];
+	type DustRemovalWhitelist = OrmlDustRemovalWhitelist;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -493,6 +531,9 @@ construct_runtime!(
 
 		// Template
 		TemplatePallet: pallet_template::{Pallet, Call, Storage, Event<T>}  = 40,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>}  = 41,
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 42,
+		ZenlinkStableAmm: zenlink_stable_amm::{Pallet, Call, Storage, Event<T>}  = 43,
 	}
 );
 
@@ -509,6 +550,9 @@ mod benches {
 		[pallet_timestamp, Timestamp]
 		[pallet_collator_selection, CollatorSelection]
 		[cumulus_pallet_xcmp_queue, XcmpQueue]
+		[pallet_template, TemplatePallet]
+		[zenlink_protocol, ZenlinkProtocol]
+		[zenlink_stable_amm, ZenlinkStableAmm]
 	);
 }
 

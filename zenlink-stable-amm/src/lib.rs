@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Zenlink
+// Copyright 2020-2022 Zenlink
 // Licensed under GPL-3.0.
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -11,6 +11,8 @@ pub mod traits;
 
 #[cfg(test)]
 mod base_pool_tests;
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
 #[cfg(test)]
 mod meta_pool_tests;
 #[cfg(test)]

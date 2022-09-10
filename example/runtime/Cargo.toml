@@ -24,6 +24,13 @@ smallvec = "1.9.0"
 
 # Local
 pallet-template = { path = "../pallets/template", default-features = false }
+zenlink-protocol = { path = "../../zenlink-protocol", default-features = false }
+chain_primitives = { path = "../chain_primitives", default-features = false }
+zenlink-stable-amm = {path = "../../zenlink-stable-amm", default-features = false }
+
+# ORML
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "18d14ff3badd126f00e306697e712308f9df4c6a", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "18d14ff3badd126f00e306697e712308f9df4c6a", default-features = false }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.28" }
@@ -125,6 +132,11 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	"chain_primitives/std",
+	"zenlink-protocol/std",
+	"zenlink-stable-amm/std",
+	"orml-tokens/std",
+	"orml-traits/std",
 ]
 
 runtime-benchmarks = [
@@ -142,6 +154,8 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"cumulus-pallet-session-benchmarking/runtime-benchmarks",
 	"cumulus-pallet-xcmp-queue/runtime-benchmarks",
+	"zenlink-protocol/runtime-benchmarks",
+	"zenlink-stable-amm/runtime-benchmarks",
 ]
 
 try-runtime = [
