@@ -9,8 +9,12 @@
 #[cfg(test)]
 mod mock;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
 #[cfg(test)]
 mod test;
+pub mod weights;
+pub use weights::WeightInfo;
 
 use codec::{Decode, Encode};
 
@@ -100,6 +104,9 @@ pub mod pallet {
 			AccountIdOf<Self>,
 			Self::Balance,
 		>;
+
+		/// Weight information for extrinsics in this pallet.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::pallet]
@@ -122,7 +129,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::swap_exact_token_for_tokens_through_stable_pool())]
 		#[transactional]
 		pub fn swap_exact_token_for_tokens_through_stable_pool(
 			origin: OriginFor<T>,

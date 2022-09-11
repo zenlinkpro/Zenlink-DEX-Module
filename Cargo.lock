@@ -5937,6 +5937,7 @@ dependencies = [
  "xcm-executor",
  "zenlink-protocol",
  "zenlink-stable-amm",
+ "zenlink-swap-router",
 ]
 
 [[package]]
@@ -11974,6 +11975,7 @@ dependencies = [
 name = "zenlink-swap-router"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-tokens",

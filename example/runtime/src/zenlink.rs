@@ -134,6 +134,7 @@ impl zenlink_stable_amm::Config for Runtime {
 	type LpGenerate = PoolLpGenerate;
 	type PoolCurrencySymbolLimit = StringLimit;
 	type PalletId = StableAmmPalletId;
+	type WeightInfo = ();
 }
 
 pub struct PoolLpGenerate;
@@ -155,4 +156,14 @@ impl ValidateCurrency<CurrencyId> for StableAmmVerifyPoolAsset {
 		}
 		true
 	}
+}
+
+impl zenlink_swap_router::Config for Runtime {
+	type Event = super::Event;
+	type StablePoolId = PoolId;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type NormalAmm = ZenlinkProtocol;
+	type StableAMM = ZenlinkStableAmm;
+	type WeightInfo = ();
 }

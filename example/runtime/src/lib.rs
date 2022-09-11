@@ -56,12 +56,10 @@ use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm::latest::prelude::BodyId;
 use xcm_executor::XcmExecutor;
 
+pub use orml_tokens;
 /// Import the template pallet.
 pub use pallet_template;
-
 pub use zenlink_protocol;
-
-pub use orml_tokens;
 
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 use primitives::*;
@@ -534,6 +532,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>}  = 41,
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 42,
 		ZenlinkStableAmm: zenlink_stable_amm::{Pallet, Call, Storage, Event<T>}  = 43,
+		ZenlinkSwapRouter: zenlink_swap_router::{Pallet, Call, Storage, Event<T>}  = 44,
 	}
 );
 
@@ -553,6 +552,7 @@ mod benches {
 		[pallet_template, TemplatePallet]
 		[zenlink_protocol, ZenlinkProtocol]
 		[zenlink_stable_amm, ZenlinkStableAmm]
+		[zenlink_swap_router, ZenlinkSwapRouter]
 	);
 }
 

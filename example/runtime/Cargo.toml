@@ -27,6 +27,7 @@ pallet-template = { path = "../pallets/template", default-features = false }
 zenlink-protocol = { path = "../../zenlink-protocol", default-features = false }
 primitives = { path = "../primitives", default-features = false }
 zenlink-stable-amm = {path = "../../zenlink-stable-amm", default-features = false }
+zenlink-swap-router = {path = "../../zenlink-swap-router", default-features = false }
 
 # ORML
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "18d14ff3badd126f00e306697e712308f9df4c6a", default-features = false }
@@ -135,6 +136,7 @@ std = [
 	"primitives/std",
 	"zenlink-protocol/std",
 	"zenlink-stable-amm/std",
+	"zenlink-swap-router/std",
 	"orml-tokens/std",
 	"orml-traits/std",
 ]
@@ -156,6 +158,7 @@ runtime-benchmarks = [
 	"cumulus-pallet-xcmp-queue/runtime-benchmarks",
 	"zenlink-protocol/runtime-benchmarks",
 	"zenlink-stable-amm/runtime-benchmarks",
+	"zenlink-swap-router/runtime-benchmarks",
 ]
 
 try-runtime = [
