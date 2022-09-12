@@ -5,3 +5,5 @@
 target/
 
 .vscode
+
+example/target

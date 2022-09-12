@@ -1,14 +1,21 @@
+// Copyright 2021-2022 Zenlink
+// Licensed under GPL-3.0.
+
 #![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod test;
 
-mod primitives;
+pub mod primitives;
 mod vault;
+pub mod weights;
 
-use pallet::*;
-use primitives::*;
+pub use pallet::*;
+pub use primitives::*;
 use vault::*;
 
 use sp_arithmetic::{
@@ -16,11 +23,13 @@ use sp_arithmetic::{
 	Rounding,
 };
 use sp_runtime::traits::{AccountIdConversion, StaticLookup};
-use sp_std::collections::btree_set::BTreeSet;
+use sp_std::{collections::btree_set::BTreeSet, vec::Vec};
 
 use frame_support::{dispatch::DispatchResult, pallet_prelude::*, PalletId};
 
 use orml_traits::MultiCurrency;
+
+pub use weights::WeightInfo;
 
 #[allow(type_alias_bounds)]
 type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
@@ -28,6 +37,7 @@ type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use frame_support::transactional;
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::config]
@@ -56,6 +66,9 @@ pub mod pallet {
 		/// This pallet id.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+
+		/// Weight information for extrinsics in this pallet.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::pallet]
@@ -154,7 +167,8 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::create_vault_asset())]
+		#[transactional]
 		pub fn create_vault_asset(
 			origin: OriginFor<T>,
 			underlying_asset_id: T::AssetId,
@@ -286,7 +300,7 @@ pub mod pallet {
 			)
 		}
 
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -299,7 +313,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::mint())]
 		pub fn mint(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -312,7 +326,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::withdraw())]
 		pub fn withdraw(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -325,7 +339,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1_000_000)]
+		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,

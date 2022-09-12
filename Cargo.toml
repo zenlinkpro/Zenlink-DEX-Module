@@ -9,5 +9,8 @@ members = [
 	"zenlink-stable-amm/rpc",
 	"zenlink-stable-amm/rpc/runtime-api",
 	"zenlink-swap-router",
-	"zenlink-vault"
+	"zenlink-vault",
+	"example/node",
+	"example/runtime",
+	"example/primitives"
 ]

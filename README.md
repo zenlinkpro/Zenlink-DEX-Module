@@ -5,9 +5,9 @@
 It should at least work until the following commits
 
 -   rustc 1.62.0-nightly (ecd44958e 2022-05-10)
--   Polkadot release-v0.9.26
--   Cumulus polkadot-v0.9.26 
--   Substrate polkadot-v0.9.26 
+-   Polkadot release-v0.9.28
+-   Cumulus polkadot-v0.9.28 
+-   Substrate polkadot-v0.9.28 
 
 
 ## Precondition

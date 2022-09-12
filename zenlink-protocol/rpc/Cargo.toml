@@ -17,10 +17,10 @@ jsonrpsee = { version = "0.13.0", features = ["server", "macros"] }
 
 # Substrate packages
 
-sp-blockchain = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
-sp-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
-sp-rpc = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.28" }
+sp-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.28" }
+sp-rpc = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.28" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.28" }
 
 # Local packages
 
