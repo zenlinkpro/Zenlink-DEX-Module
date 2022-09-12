@@ -143,6 +143,7 @@ impl Config for Test {
 	type MultiAsset = Tokens;
 	type VaultAssetGenerate = VaultAssetGenerator;
 	type PalletId = VaultAssetPalletId;
+	type WeightInfo = ();
 }
 
 frame_support::construct_runtime!(

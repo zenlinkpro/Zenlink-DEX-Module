@@ -533,6 +533,7 @@ construct_runtime!(
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>}  = 42,
 		ZenlinkStableAmm: zenlink_stable_amm::{Pallet, Call, Storage, Event<T>}  = 43,
 		ZenlinkSwapRouter: zenlink_swap_router::{Pallet, Call, Storage, Event<T>}  = 44,
+		ZenlinkVault: zenlink_vault::{Pallet, Call, Storage, Event<T>}  = 45,
 	}
 );
 
@@ -553,6 +554,7 @@ mod benches {
 		[zenlink_protocol, ZenlinkProtocol]
 		[zenlink_stable_amm, ZenlinkStableAmm]
 		[zenlink_swap_router, ZenlinkSwapRouter]
+		[zenlink_vault, ZenlinkVault]
 	);
 }
 

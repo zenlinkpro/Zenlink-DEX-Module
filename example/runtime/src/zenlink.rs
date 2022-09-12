@@ -8,6 +8,7 @@ use sp_std::marker::PhantomData;
 use primitives::*;
 use zenlink_protocol::*;
 use zenlink_stable_amm::traits::{StablePoolLpCurrencyIdGenerate, ValidateCurrency};
+use zenlink_vault::VaultAssetGenerate;
 
 parameter_types! {
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
@@ -17,6 +18,7 @@ parameter_types! {
 	];
 	pub const StringLimit: u32 = 50;
 	pub const StableAmmPalletId: PalletId = PalletId(*b"bf/stamm");
+	pub const VaultPalletId: PalletId = PalletId(*b"bf/vault");
 }
 
 impl zenlink_protocol::Config for Runtime {
@@ -165,5 +167,25 @@ impl zenlink_swap_router::Config for Runtime {
 	type CurrencyId = CurrencyId;
 	type NormalAmm = ZenlinkProtocol;
 	type StableAMM = ZenlinkStableAmm;
+	type WeightInfo = ();
+}
+
+pub struct VaultAssetGenerator;
+
+impl VaultAssetGenerate<CurrencyId> for VaultAssetGenerator {
+	fn generate(asset: CurrencyId) -> Option<CurrencyId> {
+		match asset {
+			CurrencyId::Token(token_symbol) => Some(CurrencyId::Vault(token_symbol)),
+			_ => None,
+		}
+	}
+}
+
+impl zenlink_vault::Config for Runtime {
+	type Event = super::Event;
+	type AssetId = CurrencyId;
+	type MultiAsset = Tokens;
+	type VaultAssetGenerate = VaultAssetGenerator;
+	type PalletId = VaultPalletId;
 	type WeightInfo = ();
 }

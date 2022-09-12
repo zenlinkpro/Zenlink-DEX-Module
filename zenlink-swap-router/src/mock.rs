@@ -200,6 +200,7 @@ impl zenlink_stable_amm::Config for Test {
 	type TimeProvider = Timestamp;
 	type PoolCurrencySymbolLimit = PoolCurrencySymbolLimit;
 	type PalletId = StableAmmPalletId;
+	type WeightInfo = ();
 }
 
 impl zenlink_protocol::Config for Test {
@@ -220,6 +221,7 @@ impl Config for Test {
 	type CurrencyId = CurrencyId;
 	type NormalAmm = Zenlink;
 	type StableAMM = StableAMM;
+	type WeightInfo = ();
 }
 
 pub struct EnsurePoolAssetImpl<Local>(PhantomData<Local>);

@@ -82,6 +82,7 @@ pub enum CurrencyId {
 	Token(TokenSymbol),
 	LPToken(TokenSymbol, TokenSymbol),
 	StableLpToken(u32),
+	Vault(TokenSymbol),
 }
 
 pub type ZenlinkAssetId = zenlink_protocol::AssetId;

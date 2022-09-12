@@ -25,6 +25,7 @@ zenlink-protocol = { path = "../../zenlink-protocol", default-features = false }
 primitives = { path = "../primitives", default-features = false }
 zenlink-stable-amm = {path = "../../zenlink-stable-amm", default-features = false }
 zenlink-swap-router = {path = "../../zenlink-swap-router", default-features = false }
+zenlink-vault = {path = "../../zenlink-vault", default-features = false }
 
 # ORML
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "18d14ff3badd126f00e306697e712308f9df4c6a", default-features = false }
@@ -156,6 +157,7 @@ runtime-benchmarks = [
 	"zenlink-protocol/runtime-benchmarks",
 	"zenlink-stable-amm/runtime-benchmarks",
 	"zenlink-swap-router/runtime-benchmarks",
+	"zenlink-vault/runtime-benchmarks",
 ]
 
 try-runtime = [

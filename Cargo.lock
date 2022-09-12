@@ -12059,6 +12059,7 @@ dependencies = [
  "zenlink-protocol",
  "zenlink-stable-amm",
  "zenlink-swap-router",
+ "zenlink-vault",
 ]
 
 [[package]]
