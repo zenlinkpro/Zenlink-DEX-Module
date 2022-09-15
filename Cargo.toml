@@ -10,6 +10,7 @@ members = [
 	"zenlink-stable-amm/rpc/runtime-api",
 	"zenlink-swap-router",
 	"zenlink-vault",
+	"zenlink-gauge",
 	"example/node",
 	"example/runtime",
 	"example/primitives"
