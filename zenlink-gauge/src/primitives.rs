@@ -14,7 +14,7 @@ pub struct VotePeriod {
 	pub end: u64,
 }
 
-#[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug, TypeInfo)]
+#[derive(Encode, Decode, Copy, Clone, Default, PartialEq, Eq, Debug, TypeInfo)]
 pub struct PoolState {
 	// Flag marking whether the pool inherit the last period token.
 	pub inherit: bool,

@@ -3,6 +3,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod test;
+
 pub mod primitives;
 pub use pallet::*;
 use primitives::*;
@@ -152,6 +157,13 @@ pub mod pallet {
 			pool_id: T::PoolId,
 			amount: Balance,
 		},
+		UpdateHistory {
+			pool_id: T::PoolId,
+			current_period_id: PeriodId,
+			last_period: PeriodId,
+			update_period: PeriodId,
+			last_period_amount: Balance,
+		},
 	}
 
 	#[pallet::error]
@@ -170,6 +182,7 @@ pub mod pallet {
 		NonVotablePool,
 		InsufficientAmount,
 		MismatchParameters,
+		NoNeedUpdate,
 	}
 
 	#[pallet::call]
@@ -247,7 +260,7 @@ pub mod pallet {
 
 		#[pallet::weight(10000)]
 		#[transactional]
-		pub fn update_vote_set_duration(
+		pub fn update_vote_duration(
 			origin: OriginFor<T>,
 			vote_duration: Duration,
 		) -> DispatchResult {
@@ -346,21 +359,24 @@ pub mod pallet {
 				current_period_id,
 				pool_id,
 				|pool_state| -> DispatchResult {
+					let mut new_state = PoolState::default();
 					if let Some(state) = pool_state {
-						Self::inherit_expired_pool(pool_id, state, current_period_id)?;
-
-						Self::inner_vote(
-							state,
-							&who,
-							amounts,
-							pool_id,
-							current_period_id,
-							&vote_period,
-							now,
-						)
-					} else {
-						Err(Error::<T>::InvalidPeriodId.into())
+						new_state = *state;
 					}
+
+					Self::inherit_expired_pool(pool_id, &mut new_state, current_period_id)?;
+					Self::inner_vote(
+						&mut new_state,
+						&who,
+						amounts,
+						pool_id,
+						current_period_id,
+						&vote_period,
+						now,
+					)?;
+
+					*pool_state = Some(new_state);
+					Ok(())
 				},
 			)
 		}
@@ -382,22 +398,97 @@ pub mod pallet {
 				current_period_id,
 				pool_id,
 				|pool_state| -> DispatchResult {
-					if let Some(state) = pool_state {
-						Self::inherit_expired_pool(pool_id, state, current_period_id)?;
+					// if let Some(state) = pool_state {
 
-						Self::inner_cancel_vote(
-							state,
-							&who,
-							amounts,
-							pool_id,
-							current_period_id,
-							now,
-						)
-					} else {
-						Err(Error::<T>::InvalidPeriodId.into())
+					// 	Self::inherit_expired_pool(pool_id, state, current_period_id)?;
+
+					// 	Self::inner_cancel_vote(
+					// 		state,
+					// 		&who,
+					// 		amounts,
+					// 		pool_id,
+					// 		current_period_id,
+					// 		now,
+					// 	)
+					// } else {
+					// 	Err(Error::<T>::InvalidPeriodId.into())
+					// }
+					let mut new_state = PoolState::default();
+					if let Some(state) = pool_state {
+						new_state = *state;
 					}
+					Self::inherit_expired_pool(pool_id, &mut new_state, current_period_id)?;
+					Self::inner_cancel_vote(
+						&mut new_state,
+						&who,
+						amounts,
+						pool_id,
+						current_period_id,
+						now,
+					)?;
+
+					*pool_state = Some(new_state);
+					Ok(())
 				},
 			)
+		}
+
+		#[pallet::weight(10000)]
+		#[transactional]
+		pub fn update_pool_histroy(
+			origin: OriginFor<T>,
+			pool_id: T::PoolId,
+			need_update_period_id: PeriodId,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+			let current_period_id = Self::get_current_period().ok_or(Error::<T>::Math)?;
+			ensure!(
+				need_update_period_id != 0 && current_period_id >= need_update_period_id,
+				Error::<T>::NoNeedUpdate
+			);
+
+			for period_id in (0..need_update_period_id - 1).rev() {
+				if let Some(last_update_pool_state) = Self::global_pool_state(period_id, pool_id) {
+					if last_update_pool_state.inherit || period_id == 0 {
+						for try_update_period_id in period_id + 1..=need_update_period_id {
+							GlobalPoolState::<T>::try_mutate(
+								try_update_period_id,
+								pool_id,
+								|update_state| -> DispatchResult {
+									if let Some(state) = update_state {
+										if state.inherit {
+											return Ok(())
+										}
+										state.inherit = true;
+										state.score = last_update_pool_state.total_amount;
+										state.total_amount = last_update_pool_state.total_amount;
+										if !state.reset_votable {
+											state.votable = last_update_pool_state.votable;
+										}
+									} else {
+										*update_state = Some(PoolState {
+											inherit: true,
+											reset_votable: false,
+											votable: last_update_pool_state.votable,
+											score: last_update_pool_state.total_amount,
+											total_amount: last_update_pool_state.total_amount,
+										})
+									}
+									Ok(())
+								},
+							)?;
+						}
+						Self::deposit_event(Event::UpdateHistory {
+							pool_id,
+							current_period_id,
+							last_period: period_id,
+							update_period: need_update_period_id,
+							last_period_amount: last_update_pool_state.total_amount,
+						});
+					}
+				}
+			}
+			Ok(())
 		}
 	}
 }
@@ -430,7 +521,9 @@ impl<T: Config> Pallet<T> {
 			let current_period =
 				Self::vote_period(current_period_id).ok_or(Error::<T>::InvalidPeriodId)?;
 
-			ensure!(current_period.end <= now, Error::<T>::UnexpiredPeriod);
+			if current_period.end > now {
+				return Ok(())
+			}
 			VotePeriods::<T>::try_mutate(*next_period_id, |period| -> DispatchResult {
 				let vote_set_window = Self::vote_set_window();
 				let vote_duration = Self::vote_duration();
@@ -536,7 +629,7 @@ impl<T: Config> Pallet<T> {
 
 				let pallet_account = T::PalletId::get().into_account_truncating();
 				let vote_currency = Self::vote_currency().ok_or(Error::<T>::Uninitialized)?;
-				T::MultiCurrency::transfer(vote_currency, who, &pallet_account, amount)?;
+				T::MultiCurrency::transfer(vote_currency, &pallet_account, who, amount)?;
 
 				let current_period =
 					Self::vote_period(current_period_id).ok_or(Error::<T>::InvalidPeriodId)?;
@@ -592,8 +685,7 @@ impl<T: Config> Pallet<T> {
 			return Ok(())
 		}
 
-		let last_update_period_id =
-			Self::pool_last_update_period(pool_id).ok_or(Error::<T>::InvalidPoolId)?;
+		let last_update_period_id = Self::pool_last_update_period(pool_id).unwrap_or_default();
 		let last_pool_state = Self::global_pool_state(last_update_period_id, pool_id)
 			.ok_or(Error::<T>::InvalidPeriodId)?;
 
