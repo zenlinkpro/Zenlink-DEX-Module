@@ -1127,7 +1127,7 @@ impl<T: Config> Pallet<T> {
 			ensure!(currencies_length == min_amounts_length, Error::<T>::MismatchParameter);
 
 			let fees: Vec<Balance> = vec![Zero::zero(); currencies_length];
-			let amounts = Self::calculate_base_removed_liquidity(pool, lp_amount)
+			let amounts = Self::calculate_base_remove_liquidity(pool, lp_amount)
 				.ok_or(Error::<T>::Arithmetic)?;
 
 			for (i, amount) in amounts.iter().enumerate() {

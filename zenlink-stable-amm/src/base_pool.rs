@@ -554,7 +554,7 @@ impl<T: Config> Pallet<T> {
 		Some((mint_amount, fees))
 	}
 
-	pub(crate) fn calculate_base_removed_liquidity(
+	pub(crate) fn calculate_base_remove_liquidity(
 		pool: &BasePool<T::CurrencyId, T::AccountId, BoundedVec<u8, T::PoolCurrencySymbolLimit>>,
 		amount: Balance,
 	) -> Option<Vec<Balance>> {

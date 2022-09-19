@@ -573,7 +573,7 @@ fn remove_liquidity_in_meta_pool_exceed_total_supply_should_not_work() {
 		setup_test_meta_pool();
 		let meta_pool_id = 1;
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
-		assert!(StableAmm::calculate_base_removed_liquidity(&pool, Balance::MAX) == None);
+		assert!(StableAmm::calculate_base_remove_liquidity(&pool, Balance::MAX) == None);
 	})
 }
 
@@ -660,7 +660,7 @@ fn remove_liquidity_in_meta_pool_with_expected_return_amount_underlying_currency
 
 		assert_eq!(pool_token_balance_before, 1996275270169644725);
 		let expected_balances =
-			StableAmm::calculate_base_removed_liquidity(&meta_pool_info, pool_token_balance_before)
+			StableAmm::calculate_base_remove_liquidity(&meta_pool_info, pool_token_balance_before)
 				.unwrap();
 		assert_eq!(expected_balances[0], 1498601924450190405);
 		assert_eq!(expected_balances[1], 504529314564897436);
@@ -735,7 +735,7 @@ fn remove_liquidity_in_meta_pool_when_min_amounts_not_reached_due_to_front_runni
 		assert_eq!(pool_token_balance, 1996275270169644725);
 
 		let expected_balances =
-			StableAmm::calculate_base_removed_liquidity(&pool, pool_token_balance).unwrap();
+			StableAmm::calculate_base_remove_liquidity(&pool, pool_token_balance).unwrap();
 		assert_eq!(expected_balances[0], 1498601924450190405);
 		assert_eq!(expected_balances[1], 504529314564897436);
 

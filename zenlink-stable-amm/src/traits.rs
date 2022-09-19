@@ -117,8 +117,8 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 	) -> Option<Vec<Balance>> {
 		if let Some(pool) = Self::pools(pool_id) {
 			return match pool {
-				Pool::Base(bp) => Self::calculate_base_removed_liquidity(&bp, amount),
-				Pool::Meta(mp) => Self::calculate_base_removed_liquidity(&mp.info, amount),
+				Pool::Base(bp) => Self::calculate_base_remove_liquidity(&bp, amount),
+				Pool::Meta(mp) => Self::calculate_base_remove_liquidity(&mp.info, amount),
 			}
 		}
 		None
