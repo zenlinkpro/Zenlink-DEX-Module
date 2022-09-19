@@ -223,7 +223,7 @@ impl<T: Config> Pallet<T> {
 		>,
 	) -> Option<Balance> {
 		match pool {
-			Pool::Basic(bp) => Self::calculate_base_virtual_price(bp),
+			Pool::Base(bp) => Self::calculate_base_virtual_price(bp),
 			Pool::Meta(mp) => Self::calculate_meta_virtual_price(mp),
 		}
 	}

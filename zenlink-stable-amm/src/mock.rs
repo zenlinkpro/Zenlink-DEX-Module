@@ -340,7 +340,7 @@ impl MockPool {
 		&self,
 	) -> BasePool<CurrencyId, AccountId, BoundedVec<u8, PoolCurrencySymbolLimit>> {
 		match self {
-			MockPool::Basic(bp) => (*bp).clone(),
+			MockPool::Base(bp) => (*bp).clone(),
 			MockPool::Meta(mp) => mp.info.clone(),
 		}
 	}

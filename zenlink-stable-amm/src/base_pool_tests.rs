@@ -216,7 +216,7 @@ fn create_pool_should_work() {
 
 		assert_eq!(
 			StableAmm::pools(0),
-			Some(MockPool::Basic(BasePool {
+			Some(MockPool::Base(BasePool {
 				currency_ids: vec![
 					Token(TOKEN1_SYMBOL),
 					Token(TOKEN2_SYMBOL),

@@ -16,7 +16,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_a(pool_id: T::PoolId) -> Balance {
 		if let Some(general_pool) = Self::pools(pool_id) {
 			let pool = match general_pool {
-				Pool::Basic(bp) => bp,
+				Pool::Base(bp) => bp,
 				Pool::Meta(mp) => mp.info,
 			};
 			return Self::get_a_precise(&pool).unwrap_or_default() / A_PRECISION
@@ -27,7 +27,7 @@ impl<T: Config> Pallet<T> {
 	pub fn get_a_precise_by_id(pool_id: T::PoolId) -> Balance {
 		if let Some(general_pool) = Self::pools(pool_id) {
 			let pool = match general_pool {
-				Pool::Basic(bp) => bp,
+				Pool::Base(bp) => bp,
 				Pool::Meta(mp) => mp.info,
 			};
 			return Self::get_a_precise(&pool).unwrap_or_default()

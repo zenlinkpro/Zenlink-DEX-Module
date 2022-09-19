@@ -114,7 +114,7 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 	) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			return match pool {
-				Pool::Basic(bp) => Self::calculate_base_swap_amount(&bp, i, j, in_balance),
+				Pool::Base(bp) => Self::calculate_base_swap_amount(&bp, i, j, in_balance),
 				Pool::Meta(mp) => {
 					let virtual_price = Self::calculate_meta_virtual_price(&mp)?;
 					let res =
@@ -133,7 +133,7 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 	) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			if let Some(res) = match pool {
-				Pool::Basic(bp) =>
+				Pool::Base(bp) =>
 					Self::calculate_base_remove_liquidity_one_token(&bp, amount, index),
 				Pool::Meta(mp) => {
 					let total_supply = T::MultiCurrency::total_issuance(mp.info.lp_currency_id);

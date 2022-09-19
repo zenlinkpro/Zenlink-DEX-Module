@@ -21,7 +21,7 @@ use sp_runtime::{
 };
 use std::sync::Arc;
 
-use stable_amm_runtime_api::StableAmmApi as StableAmmRuntimeApi;
+use zenlink_stable_amm_runtime_api::StableAmmApi as StableAmmRuntimeApi;
 
 #[rpc(client, server)]
 pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {
