@@ -23,6 +23,11 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		in_balance: Balance,
 	) -> Option<Balance>;
 
+	fn stable_amm_calculate_remove_liquidity(
+		pool_id: PoolId,
+		amount: Balance,
+	) -> Option<Vec<Balance>>;
+
 	fn stable_amm_calculate_remove_liquidity_one_currency(
 		pool_id: PoolId,
 		amount: Balance,
@@ -104,6 +109,19 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		deposit: bool,
 	) -> Result<Balance, DispatchError> {
 		Self::calculate_currency_amount(pool_id, amounts.to_vec(), deposit)
+	}
+
+	fn stable_amm_calculate_remove_liquidity(
+		pool_id: T::PoolId,
+		amount: Balance,
+	) -> Option<Vec<Balance>> {
+		if let Some(pool) = Self::pools(pool_id) {
+			return match pool {
+				Pool::Base(bp) => Self::calculate_base_removed_liquidity(&bp, amount),
+				Pool::Meta(mp) => Self::calculate_base_removed_liquidity(&mp.info, amount),
+			}
+		}
+		None
 	}
 
 	fn stable_amm_calculate_swap_amount(
