@@ -321,7 +321,7 @@ pub mod pallet {
 				let lp_currency_id = new_pool.lp_currency_id;
 				let pool_account = new_pool.account.clone();
 
-				*pool_info = Some(Pool::Basic(new_pool));
+				*pool_info = Some(Pool::Base(new_pool));
 
 				Self::deposit_event(Event::CreatePool {
 					pool_id,
@@ -922,7 +922,7 @@ pub mod pallet {
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 				let general_pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 				let pool = match general_pool {
-					Pool::Basic(bp) => bp,
+					Pool::Base(bp) => bp,
 					Pool::Meta(mp) => &mut mp.info,
 				};
 				ensure!(
@@ -998,7 +998,7 @@ pub mod pallet {
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 				let general_pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 				let pool = match general_pool {
-					Pool::Basic(bp) => bp,
+					Pool::Base(bp) => bp,
 					Pool::Meta(mp) => &mut mp.info,
 				};
 
@@ -1032,7 +1032,7 @@ pub mod pallet {
 			Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 				let general_pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 				let pool = match general_pool {
-					Pool::Basic(bp) => bp,
+					Pool::Base(bp) => bp,
 					Pool::Meta(mp) => &mut mp.info,
 				};
 
@@ -1073,7 +1073,7 @@ impl<T: Config> Pallet<T> {
 		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> Result<Balance, DispatchError> {
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 			match pool {
-				Pool::Basic(bp) =>
+				Pool::Base(bp) =>
 					Self::base_pool_add_liquidity(who, pool_id, bp, amounts, min_mint_amount, to),
 				Pool::Meta(mp) =>
 					Self::meta_pool_add_liquidity(who, pool_id, mp, amounts, min_mint_amount, to),
@@ -1095,7 +1095,7 @@ impl<T: Config> Pallet<T> {
 		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> Result<Balance, DispatchError> {
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 			match pool {
-				Pool::Basic(bp) =>
+				Pool::Base(bp) =>
 					Self::base_pool_swap(who, pool_id, bp, i, j, in_amount, out_min_amount, to),
 				Pool::Meta(mp) =>
 					Self::meta_pool_swap(who, pool_id, mp, i, j, in_amount, out_min_amount, to),
@@ -1114,7 +1114,7 @@ impl<T: Config> Pallet<T> {
 			ensure!(!lp_amount.is_zero(), Error::<T>::InvalidTransaction);
 			let global_pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 			let pool = match global_pool {
-				Pool::Basic(bp) => bp,
+				Pool::Base(bp) => bp,
 				Pool::Meta(mp) => &mut mp.info,
 			};
 
@@ -1127,7 +1127,7 @@ impl<T: Config> Pallet<T> {
 			ensure!(currencies_length == min_amounts_length, Error::<T>::MismatchParameter);
 
 			let fees: Vec<Balance> = vec![Zero::zero(); currencies_length];
-			let amounts = Self::calculate_base_removed_liquidity(pool, lp_amount)
+			let amounts = Self::calculate_base_remove_liquidity(pool, lp_amount)
 				.ok_or(Error::<T>::Arithmetic)?;
 
 			for (i, amount) in amounts.iter().enumerate() {
@@ -1162,7 +1162,7 @@ impl<T: Config> Pallet<T> {
 			ensure!(!lp_amount.is_zero(), Error::<T>::InvalidTransaction);
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 			match pool {
-				Pool::Basic(bp) => Self::base_pool_remove_liquidity_one_currency(
+				Pool::Base(bp) => Self::base_pool_remove_liquidity_one_currency(
 					pool_id, bp, who, lp_amount, index, min_amount, to,
 				),
 				Pool::Meta(mp) => Self::meta_pool_remove_liquidity_one_currency(
@@ -1182,7 +1182,7 @@ impl<T: Config> Pallet<T> {
 		Pools::<T>::try_mutate_exists(pool_id, |optioned_pool| -> DispatchResult {
 			let pool = optioned_pool.as_mut().ok_or(Error::<T>::InvalidPoolId)?;
 			match pool {
-				Pool::Basic(bp) => Self::base_pool_remove_liquidity_imbalance(
+				Pool::Base(bp) => Self::base_pool_remove_liquidity_imbalance(
 					who,
 					pool_id,
 					bp,
@@ -1214,7 +1214,7 @@ impl<T: Config> Pallet<T> {
 		let base_pool = Self::pools(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		let meta_pool = Self::pools(pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		match meta_pool {
-			Pool::Basic(_) => Err(Error::<T>::InvalidPoolId),
+			Pool::Base(_) => Err(Error::<T>::InvalidPoolId),
 			Pool::Meta(ref mp) => {
 				ensure!(mp.base_pool_id == base_pool_id, Error::<T>::MismatchParameter);
 				Ok(())
@@ -1300,7 +1300,7 @@ impl<T: Config> Pallet<T> {
 		let base_pool = Self::pools(base_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		let meta_pool = Self::pools(pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		match meta_pool {
-			Pool::Basic(_) => Err(Error::<T>::InvalidPoolId),
+			Pool::Base(_) => Err(Error::<T>::InvalidPoolId),
 			Pool::Meta(ref mp) => {
 				ensure!(mp.base_pool_id == base_pool_id, Error::<T>::MismatchParameter);
 				Ok(())
@@ -1363,7 +1363,7 @@ impl<T: Config> Pallet<T> {
 		let meta_pool = Self::pools(meta_pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 
 		match meta_pool {
-			Pool::Basic(_) => Err(Error::<T>::InvalidPoolId),
+			Pool::Base(_) => Err(Error::<T>::InvalidPoolId),
 			Pool::Meta(ref mp) => {
 				ensure!(mp.base_pool_id == base_pool_id, Error::<T>::MismatchParameter);
 				Ok(())
@@ -1453,7 +1453,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<Balance, DispatchError> {
 		if let Some(pool) = Self::pools(pool_id) {
 			match pool {
-				Pool::Basic(bp) => Self::calculate_base_currency_amount(&bp, amounts, deposit),
+				Pool::Base(bp) => Self::calculate_base_currency_amount(&bp, amounts, deposit),
 				Pool::Meta(mp) => Self::calculate_meta_currency_amount(&mp, amounts, deposit),
 			}
 		} else {
@@ -1464,7 +1464,7 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn get_admin_balance(pool_id: T::PoolId, currency_index: usize) -> Option<Balance> {
 		if let Some(general_pool) = Self::pools(pool_id) {
 			let pool = match general_pool {
-				Pool::Basic(bp) => bp,
+				Pool::Base(bp) => bp,
 				Pool::Meta(mp) => mp.info,
 			};
 			let currencies_len = pool.currency_ids.len();

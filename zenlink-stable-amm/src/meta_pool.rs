@@ -579,7 +579,7 @@ impl<T: Config> Pallet<T> {
 		if now > (meta_pool.base_cache_last_updated + BASE_CACHE_EXPIRE_TIME) {
 			let pool = Self::pools(meta_pool.base_pool_id)?;
 			return match pool {
-				Pool::Basic(bp) => Self::calculate_base_virtual_price(&bp),
+				Pool::Base(bp) => Self::calculate_base_virtual_price(&bp),
 				Pool::Meta(mp) => Self::calculate_meta_virtual_price(&mp),
 			}
 		}
@@ -873,7 +873,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<Balance, DispatchError> {
 		let pool = Self::pools(pool_id).ok_or(Error::<T>::InvalidPoolId)?;
 		let meta_pool = match pool {
-			Pool::Basic(_) => None,
+			Pool::Base(_) => None,
 			Pool::Meta(mp) => Some(mp),
 		}
 		.ok_or(Error::<T>::InvalidPoolId)?;

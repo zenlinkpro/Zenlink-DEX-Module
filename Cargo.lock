@@ -10162,30 +10162,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "stable-amm-rpc"
-version = "0.1.0"
-dependencies = [
- "jsonrpsee",
- "parity-scale-codec",
- "serde",
- "sp-api",
- "sp-blockchain",
- "sp-rpc",
- "sp-runtime",
- "stable-amm-runtime-api",
-]
-
-[[package]]
-name = "stable-amm-runtime-api"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "sp-api",
- "sp-std",
- "zenlink-stable-amm",
-]
-
-[[package]]
 name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11804,6 +11780,30 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "zenlink-stable-amm-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpsee",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-rpc",
+ "sp-runtime",
+ "zenlink-stable-amm-runtime-api",
+]
+
+[[package]]
+name = "zenlink-stable-amm-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std",
+ "zenlink-stable-amm",
 ]
 
 [[package]]

@@ -23,6 +23,11 @@ pub trait StableAmmApi<PoolId, CurrencyId, AccountId, Balance> {
 		in_balance: Balance,
 	) -> Option<Balance>;
 
+	fn stable_amm_calculate_remove_liquidity(
+		pool_id: PoolId,
+		amount: Balance,
+	) -> Option<Vec<Balance>>;
+
 	fn stable_amm_calculate_remove_liquidity_one_currency(
 		pool_id: PoolId,
 		amount: Balance,
@@ -106,6 +111,19 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 		Self::calculate_currency_amount(pool_id, amounts.to_vec(), deposit)
 	}
 
+	fn stable_amm_calculate_remove_liquidity(
+		pool_id: T::PoolId,
+		amount: Balance,
+	) -> Option<Vec<Balance>> {
+		if let Some(pool) = Self::pools(pool_id) {
+			return match pool {
+				Pool::Base(bp) => Self::calculate_base_remove_liquidity(&bp, amount),
+				Pool::Meta(mp) => Self::calculate_base_remove_liquidity(&mp.info, amount),
+			}
+		}
+		None
+	}
+
 	fn stable_amm_calculate_swap_amount(
 		pool_id: T::PoolId,
 		i: usize,
@@ -114,7 +132,7 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 	) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			return match pool {
-				Pool::Basic(bp) => Self::calculate_base_swap_amount(&bp, i, j, in_balance),
+				Pool::Base(bp) => Self::calculate_base_swap_amount(&bp, i, j, in_balance),
 				Pool::Meta(mp) => {
 					let virtual_price = Self::calculate_meta_virtual_price(&mp)?;
 					let res =
@@ -133,7 +151,7 @@ impl<T: Config> StableAmmApi<T::PoolId, T::CurrencyId, T::AccountId, Balance> fo
 	) -> Option<Balance> {
 		if let Some(pool) = Self::pools(pool_id) {
 			if let Some(res) = match pool {
-				Pool::Basic(bp) =>
+				Pool::Base(bp) =>
 					Self::calculate_base_remove_liquidity_one_token(&bp, amount, index),
 				Pool::Meta(mp) => {
 					let total_supply = T::MultiCurrency::total_issuance(mp.info.lp_currency_id);

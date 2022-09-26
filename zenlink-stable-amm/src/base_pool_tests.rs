@@ -216,7 +216,7 @@ fn create_pool_should_work() {
 
 		assert_eq!(
 			StableAmm::pools(0),
-			Some(MockPool::Basic(BasePool {
+			Some(MockPool::Base(BasePool {
 				currency_ids: vec![
 					Token(TOKEN1_SYMBOL),
 					Token(TOKEN2_SYMBOL),
@@ -497,7 +497,7 @@ fn remove_liquidity_exceed_total_supply_should_not_work() {
 	new_test_ext().execute_with(|| {
 		let (pool_id, _) = setup_test_base_pool();
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
-		assert!(StableAmm::calculate_base_removed_liquidity(&pool, u128::MAX) == None)
+		assert!(StableAmm::calculate_base_remove_liquidity(&pool, u128::MAX) == None)
 	})
 }
 
@@ -588,7 +588,7 @@ fn remove_liquidity_with_expected_return_amount_underlying_currency_should_work(
 		assert_eq!(pool_token_balance_before, 1996275270169644725);
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		let expected_balances =
-			StableAmm::calculate_base_removed_liquidity(&pool, pool_token_balance_before).unwrap();
+			StableAmm::calculate_base_remove_liquidity(&pool, pool_token_balance_before).unwrap();
 		assert_eq!(expected_balances[0], 1498601924450190405);
 		assert_eq!(expected_balances[1], 504529314564897436);
 
@@ -662,7 +662,7 @@ fn remove_liquidity_when_min_amounts_not_reached_due_to_front_running_should_not
 
 		let pool = StableAmm::pools(pool_id).unwrap().get_pool_info();
 		let expected_balances =
-			StableAmm::calculate_base_removed_liquidity(&pool, pool_token_balance).unwrap();
+			StableAmm::calculate_base_remove_liquidity(&pool, pool_token_balance).unwrap();
 		assert_eq!(expected_balances[0], 1498601924450190405);
 		assert_eq!(expected_balances[1], 504529314564897436);
 

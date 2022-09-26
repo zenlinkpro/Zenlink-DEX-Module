@@ -66,7 +66,7 @@ pub struct MetaPool<PoolId, CurrencyId, AccountId, BoundString> {
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo)]
 pub enum Pool<PoolId, CurrencyId, AccountId, BoundString> {
-	Basic(BasePool<CurrencyId, AccountId, BoundString>),
+	Base(BasePool<CurrencyId, AccountId, BoundString>),
 	Meta(MetaPool<PoolId, CurrencyId, AccountId, BoundString>),
 }
 
@@ -75,77 +75,77 @@ impl<PoolId, CurrencyId: Copy, AccountId: Clone, BoundString>
 {
 	pub fn info(self) -> BasePool<CurrencyId, AccountId, BoundString> {
 		match self {
-			Pool::Basic(bp) => bp,
+			Pool::Base(bp) => bp,
 			Pool::Meta(mp) => mp.info,
 		}
 	}
 
 	pub fn get_currency_ids(self) -> Vec<CurrencyId> {
 		match self {
-			Pool::Basic(bp) => bp.currency_ids,
+			Pool::Base(bp) => bp.currency_ids,
 			Pool::Meta(mp) => mp.info.currency_ids,
 		}
 	}
 
 	pub fn get_lp_currency(&self) -> CurrencyId {
 		match self {
-			Pool::Basic(bp) => bp.lp_currency_id,
+			Pool::Base(bp) => bp.lp_currency_id,
 			Pool::Meta(mp) => mp.info.lp_currency_id,
 		}
 	}
 
 	pub fn get_initial_a_time(&self) -> Number {
 		match self {
-			Pool::Basic(bp) => bp.initial_a_time,
+			Pool::Base(bp) => bp.initial_a_time,
 			Pool::Meta(mp) => mp.info.initial_a_time,
 		}
 	}
 
 	pub fn get_token_multipliers(self) -> Vec<Balance> {
 		match self {
-			Pool::Basic(bp) => bp.token_multipliers,
+			Pool::Base(bp) => bp.token_multipliers,
 			Pool::Meta(mp) => mp.info.token_multipliers,
 		}
 	}
 
 	pub fn get_balances(&self) -> Vec<Balance> {
 		match self {
-			Pool::Basic(bp) => bp.balances.clone(),
+			Pool::Base(bp) => bp.balances.clone(),
 			Pool::Meta(mp) => mp.info.balances.clone(),
 		}
 	}
 
 	pub fn get_fee(&self) -> Number {
 		match self {
-			Pool::Basic(bp) => bp.fee,
+			Pool::Base(bp) => bp.fee,
 			Pool::Meta(mp) => mp.info.fee,
 		}
 	}
 
 	pub fn get_account(&self) -> AccountId {
 		match self {
-			Pool::Basic(bp) => bp.account.clone(),
+			Pool::Base(bp) => bp.account.clone(),
 			Pool::Meta(mp) => mp.info.account.clone(),
 		}
 	}
 
 	pub fn set_admin_fee(&mut self, admin_fee: Balance) {
 		match self {
-			Pool::Basic(bp) => bp.admin_fee = admin_fee,
+			Pool::Base(bp) => bp.admin_fee = admin_fee,
 			Pool::Meta(mp) => mp.info.admin_fee = admin_fee,
 		}
 	}
 
 	pub fn set_fee(&mut self, fee: Balance) {
 		match self {
-			Pool::Basic(bp) => bp.fee = fee,
+			Pool::Base(bp) => bp.fee = fee,
 			Pool::Meta(mp) => mp.info.fee = fee,
 		}
 	}
 
 	pub fn set_admin_fee_receiver(&mut self, receiver: AccountId) {
 		match self {
-			Pool::Basic(bp) => bp.admin_fee_receiver = receiver,
+			Pool::Base(bp) => bp.admin_fee_receiver = receiver,
 			Pool::Meta(mp) => mp.info.admin_fee_receiver = receiver,
 		}
 	}
