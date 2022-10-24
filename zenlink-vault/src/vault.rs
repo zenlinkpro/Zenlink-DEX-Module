@@ -1,3 +1,6 @@
+// Copyright 2021-2022 Zenlink.
+// Licensed under Apache 2.0.
+
 use super::*;
 
 pub trait Vault<T: Config> {

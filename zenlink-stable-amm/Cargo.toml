@@ -3,7 +3,7 @@ name = "zenlink-stable-amm"
 version = "0.1.0"
 authors = ["Zenlink Developers"]
 edition = "2021"
-license = "GPL-3.0-only"
+license = "Apache 2.0"
 
 [dependencies]
 serde = { version = "1.0.119", optional = true }

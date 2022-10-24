@@ -1,5 +1,5 @@
-// Copyright 2021-2022 Zenlink
-// Licensed under GPL-3.0.
+// Copyright 2021-2022 Zenlink.
+// Licensed under Apache 2.0.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
