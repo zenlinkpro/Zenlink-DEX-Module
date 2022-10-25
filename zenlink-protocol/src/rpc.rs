@@ -1,5 +1,5 @@
-// Copyright 2020-2021 Zenlink
-// Licensed under GPL-3.0.
+// Copyright 2021-2022 Zenlink.
+// Licensed under Apache 2.0.
 
 #![allow(clippy::type_complexity)]
 

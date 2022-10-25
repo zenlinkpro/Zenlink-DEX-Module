@@ -1,3 +1,6 @@
+// Copyright 2021-2022 Zenlink.
+// Licensed under Apache 2.0.
+
 use super::*;
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;

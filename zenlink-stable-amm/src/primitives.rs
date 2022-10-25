@@ -1,3 +1,6 @@
+// Copyright 2021-2022 Zenlink.
+// Licensed under Apache 2.0.
+
 use codec::{Decode, Encode};
 use frame_support::pallet_prelude::*;
 use sp_std::vec::Vec;

@@ -1,3 +1,6 @@
+// Copyright 2021-2022 Zenlink.
+// Licensed under Apache 2.0.
+
 //! Runtime API definition for stable amm.
 
 #![cfg_attr(not(feature = "std"), no_std)]
