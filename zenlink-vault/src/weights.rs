@@ -65,9 +65,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: ZenlinkVault AssetMetadata (r:2 w:2)
 	// Storage: ZenlinkVault VaultRatio (r:1 w:1)
 	fn create_vault_asset() -> Weight {
-		(18_206_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(18_206_000)
+			.saturating_add(T::DbWeight::get().reads(4 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 	// Storage: ZenlinkVault Vaults (r:1 w:0)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -75,9 +75,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: ZenlinkVault AssetMetadata (r:2 w:0)
 	// Storage: System Account (r:1 w:1)
 	fn deposit() -> Weight {
-		(99_159_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(8 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(99_159_000)
+			.saturating_add(T::DbWeight::get().reads(8 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: ZenlinkVault Vaults (r:1 w:0)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -85,9 +85,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Tokens Accounts (r:3 w:3)
 	// Storage: System Account (r:1 w:1)
 	fn mint() -> Weight {
-		(92_309_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(8 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(92_309_000)
+			.saturating_add(T::DbWeight::get().reads(8 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: ZenlinkVault Vaults (r:1 w:0)
 	// Storage: Tokens Accounts (r:3 w:3)
@@ -96,9 +96,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: ZenlinkVault VaultRatio (r:1 w:0)
 	// Storage: System Account (r:1 w:0)
 	fn withdraw() -> Weight {
-		(95_240_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(9 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(95_240_000)
+			.saturating_add(T::DbWeight::get().reads(9 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 	// Storage: ZenlinkVault Vaults (r:1 w:0)
 	// Storage: Tokens Accounts (r:3 w:3)
@@ -107,9 +107,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: ZenlinkVault VaultRatio (r:1 w:0)
 	// Storage: System Account (r:1 w:0)
 	fn redeem() -> Weight {
-		(79_124_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(9 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(79_124_000)
+			.saturating_add(T::DbWeight::get().reads(9 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 }
 
@@ -119,9 +119,9 @@ impl WeightInfo for () {
 	// Storage: ZenlinkVault AssetMetadata (r:2 w:2)
 	// Storage: ZenlinkVault VaultRatio (r:1 w:1)
 	fn create_vault_asset() -> Weight {
-		(18_206_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(18_206_000)
+			.saturating_add(RocksDbWeight::get().reads(4 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 	// Storage: ZenlinkVault Vaults (r:1 w:0)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -129,9 +129,9 @@ impl WeightInfo for () {
 	// Storage: ZenlinkVault AssetMetadata (r:2 w:0)
 	// Storage: System Account (r:1 w:1)
 	fn deposit() -> Weight {
-		(99_159_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(8 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(99_159_000)
+			.saturating_add(RocksDbWeight::get().reads(8 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: ZenlinkVault Vaults (r:1 w:0)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -139,9 +139,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:3 w:3)
 	// Storage: System Account (r:1 w:1)
 	fn mint() -> Weight {
-		(92_309_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(8 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(92_309_000)
+			.saturating_add(RocksDbWeight::get().reads(8 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: ZenlinkVault Vaults (r:1 w:0)
 	// Storage: Tokens Accounts (r:3 w:3)
@@ -150,9 +150,9 @@ impl WeightInfo for () {
 	// Storage: ZenlinkVault VaultRatio (r:1 w:0)
 	// Storage: System Account (r:1 w:0)
 	fn withdraw() -> Weight {
-		(95_240_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(9 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(95_240_000)
+			.saturating_add(RocksDbWeight::get().reads(9 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 	// Storage: ZenlinkVault Vaults (r:1 w:0)
 	// Storage: Tokens Accounts (r:3 w:3)
@@ -161,8 +161,8 @@ impl WeightInfo for () {
 	// Storage: ZenlinkVault VaultRatio (r:1 w:0)
 	// Storage: System Account (r:1 w:0)
 	fn redeem() -> Weight {
-		(79_124_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(9 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(79_124_000)
+			.saturating_add(RocksDbWeight::get().reads(9 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 }

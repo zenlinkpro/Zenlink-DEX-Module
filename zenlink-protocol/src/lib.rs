@@ -272,7 +272,7 @@ pub mod pallet {
 		/// Transfer by xcm
 
 		/// Transferred to parachain. \[asset_id, src, para_id, dest, amount, used_weight\]
-		TransferredToParachain(AssetId, T::AccountId, ParaId, T::AccountId, AssetBalance, Weight),
+		TransferredToParachain(AssetId, T::AccountId, ParaId, T::AccountId, AssetBalance, u64),
 
 		/// Contribute to bootstrap pair. \[who, asset_0, asset_0_contribute, asset_1_contribute\]
 		BootstrapContribute(T::AccountId, AssetId, AssetBalance, AssetId, AssetBalance),
@@ -498,7 +498,7 @@ pub mod pallet {
 			para_id: ParaId,
 			recipient: T::AccountId,
 			#[pallet::compact] amount: AssetBalance,
-			max_weight: Weight,
+			max_weight: u64,
 		) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
 			let balance = T::MultiAssetsHandler::balance_of(asset_id, &who);

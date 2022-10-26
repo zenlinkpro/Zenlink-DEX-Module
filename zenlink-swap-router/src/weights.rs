@@ -65,9 +65,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Timestamp Now (r:1 w:0)
 	// Storage: System Account (r:1 w:0)
 	fn swap_exact_token_for_tokens_through_stable_pool() -> Weight {
-		(159_462_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(13 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(159_462_000)
+			.saturating_add(T::DbWeight::get().reads(13 as u64))
+			.saturating_add(T::DbWeight::get().writes(9 as u64))
 	}
 }
 
@@ -81,8 +81,8 @@ impl WeightInfo for () {
 	// Storage: Timestamp Now (r:1 w:0)
 	// Storage: System Account (r:1 w:0)
 	fn swap_exact_token_for_tokens_through_stable_pool() -> Weight {
-		(159_462_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(13 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(159_462_000)
+			.saturating_add(RocksDbWeight::get().reads(13 as u64))
+			.saturating_add(RocksDbWeight::get().writes(9 as u64))
 	}
 }
