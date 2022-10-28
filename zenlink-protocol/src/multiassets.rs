@@ -3,7 +3,7 @@
 
 use super::*;
 
-pub trait MultiAssetsHandler<AccountId> {
+pub trait MultiAssetsHandler<AccountId, AssetId: Copy> {
 	fn balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance;
 
 	fn total_supply(asset_id: AssetId) -> AssetBalance;
@@ -39,7 +39,8 @@ pub struct ZenlinkMultiAssets<T, Native = (), Local = (), Other = ()>(
 	PhantomData<(T, Native, Local, Other)>,
 );
 
-impl<T: Config, NativeCurrency, Local, Other> MultiAssetsHandler<T::AccountId>
+impl<T: Config<AssetId = AssetId>, NativeCurrency, Local, Other>
+	MultiAssetsHandler<T::AccountId, AssetId>
 	for ZenlinkMultiAssets<Pallet<T>, NativeCurrency, Local, Other>
 where
 	NativeCurrency: Currency<T::AccountId>,

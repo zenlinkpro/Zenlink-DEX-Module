@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 pub use pallet::*;
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, FullCodec};
 use frame_support::{
 	inherent::Vec,
 	pallet_prelude::*,
@@ -20,8 +20,12 @@ use frame_support::{
 	PalletId, RuntimeDebug,
 };
 use sp_core::U256;
-use sp_runtime::traits::{AccountIdConversion, Hash, One, StaticLookup, Zero};
-use sp_std::{collections::btree_map::BTreeMap, convert::TryInto, marker::PhantomData, prelude::*};
+use sp_runtime::traits::{
+	AccountIdConversion, Hash, MaybeSerializeDeserialize, One, StaticLookup, Zero,
+};
+use sp_std::{
+	collections::btree_map::BTreeMap, convert::TryInto, fmt::Debug, marker::PhantomData, prelude::*,
+};
 
 // -------xcm--------
 pub use cumulus_primitives_core::ParaId;
@@ -54,12 +58,15 @@ mod default_weights;
 pub use default_weights::WeightInfo;
 pub use multiassets::{MultiAssetsHandler, ZenlinkMultiAssets};
 pub use primitives::{
-	AssetBalance, AssetId, BootstrapParameter, PairMetadata, PairStatus,
+	AssetBalance, AssetId, AssetIdConverter, AssetInfo, BootstrapParameter, PairLpGenerate,
+	PairMetadata, PairStatus,
 	PairStatus::{Bootstrap, Disable, Trading},
 	LIQUIDITY, LOCAL, NATIVE, RESERVED,
 };
 pub use rpc::PairInfo;
-pub use traits::{ExportZenlink, LocalAssetHandler, OtherAssetHandler};
+pub use traits::{
+	ConvertMultiLocation, ExportZenlink, GenerateLpAssetId, LocalAssetHandler, OtherAssetHandler,
+};
 pub use transactor::{TransactorAdaptor, TrustedParas};
 
 const LOG_TARGET: &str = "zenlink_protocol";
@@ -79,10 +86,24 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The assets interface beyond native currency and other assets.
-		type MultiAssetsHandler: MultiAssetsHandler<Self::AccountId>;
+		type MultiAssetsHandler: MultiAssetsHandler<Self::AccountId, Self::AssetId>;
 		/// This pallet id.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+		/// The asset type.
+		type AssetId: FullCodec
+			+ Eq
+			+ PartialEq
+			+ Ord
+			+ PartialOrd
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ AssetInfo
+			+ Debug
+			+ scale_info::TypeInfo
+			+ MaxEncodedLen;
+		/// Generate the AssetId for the pair.
+		type LpGenerate: GenerateLpAssetId<Self::AssetId>;
 
 		/// XCM
 
@@ -94,7 +115,10 @@ pub mod pallet {
 		type XcmExecutor: ExecuteXcm<Self::Call>;
 		/// AccountId to be used in XCM as a corresponding AccountId32
 		/// and convert from MultiLocation in XCM
-		type Conversion: Convert<MultiLocation, Self::AccountId>;
+		type AccountIdConverter: Convert<MultiLocation, Self::AccountId>;
+		/// Used to convert the AssetId into a MultiLocation.
+		type AssetIdConverter: ConvertMultiLocation<Self::AssetId>;
+
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 	}
@@ -109,23 +133,24 @@ pub mod pallet {
 	#[pallet::getter(fn foreign_ledger)]
 	/// The number of units of assets held by any given account.
 	pub type ForeignLedger<T: Config> =
-		StorageMap<_, Blake2_128Concat, (AssetId, T::AccountId), AssetBalance, ValueQuery>;
+		StorageMap<_, Blake2_128Concat, (T::AssetId, T::AccountId), AssetBalance, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn foreign_meta)]
 	/// TWOX-NOTE: `AssetId` is trusted, so this is safe.
 	pub type ForeignMeta<T: Config> =
-		StorageMap<_, Twox64Concat, AssetId, AssetBalance, ValueQuery>;
+		StorageMap<_, Twox64Concat, T::AssetId, AssetBalance, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn foreign_list)]
-	pub type ForeignList<T: Config> = StorageValue<_, Vec<AssetId>, ValueQuery>;
+	pub type ForeignList<T: Config> = StorageValue<_, Vec<T::AssetId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn k_last)]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
 	/// Last unliquidated protocol fee;
-	pub type KLast<T: Config> = StorageMap<_, Twox64Concat, (AssetId, AssetId), U256, ValueQuery>;
+	pub type KLast<T: Config> =
+		StorageMap<_, Twox64Concat, (T::AssetId, T::AssetId), U256, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn fee_meta)]
@@ -135,15 +160,15 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn lp_pairs)]
 	pub type LiquidityPairs<T: Config> =
-		StorageMap<_, Blake2_128Concat, (AssetId, AssetId), Option<AssetId>, ValueQuery>;
+		StorageMap<_, Blake2_128Concat, (T::AssetId, T::AssetId), Option<T::AssetId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn pair_status)]
-	/// (AssetId, AssetId) -> PairStatus
+	/// (T::AssetId, T::AssetId) -> PairStatus
 	pub type PairStatuses<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
-		(AssetId, AssetId),
+		(T::AssetId, T::AssetId),
 		PairStatus<AssetBalance, T::BlockNumber, T::AccountId>,
 		ValueQuery,
 	>;
@@ -153,7 +178,7 @@ pub mod pallet {
 	pub type BootstrapPersonalSupply<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
-		((AssetId, AssetId), T::AccountId),
+		((T::AssetId, T::AssetId), T::AccountId),
 		(AssetBalance, AssetBalance),
 		ValueQuery,
 	>;
@@ -166,7 +191,7 @@ pub mod pallet {
 	pub type BootstrapEndStatus<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
-		(AssetId, AssetId),
+		(T::AssetId, T::AssetId),
 		PairStatus<AssetBalance, T::BlockNumber, T::AccountId>,
 		ValueQuery,
 	>;
@@ -176,8 +201,8 @@ pub mod pallet {
 	pub type BootstrapRewards<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
-		(AssetId, AssetId),
-		BTreeMap<AssetId, AssetBalance>,
+		(T::AssetId, T::AssetId),
+		BTreeMap<T::AssetId, AssetBalance>,
 		ValueQuery,
 	>;
 
@@ -186,8 +211,8 @@ pub mod pallet {
 	pub type BootstrapLimits<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
-		(AssetId, AssetId),
-		BTreeMap<AssetId, AssetBalance>,
+		(T::AssetId, T::AssetId),
+		BTreeMap<T::AssetId, AssetBalance>,
 		ValueQuery,
 	>;
 
@@ -242,51 +267,58 @@ pub mod pallet {
 		/// Foreign Asset
 
 		/// Some assets were transferred. \[asset_id, owner, target, amount\]
-		Transferred(AssetId, T::AccountId, T::AccountId, AssetBalance),
+		Transferred(T::AssetId, T::AccountId, T::AccountId, AssetBalance),
 		/// Some assets were burned. \[asset_id, owner, amount\]
-		Burned(AssetId, T::AccountId, AssetBalance),
+		Burned(T::AssetId, T::AccountId, AssetBalance),
 		/// Some assets were minted. \[asset_id, owner, amount\]
-		Minted(AssetId, T::AccountId, AssetBalance),
+		Minted(T::AssetId, T::AccountId, AssetBalance),
 
 		/// Swap
 
 		/// Create a trading pair. \[asset_0, asset_1\]
-		PairCreated(AssetId, AssetId),
+		PairCreated(T::AssetId, T::AssetId),
 		/// Add liquidity. \[owner, asset_0, asset_1, add_balance_0, add_balance_1,
 		/// mint_balance_lp\]
-		LiquidityAdded(T::AccountId, AssetId, AssetId, AssetBalance, AssetBalance, AssetBalance),
+		LiquidityAdded(
+			T::AccountId,
+			T::AssetId,
+			T::AssetId,
+			AssetBalance,
+			AssetBalance,
+			AssetBalance,
+		),
 		/// Remove liquidity. \[owner, recipient, asset_0, asset_1, rm_balance_0, rm_balance_1,
 		/// burn_balance_lp\]
 		LiquidityRemoved(
 			T::AccountId,
 			T::AccountId,
-			AssetId,
-			AssetId,
+			T::AssetId,
+			T::AssetId,
 			AssetBalance,
 			AssetBalance,
 			AssetBalance,
 		),
 		/// Transact in trading \[owner, recipient, swap_path, balances\]
-		AssetSwap(T::AccountId, T::AccountId, Vec<AssetId>, Vec<AssetBalance>),
+		AssetSwap(T::AccountId, T::AccountId, Vec<T::AssetId>, Vec<AssetBalance>),
 
 		/// Transfer by xcm
 
 		/// Transferred to parachain. \[asset_id, src, para_id, dest, amount, used_weight\]
-		TransferredToParachain(AssetId, T::AccountId, ParaId, T::AccountId, AssetBalance, u64),
+		TransferredToParachain(T::AssetId, T::AccountId, ParaId, T::AccountId, AssetBalance, u64),
 
 		/// Contribute to bootstrap pair. \[who, asset_0, asset_0_contribute, asset_1_contribute\]
-		BootstrapContribute(T::AccountId, AssetId, AssetBalance, AssetId, AssetBalance),
+		BootstrapContribute(T::AccountId, T::AssetId, AssetBalance, T::AssetId, AssetBalance),
 
 		/// A bootstrap pair end. \[asset_0, asset_1, asset_0_amount, asset_1_amount,
 		/// total_lp_supply]
-		BootstrapEnd(AssetId, AssetId, AssetBalance, AssetBalance, AssetBalance),
+		BootstrapEnd(T::AssetId, T::AssetId, AssetBalance, AssetBalance, AssetBalance),
 
 		/// Create a bootstrap pair. \[bootstrap_pair_account, asset_0, asset_1,
 		/// total_supply_0,total_supply_1, capacity_supply_0,capacity_supply_1, end\]
 		BootstrapCreated(
 			T::AccountId,
-			AssetId,
-			AssetId,
+			T::AssetId,
+			T::AssetId,
 			AssetBalance,
 			AssetBalance,
 			AssetBalance,
@@ -300,8 +332,8 @@ pub mod pallet {
 			T::AccountId,
 			T::AccountId,
 			T::AccountId,
-			AssetId,
-			AssetId,
+			T::AssetId,
+			T::AssetId,
 			AssetBalance,
 			AssetBalance,
 			AssetBalance,
@@ -311,8 +343,8 @@ pub mod pallet {
 		/// total_supply_0,total_supply_1, capacity_supply_0,capacity_supply_1\]
 		BootstrapUpdate(
 			T::AccountId,
-			AssetId,
-			AssetId,
+			T::AssetId,
+			T::AssetId,
 			AssetBalance,
 			AssetBalance,
 			AssetBalance,
@@ -322,16 +354,23 @@ pub mod pallet {
 
 		/// Refund from disable bootstrap pair. \[bootstrap_pair_account, caller, asset_0, asset_1,
 		/// asset_0_refund, asset_1_refund\]
-		BootstrapRefund(T::AccountId, T::AccountId, AssetId, AssetId, AssetBalance, AssetBalance),
+		BootstrapRefund(
+			T::AccountId,
+			T::AccountId,
+			T::AssetId,
+			T::AssetId,
+			AssetBalance,
+			AssetBalance,
+		),
 
 		/// Bootstrap distribute some rewards to contributors.
-		DistributeReward(AssetId, AssetId, T::AccountId, Vec<(AssetId, AssetBalance)>),
+		DistributeReward(T::AssetId, T::AssetId, T::AccountId, Vec<(T::AssetId, AssetBalance)>),
 
 		/// Charge reward into a bootstrap.
-		ChargeReward(AssetId, AssetId, T::AccountId, Vec<(AssetId, AssetBalance)>),
+		ChargeReward(T::AssetId, T::AssetId, T::AccountId, Vec<(T::AssetId, AssetBalance)>),
 
 		/// Withdraw all reward from a bootstrap.
-		WithdrawReward(AssetId, AssetId, T::AccountId),
+		WithdrawReward(T::AssetId, T::AssetId, T::AccountId),
 	}
 	#[pallet::error]
 	pub enum Error<T> {
@@ -466,7 +505,7 @@ pub mod pallet {
 		#[pallet::weight(1_000_000)]
 		pub fn transfer(
 			origin: OriginFor<T>,
-			asset_id: AssetId,
+			asset_id: T::AssetId,
 			recipient: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] amount: AssetBalance,
 		) -> DispatchResult {
@@ -494,7 +533,7 @@ pub mod pallet {
 		#[frame_support::transactional]
 		pub fn transfer_to_parachain(
 			origin: OriginFor<T>,
-			asset_id: AssetId,
+			asset_id: T::AssetId,
 			para_id: ParaId,
 			recipient: T::AccountId,
 			#[pallet::compact] amount: AssetBalance,
@@ -509,13 +548,13 @@ pub mod pallet {
 			ensure!(Some(true) == checked, Error::<T>::NativeBalanceTooLow);
 			ensure!(balance >= amount, Error::<T>::InsufficientAssetBalance);
 
-			let xcm_target = T::Conversion::reverse(recipient.clone())
+			let xcm_target = T::AccountIdConverter::reverse(recipient.clone())
 				.map_err(|_| Error::<T>::AccountIdBadLocation)?;
 
 			let xcm = Self::make_xcm_transfer_to_parachain(&asset_id, para_id, xcm_target, amount)
 				.map_err(|_| Error::<T>::AssetNotExists)?;
 
-			let xcm_origin = T::Conversion::reverse(who.clone())
+			let xcm_origin = T::AccountIdConverter::reverse(who.clone())
 				.map_err(|_| Error::<T>::AccountIdBadLocation)?;
 
 			log::info! {
@@ -566,8 +605,8 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::create_pair())]
 		pub fn create_pair(
 			origin: OriginFor<T>,
-			asset_0: AssetId,
-			asset_1: AssetId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(asset_0.is_support() && asset_1.is_support(), Error::<T>::UnsupportedAssetType);
@@ -625,8 +664,8 @@ pub mod pallet {
 		#[allow(clippy::too_many_arguments)]
 		pub fn add_liquidity(
 			origin: OriginFor<T>,
-			asset_0: AssetId,
-			asset_1: AssetId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
 			#[pallet::compact] amount_0_desired: AssetBalance,
 			#[pallet::compact] amount_1_desired: AssetBalance,
 			#[pallet::compact] amount_0_min: AssetBalance,
@@ -666,8 +705,8 @@ pub mod pallet {
 		#[allow(clippy::too_many_arguments)]
 		pub fn remove_liquidity(
 			origin: OriginFor<T>,
-			asset_0: AssetId,
-			asset_1: AssetId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
 			#[pallet::compact] liquidity: AssetBalance,
 			#[pallet::compact] amount_0_min: AssetBalance,
 			#[pallet::compact] amount_1_min: AssetBalance,
@@ -706,7 +745,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] amount_in: AssetBalance,
 			#[pallet::compact] amount_out_min: AssetBalance,
-			path: Vec<AssetId>,
+			path: Vec<T::AssetId>,
 			recipient: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] deadline: T::BlockNumber,
 		) -> DispatchResult {
@@ -740,7 +779,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] amount_out: AssetBalance,
 			#[pallet::compact] amount_in_max: AssetBalance,
-			path: Vec<AssetId>,
+			path: Vec<T::AssetId>,
 			recipient: <T::Lookup as StaticLookup>::Source,
 			#[pallet::compact] deadline: T::BlockNumber,
 		) -> DispatchResult {
@@ -777,15 +816,15 @@ pub mod pallet {
 		#[allow(clippy::too_many_arguments)]
 		pub fn bootstrap_create(
 			origin: OriginFor<T>,
-			asset_0: AssetId,
-			asset_1: AssetId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
 			#[pallet::compact] target_supply_0: AssetBalance,
 			#[pallet::compact] target_supply_1: AssetBalance,
 			#[pallet::compact] capacity_supply_0: AssetBalance,
 			#[pallet::compact] capacity_supply_1: AssetBalance,
 			#[pallet::compact] end: T::BlockNumber,
-			rewards: Vec<AssetId>,
-			limits: Vec<(AssetId, AssetBalance)>,
+			rewards: Vec<T::AssetId>,
+			limits: Vec<(T::AssetId, AssetBalance)>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -823,12 +862,12 @@ pub mod pallet {
 							rewards
 								.into_iter()
 								.map(|asset_id| (asset_id, Zero::zero()))
-								.collect::<BTreeMap<AssetId, AssetBalance>>(),
+								.collect::<BTreeMap<T::AssetId, AssetBalance>>(),
 						);
 
 						BootstrapLimits::<T>::insert(
 							pair,
-							limits.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>(),
+							limits.into_iter().collect::<BTreeMap<T::AssetId, AssetBalance>>(),
 						);
 
 						Ok(())
@@ -850,12 +889,12 @@ pub mod pallet {
 						rewards
 							.into_iter()
 							.map(|asset_id| (asset_id, Zero::zero()))
-							.collect::<BTreeMap<AssetId, AssetBalance>>(),
+							.collect::<BTreeMap<T::AssetId, AssetBalance>>(),
 					);
 
 					BootstrapLimits::<T>::insert(
 						pair,
-						limits.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>(),
+						limits.into_iter().collect::<BTreeMap<T::AssetId, AssetBalance>>(),
 					);
 
 					Ok(())
@@ -888,8 +927,8 @@ pub mod pallet {
 		#[frame_support::transactional]
 		pub fn bootstrap_contribute(
 			who: OriginFor<T>,
-			asset_0: AssetId,
-			asset_1: AssetId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
 			#[pallet::compact] amount_0_contribute: AssetBalance,
 			#[pallet::compact] amount_1_contribute: AssetBalance,
 			#[pallet::compact] deadline: T::BlockNumber,
@@ -925,8 +964,8 @@ pub mod pallet {
 		pub fn bootstrap_claim(
 			origin: OriginFor<T>,
 			recipient: <T::Lookup as StaticLookup>::Source,
-			asset_0: AssetId,
-			asset_1: AssetId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
 			#[pallet::compact] deadline: T::BlockNumber,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -948,8 +987,8 @@ pub mod pallet {
 		#[frame_support::transactional]
 		pub fn bootstrap_end(
 			origin: OriginFor<T>,
-			asset_0: AssetId,
-			asset_1: AssetId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
 			Self::mutate_lp_pairs(asset_0, asset_1);
@@ -975,15 +1014,15 @@ pub mod pallet {
 		#[allow(clippy::too_many_arguments)]
 		pub fn bootstrap_update(
 			origin: OriginFor<T>,
-			asset_0: AssetId,
-			asset_1: AssetId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
 			#[pallet::compact] target_supply_0: AssetBalance,
 			#[pallet::compact] target_supply_1: AssetBalance,
 			#[pallet::compact] capacity_supply_0: AssetBalance,
 			#[pallet::compact] capacity_supply_1: AssetBalance,
 			#[pallet::compact] end: T::BlockNumber,
-			rewards: Vec<AssetId>,
-			limits: Vec<(AssetId, AssetBalance)>,
+			rewards: Vec<T::AssetId>,
+			limits: Vec<(T::AssetId, AssetBalance)>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			let pair = Self::sort_asset_id(asset_0, asset_1);
@@ -1020,12 +1059,12 @@ pub mod pallet {
 						rewards
 							.into_iter()
 							.map(|asset_id| (asset_id, Zero::zero()))
-							.collect::<BTreeMap<AssetId, AssetBalance>>(),
+							.collect::<BTreeMap<T::AssetId, AssetBalance>>(),
 					);
 
 					BootstrapLimits::<T>::insert(
 						pair,
-						limits.into_iter().collect::<BTreeMap<AssetId, AssetBalance>>(),
+						limits.into_iter().collect::<BTreeMap<T::AssetId, AssetBalance>>(),
 					);
 
 					Ok(())
@@ -1056,8 +1095,8 @@ pub mod pallet {
 		#[frame_support::transactional]
 		pub fn bootstrap_refund(
 			origin: OriginFor<T>,
-			asset_0: AssetId,
-			asset_1: AssetId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::do_bootstrap_refund(who, asset_0, asset_1)
@@ -1067,9 +1106,9 @@ pub mod pallet {
 		#[frame_support::transactional]
 		pub fn bootstrap_charge_reward(
 			origin: OriginFor<T>,
-			asset_0: AssetId,
-			asset_1: AssetId,
-			charge_rewards: Vec<(AssetId, AssetBalance)>,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
+			charge_rewards: Vec<(T::AssetId, AssetBalance)>,
 		) -> DispatchResult {
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 			let who = ensure_signed(origin)?;
@@ -1100,8 +1139,8 @@ pub mod pallet {
 		#[frame_support::transactional]
 		pub fn bootstrap_withdraw_reward(
 			origin: OriginFor<T>,
-			asset_0: AssetId,
-			asset_1: AssetId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
 			recipient: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			ensure_root(origin)?;

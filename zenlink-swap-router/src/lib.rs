@@ -96,7 +96,7 @@ pub mod pallet {
 			+ TypeInfo
 			+ MaxEncodedLen;
 
-		type NormalAmm: ExportZenlink<AccountIdOf<Self>>;
+		type NormalAmm: ExportZenlink<AccountIdOf<Self>, AssetId>;
 
 		type StableAMM: StableAmmApi<
 			Self::StablePoolId,

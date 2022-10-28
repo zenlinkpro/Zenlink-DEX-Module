@@ -35,15 +35,22 @@ impl<ParaChains: Get<Vec<(MultiLocation, u128)>>> FilterAssetLocation for Truste
 	}
 }
 
-pub struct TransactorAdaptor<ZenlinkAssets, AccountIdConverter, AccountId>(
-	PhantomData<(ZenlinkAssets, AccountIdConverter, AccountId)>,
-);
+pub struct TransactorAdaptor<
+	ZenlinkAssets,
+	AccountIdConverter,
+	AccountId,
+	AssetIdConverter,
+	AssetId,
+>(PhantomData<(ZenlinkAssets, AccountIdConverter, AccountId, AssetIdConverter, AssetId)>);
 
 impl<
-		ZenlinkAssets: MultiAssetsHandler<AccountId>,
+		ZenlinkAssets: MultiAssetsHandler<AccountId, AssetId>,
 		AccountIdConverter: Convert<MultiLocation, AccountId>,
 		AccountId: sp_std::fmt::Debug + Clone,
-	> TransactAsset for TransactorAdaptor<ZenlinkAssets, AccountIdConverter, AccountId>
+		AssetIdConverter: Convert<MultiLocation, AssetId>,
+		AssetId: sp_std::fmt::Debug + Clone + Copy,
+	> TransactAsset
+	for TransactorAdaptor<ZenlinkAssets, AccountIdConverter, AccountId, AssetIdConverter, AssetId>
 {
 	fn deposit_asset(asset: &MultiAsset, who: &MultiLocation) -> XcmResult {
 		log::info!(target: LOG_TARGET, "deposit_asset: asset = {:?}, who = {:?}", asset, who,);
@@ -54,8 +61,8 @@ impl<
 		match &asset.id {
 			XcmAssetId::Concrete(location) => {
 				if let Fungibility::Fungible(amount) = asset.fun {
-					let asset_id = multilocation_to_asset(location)
-						.ok_or(XcmError::FailedToTransactAsset("unKnown asset"))?;
+					let asset_id = AssetIdConverter::convert_ref(location)
+						.map_err(|()| XcmError::FailedToTransactAsset("unKnown asset"))?;
 
 					ZenlinkAssets::deposit(asset_id, &who, amount)
 						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
@@ -77,8 +84,8 @@ impl<
 		match &asset.id {
 			XcmAssetId::Concrete(location) =>
 				if let Fungibility::Fungible(amount) = asset.fun {
-					let asset_id = multilocation_to_asset(location)
-						.ok_or(XcmError::FailedToTransactAsset("unKnown asset"))?;
+					let asset_id = AssetIdConverter::convert_ref(location)
+						.map_err(|()| XcmError::FailedToTransactAsset("unKnown asset"))?;
 
 					ZenlinkAssets::withdraw(asset_id, &who, amount)
 						.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
@@ -88,20 +95,5 @@ impl<
 				},
 			_ => Err(XcmError::NotWithdrawable),
 		}
-	}
-}
-
-fn multilocation_to_asset(location: &MultiLocation) -> Option<AssetId> {
-	if location.parents != 1 {
-		return None
-	}
-
-	match location.interior {
-		Junctions::X3(
-			Junction::Parachain(chain_id),
-			Junction::PalletInstance(asset_type),
-			Junction::GeneralIndex(asset_index),
-		) => Some(AssetId { chain_id, asset_type, asset_index: asset_index as u64 }),
-		_ => None,
 	}
 }
