@@ -1,6 +1,31 @@
 // Copyright 2021-2022 Zenlink.
 // Licensed under Apache 2.0.
 
+//! # Stable AMM Pallet
+//!
+//! Based on the Curve V1 StableSwap architecture.
+//!
+//! There are two categories of pool:
+//! - Basic: pairs two or more stablecoins
+//! - Meta: pairs stablecoins with the LP token of another base pool
+//!
+//! ## Overview
+//!
+//! This pallet provides functionality for:
+//!
+//! - Creating pools
+//! - Adding / removing liquidity
+//! - Swapping currencies
+//! - Ramping of A
+//!
+//! ### Terminology
+//!
+//! - **Amplification Coefficient:** This determines a pool's tolerance for imbalance.
+//!
+//! - **Swap Fee:** The fee taken from the output currency.
+//!
+//! - **Admin Fee:** The percentage of the fee taken from the swap fee, claimable by the pool owner.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 #![allow(clippy::too_many_arguments)]
@@ -248,9 +273,9 @@ pub mod pallet {
 		ExceedMaxAChange,
 		/// The ramping A of this pool is already stopped.
 		AlreadyStoppedRampA,
-		/// The fee parameter exceed MAX_FEE when create pool.
+		/// The fee parameter exceeds MAX_SWAP_FEE when create pool.
 		ExceedMaxFee,
-		/// The admin fee parameter exceed MAX_ADMIN_FEE when create pool.
+		/// The admin fee parameter exceeds MAX_ADMIN_FEE when create pool.
 		ExceedMaxAdminFee,
 		/// The A parameter exceed MAX_A when create pool.
 		ExceedMaxA,

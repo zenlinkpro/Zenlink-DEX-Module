@@ -29,8 +29,8 @@ pub const BASE_CACHE_EXPIRE_TIME: u64 = 10 * MINUTE;
 // max_a with precision
 pub const MAX_A: Number = 1_000_000;
 pub const MAX_A_CHANGE: u32 = 10;
-pub const MAX_ADMIN_FEE: Number = 10_000_000_000;
-pub const MAX_SWAP_FEE: Number = 100_000_000;
+pub const MAX_ADMIN_FEE: Number = 10_000_000_000; // 100%
+pub const MAX_SWAP_FEE: Number = 100_000_000; // 1%
 
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, Debug, TypeInfo)]
 pub struct BasePool<CurrencyId, AccountId, BoundString> {

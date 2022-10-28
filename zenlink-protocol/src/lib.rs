@@ -1,6 +1,19 @@
 // Copyright 2021-2022 Zenlink.
 // Licensed under Apache 2.0.
 
+//! # Standard AMM Pallet
+//!
+//! Based on the Uniswap V2 architecture.
+//!
+//! ## Overview
+//!
+//! This pallet provides functionality for:
+//!
+//! - Creating pools
+//! - Bootstrapping pools
+//! - Adding / removing liquidity
+//! - Swapping currencies
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
