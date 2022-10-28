@@ -75,9 +75,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System Account (r:1 w:1)
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	fn create_base_pool() -> Weight {
-		(39_366_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(39_366_000)
+			.saturating_add(T::DbWeight::get().reads(4 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 	// Storage: ZenlinkStableAmm LpCurrencies (r:2 w:1)
 	// Storage: ZenlinkStableAmm NextPoolId (r:1 w:1)
@@ -86,9 +86,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Timestamp Now (r:1 w:0)
 	// Storage: Tokens TotalIssuance (r:1 w:0)
 	fn create_meta_pool() -> Weight {
-		(61_890_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(8 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(61_890_000)
+			.saturating_add(T::DbWeight::get().reads(8 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -96,27 +96,27 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Tokens Accounts (r:5 w:5)
 	// Storage: System Account (r:1 w:1)
 	fn add_liquidity() -> Weight {
-		(115_960_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(9 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		Weight::from_ref_time(115_960_000)
+			.saturating_add(T::DbWeight::get().reads(9 as u64))
+			.saturating_add(T::DbWeight::get().writes(8 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens Accounts (r:4 w:4)
 	// Storage: Timestamp Now (r:1 w:0)
 	// Storage: System Account (r:1 w:0)
 	fn swap() -> Weight {
-		(85_525_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(7 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(85_525_000)
+			.saturating_add(T::DbWeight::get().reads(7 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
 	// Storage: Tokens Accounts (r:5 w:5)
 	// Storage: System Account (r:1 w:0)
 	fn remove_liquidity() -> Weight {
-		(90_226_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(8 as Weight))
-			.saturating_add(T::DbWeight::get().writes(7 as Weight))
+		Weight::from_ref_time(90_226_000)
+			.saturating_add(T::DbWeight::get().reads(8 as u64))
+			.saturating_add(T::DbWeight::get().writes(7 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -124,9 +124,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Timestamp Now (r:1 w:0)
 	// Storage: System Account (r:1 w:0)
 	fn remove_liquidity_one_currency() -> Weight {
-		(92_100_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(7 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(92_100_000)
+			.saturating_add(T::DbWeight::get().reads(7 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -134,9 +134,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Tokens Accounts (r:5 w:5)
 	// Storage: System Account (r:1 w:0)
 	fn remove_liquidity_imbalance() -> Weight {
-		(114_539_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(9 as Weight))
-			.saturating_add(T::DbWeight::get().writes(7 as Weight))
+		Weight::from_ref_time(114_539_000)
+			.saturating_add(T::DbWeight::get().reads(9 as u64))
+			.saturating_add(T::DbWeight::get().writes(7 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Tokens TotalIssuance (r:2 w:2)
@@ -144,18 +144,18 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Tokens Accounts (r:9 w:9)
 	// Storage: System Account (r:1 w:1)
 	fn add_pool_and_base_pool_liquidity() -> Weight {
-		(226_376_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(15 as Weight))
-			.saturating_add(T::DbWeight::get().writes(14 as Weight))
+		Weight::from_ref_time(226_376_000)
+			.saturating_add(T::DbWeight::get().reads(15 as u64))
+			.saturating_add(T::DbWeight::get().writes(14 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Tokens Accounts (r:9 w:9)
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	// Storage: System Account (r:2 w:0)
 	fn remove_pool_and_base_pool_liquidity() -> Weight {
-		(178_743_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(15 as Weight))
-			.saturating_add(T::DbWeight::get().writes(13 as Weight))
+		Weight::from_ref_time(178_743_000)
+			.saturating_add(T::DbWeight::get().reads(15 as u64))
+			.saturating_add(T::DbWeight::get().writes(13 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Tokens Accounts (r:5 w:5)
@@ -163,9 +163,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Timestamp Now (r:1 w:0)
 	// Storage: System Account (r:2 w:0)
 	fn remove_pool_and_base_pool_liquidity_one_currency() -> Weight {
-		(166_453_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(166_453_000)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(9 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -173,9 +173,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Tokens Accounts (r:7 w:6)
 	// Storage: System Account (r:1 w:0)
 	fn swap_pool_from_base() -> Weight {
-		(176_670_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(176_670_000)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(9 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Tokens Accounts (r:6 w:6)
@@ -183,9 +183,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System Account (r:2 w:0)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
 	fn swap_pool_to_base() -> Weight {
-		(171_070_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(171_070_000)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(9 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Timestamp Now (r:1 w:0)
@@ -193,17 +193,17 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Tokens TotalIssuance (r:1 w:1)
 	// Storage: System Account (r:2 w:1)
 	fn swap_meta_pool_underlying() -> Weight {
-		(177_071_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(10 as Weight))
+		Weight::from_ref_time(177_071_000)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(10 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens Accounts (r:3 w:2)
 	// Storage: System Account (r:1 w:0)
 	fn withdraw_admin_fee() -> Weight {
-		(63_386_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(5 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(63_386_000)
+			.saturating_add(T::DbWeight::get().reads(5 as u64))
+			.saturating_add(T::DbWeight::get().writes(3 as u64))
 	}
 }
 
@@ -214,9 +214,9 @@ impl WeightInfo for () {
 	// Storage: System Account (r:1 w:1)
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	fn create_base_pool() -> Weight {
-		(39_366_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(4 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(39_366_000)
+			.saturating_add(RocksDbWeight::get().reads(4 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 	// Storage: ZenlinkStableAmm LpCurrencies (r:2 w:1)
 	// Storage: ZenlinkStableAmm NextPoolId (r:1 w:1)
@@ -225,9 +225,9 @@ impl WeightInfo for () {
 	// Storage: Timestamp Now (r:1 w:0)
 	// Storage: Tokens TotalIssuance (r:1 w:0)
 	fn create_meta_pool() -> Weight {
-		(61_890_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(8 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(61_890_000)
+			.saturating_add(RocksDbWeight::get().reads(8 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -235,27 +235,27 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:5 w:5)
 	// Storage: System Account (r:1 w:1)
 	fn add_liquidity() -> Weight {
-		(115_960_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(9 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
+		Weight::from_ref_time(115_960_000)
+			.saturating_add(RocksDbWeight::get().reads(9 as u64))
+			.saturating_add(RocksDbWeight::get().writes(8 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens Accounts (r:4 w:4)
 	// Storage: Timestamp Now (r:1 w:0)
 	// Storage: System Account (r:1 w:0)
 	fn swap() -> Weight {
-		(85_525_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(7 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(85_525_000)
+			.saturating_add(RocksDbWeight::get().reads(7 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
 	// Storage: Tokens Accounts (r:5 w:5)
 	// Storage: System Account (r:1 w:0)
 	fn remove_liquidity() -> Weight {
-		(90_226_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(8 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(7 as Weight))
+		Weight::from_ref_time(90_226_000)
+			.saturating_add(RocksDbWeight::get().reads(8 as u64))
+			.saturating_add(RocksDbWeight::get().writes(7 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -263,9 +263,9 @@ impl WeightInfo for () {
 	// Storage: Timestamp Now (r:1 w:0)
 	// Storage: System Account (r:1 w:0)
 	fn remove_liquidity_one_currency() -> Weight {
-		(92_100_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(7 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(92_100_000)
+			.saturating_add(RocksDbWeight::get().reads(7 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -273,9 +273,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:5 w:5)
 	// Storage: System Account (r:1 w:0)
 	fn remove_liquidity_imbalance() -> Weight {
-		(114_539_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(9 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(7 as Weight))
+		Weight::from_ref_time(114_539_000)
+			.saturating_add(RocksDbWeight::get().reads(9 as u64))
+			.saturating_add(RocksDbWeight::get().writes(7 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Tokens TotalIssuance (r:2 w:2)
@@ -283,18 +283,18 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:9 w:9)
 	// Storage: System Account (r:1 w:1)
 	fn add_pool_and_base_pool_liquidity() -> Weight {
-		(226_376_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(15 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(14 as Weight))
+		Weight::from_ref_time(226_376_000)
+			.saturating_add(RocksDbWeight::get().reads(15 as u64))
+			.saturating_add(RocksDbWeight::get().writes(14 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Tokens Accounts (r:9 w:9)
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	// Storage: System Account (r:2 w:0)
 	fn remove_pool_and_base_pool_liquidity() -> Weight {
-		(178_743_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(15 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(13 as Weight))
+		Weight::from_ref_time(178_743_000)
+			.saturating_add(RocksDbWeight::get().reads(15 as u64))
+			.saturating_add(RocksDbWeight::get().writes(13 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Tokens Accounts (r:5 w:5)
@@ -302,9 +302,9 @@ impl WeightInfo for () {
 	// Storage: Timestamp Now (r:1 w:0)
 	// Storage: System Account (r:2 w:0)
 	fn remove_pool_and_base_pool_liquidity_one_currency() -> Weight {
-		(166_453_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(166_453_000)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(9 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
@@ -312,9 +312,9 @@ impl WeightInfo for () {
 	// Storage: Tokens Accounts (r:7 w:6)
 	// Storage: System Account (r:1 w:0)
 	fn swap_pool_from_base() -> Weight {
-		(176_670_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(176_670_000)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(9 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Tokens Accounts (r:6 w:6)
@@ -322,9 +322,9 @@ impl WeightInfo for () {
 	// Storage: System Account (r:2 w:0)
 	// Storage: Tokens TotalIssuance (r:1 w:1)
 	fn swap_pool_to_base() -> Weight {
-		(171_070_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(171_070_000)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(9 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:2 w:2)
 	// Storage: Timestamp Now (r:1 w:0)
@@ -332,16 +332,16 @@ impl WeightInfo for () {
 	// Storage: Tokens TotalIssuance (r:1 w:1)
 	// Storage: System Account (r:2 w:1)
 	fn swap_meta_pool_underlying() -> Weight {
-		(177_071_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(10 as Weight))
+		Weight::from_ref_time(177_071_000)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(10 as u64))
 	}
 	// Storage: ZenlinkStableAmm Pools (r:1 w:1)
 	// Storage: Tokens Accounts (r:3 w:2)
 	// Storage: System Account (r:1 w:0)
 	fn withdraw_admin_fee() -> Weight {
-		(63_386_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(5 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(63_386_000)
+			.saturating_add(RocksDbWeight::get().reads(5 as u64))
+			.saturating_add(RocksDbWeight::get().writes(3 as u64))
 	}
 }

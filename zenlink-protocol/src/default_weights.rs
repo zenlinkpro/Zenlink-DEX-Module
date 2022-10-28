@@ -67,15 +67,15 @@ pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: ZenlinkProtocol FeeMeta (r:1 w:1)
 	fn set_fee_receiver() -> Weight {
-		(6_845_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(6_845_000)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: ZenlinkProtocol FeeMeta (r:1 w:1)
 	fn set_fee_point() -> Weight {
-		(5_987_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(5_987_000)
+			.saturating_add(T::DbWeight::get().reads(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: ParachainInfo ParachainId (r:1 w:0)
 	// Storage: Tokens TotalIssuance (r:2 w:0)
@@ -86,9 +86,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System Events (r:1 w:1)
 	// Storage: ZenlinkProtocol LiquidityPairs (r:0 w:1)
 	fn create_pair() -> Weight {
-		(38_251_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(8 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(38_251_000)
+			.saturating_add(T::DbWeight::get().reads(8 as u64))
+			.saturating_add(T::DbWeight::get().writes(4 as u64))
 	}
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
 	// Storage: System Number (r:1 w:0)
@@ -96,9 +96,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System EventCount (r:1 w:1)
 	// Storage: System Events (r:1 w:1)
 	fn bootstrap_create() -> Weight {
-		(23_390_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(5 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(23_390_000)
+			.saturating_add(T::DbWeight::get().reads(5 as u64))
+			.saturating_add(T::DbWeight::get().writes(3 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
@@ -110,9 +110,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System EventCount (r:1 w:1)
 	// Storage: System Events (r:1 w:1)
 	fn bootstrap_contribute() -> Weight {
-		(132_175_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(132_175_000)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(9 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:0)
@@ -126,9 +126,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System EventCount (r:1 w:1)
 	// Storage: System Events (r:1 w:1)
 	fn bootstrap_claim() -> Weight {
-		(97_310_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(97_310_000)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(5 as u64))
 	}
 	// Storage: ParachainInfo ParachainId (r:1 w:0)
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
@@ -142,9 +142,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: ZenlinkProtocol LiquidityPairs (r:0 w:1)
 	// Storage: ZenlinkProtocol BootstrapEndStatus (r:0 w:1)
 	fn bootstrap_end() -> Weight {
-		(182_207_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(14 as Weight))
-			.saturating_add(T::DbWeight::get().writes(12 as Weight))
+		Weight::from_ref_time(182_207_000)
+			.saturating_add(T::DbWeight::get().reads(14 as u64))
+			.saturating_add(T::DbWeight::get().writes(12 as u64))
 	}
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
 	// Storage: System Number (r:1 w:0)
@@ -152,9 +152,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System EventCount (r:1 w:1)
 	// Storage: System Events (r:1 w:1)
 	fn bootstrap_update() -> Weight {
-		(26_462_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(5 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(26_462_000)
+			.saturating_add(T::DbWeight::get().reads(5 as u64))
+			.saturating_add(T::DbWeight::get().writes(3 as u64))
 	}
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
 	// Storage: System Number (r:1 w:0)
@@ -166,9 +166,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System EventCount (r:1 w:1)
 	// Storage: System Events (r:1 w:1)
 	fn bootstrap_refund() -> Weight {
-		(109_743_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(12 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		Weight::from_ref_time(109_743_000)
+			.saturating_add(T::DbWeight::get().reads(12 as u64))
+			.saturating_add(T::DbWeight::get().writes(8 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
@@ -183,9 +183,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System Events (r:1 w:1)
 	// Storage: System Account (r:1 w:1)
 	fn add_liquidity() -> Weight {
-		(208_373_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(16 as Weight))
-			.saturating_add(T::DbWeight::get().writes(11 as Weight))
+		Weight::from_ref_time(208_373_000)
+			.saturating_add(T::DbWeight::get().reads(16 as u64))
+			.saturating_add(T::DbWeight::get().writes(11 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
@@ -200,9 +200,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System Events (r:1 w:1)
 	// Storage: System Account (r:1 w:0)
 	fn remove_liquidity() -> Weight {
-		(168_013_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(16 as Weight))
-			.saturating_add(T::DbWeight::get().writes(10 as Weight))
+		Weight::from_ref_time(168_013_000)
+			.saturating_add(T::DbWeight::get().reads(16 as u64))
+			.saturating_add(T::DbWeight::get().writes(10 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ParachainInfo ParachainId (r:1 w:0)
@@ -213,9 +213,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: ZenlinkProtocol PairStatuses (r:2 w:0)
 	// Storage: System Account (r:2 w:0)
 	fn swap_exact_assets_for_assets() -> Weight {
-		(191_434_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(15 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		Weight::from_ref_time(191_434_000)
+			.saturating_add(T::DbWeight::get().reads(15 as u64))
+			.saturating_add(T::DbWeight::get().writes(8 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ParachainInfo ParachainId (r:1 w:0)
@@ -226,9 +226,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: ZenlinkProtocol PairStatuses (r:2 w:0)
 	// Storage: System Account (r:2 w:0)
 	fn swap_assets_for_exact_assets() -> Weight {
-		(192_004_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(15 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		Weight::from_ref_time(192_004_000)
+			.saturating_add(T::DbWeight::get().reads(15 as u64))
+			.saturating_add(T::DbWeight::get().writes(8 as u64))
 	}
 }
 
@@ -236,15 +236,15 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 impl WeightInfo for () {
 	// Storage: ZenlinkProtocol FeeMeta (r:1 w:1)
 	fn set_fee_receiver() -> Weight {
-		(6_845_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(6_845_000)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: ZenlinkProtocol FeeMeta (r:1 w:1)
 	fn set_fee_point() -> Weight {
-		(5_987_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+		Weight::from_ref_time(5_987_000)
+			.saturating_add(RocksDbWeight::get().reads(1 as u64))
+			.saturating_add(RocksDbWeight::get().writes(1 as u64))
 	}
 	// Storage: ParachainInfo ParachainId (r:1 w:0)
 	// Storage: Tokens TotalIssuance (r:2 w:0)
@@ -255,9 +255,9 @@ impl WeightInfo for () {
 	// Storage: System Events (r:1 w:1)
 	// Storage: ZenlinkProtocol LiquidityPairs (r:0 w:1)
 	fn create_pair() -> Weight {
-		(38_251_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(8 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(4 as Weight))
+		Weight::from_ref_time(38_251_000)
+			.saturating_add(RocksDbWeight::get().reads(8 as u64))
+			.saturating_add(RocksDbWeight::get().writes(4 as u64))
 	}
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
 	// Storage: System Number (r:1 w:0)
@@ -265,9 +265,9 @@ impl WeightInfo for () {
 	// Storage: System EventCount (r:1 w:1)
 	// Storage: System Events (r:1 w:1)
 	fn bootstrap_create() -> Weight {
-		(23_390_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(5 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(23_390_000)
+			.saturating_add(RocksDbWeight::get().reads(5 as u64))
+			.saturating_add(RocksDbWeight::get().writes(3 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
@@ -279,9 +279,9 @@ impl WeightInfo for () {
 	// Storage: System EventCount (r:1 w:1)
 	// Storage: System Events (r:1 w:1)
 	fn bootstrap_contribute() -> Weight {
-		(132_175_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(9 as Weight))
+		Weight::from_ref_time(132_175_000)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(9 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:0)
@@ -295,9 +295,9 @@ impl WeightInfo for () {
 	// Storage: System EventCount (r:1 w:1)
 	// Storage: System Events (r:1 w:1)
 	fn bootstrap_claim() -> Weight {
-		(97_310_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(5 as Weight))
+		Weight::from_ref_time(97_310_000)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(5 as u64))
 	}
 	// Storage: ParachainInfo ParachainId (r:1 w:0)
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
@@ -311,9 +311,9 @@ impl WeightInfo for () {
 	// Storage: ZenlinkProtocol LiquidityPairs (r:0 w:1)
 	// Storage: ZenlinkProtocol BootstrapEndStatus (r:0 w:1)
 	fn bootstrap_end() -> Weight {
-		(182_207_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(14 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(12 as Weight))
+		Weight::from_ref_time(182_207_000)
+			.saturating_add(RocksDbWeight::get().reads(14 as u64))
+			.saturating_add(RocksDbWeight::get().writes(12 as u64))
 	}
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
 	// Storage: System Number (r:1 w:0)
@@ -321,9 +321,9 @@ impl WeightInfo for () {
 	// Storage: System EventCount (r:1 w:1)
 	// Storage: System Events (r:1 w:1)
 	fn bootstrap_update() -> Weight {
-		(26_462_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(5 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+		Weight::from_ref_time(26_462_000)
+			.saturating_add(RocksDbWeight::get().reads(5 as u64))
+			.saturating_add(RocksDbWeight::get().writes(3 as u64))
 	}
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
 	// Storage: System Number (r:1 w:0)
@@ -335,9 +335,9 @@ impl WeightInfo for () {
 	// Storage: System EventCount (r:1 w:1)
 	// Storage: System Events (r:1 w:1)
 	fn bootstrap_refund() -> Weight {
-		(109_743_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(12 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
+		Weight::from_ref_time(109_743_000)
+			.saturating_add(RocksDbWeight::get().reads(12 as u64))
+			.saturating_add(RocksDbWeight::get().writes(8 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
@@ -352,9 +352,9 @@ impl WeightInfo for () {
 	// Storage: System Events (r:1 w:1)
 	// Storage: System Account (r:1 w:1)
 	fn add_liquidity() -> Weight {
-		(208_373_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(16 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(11 as Weight))
+		Weight::from_ref_time(208_373_000)
+			.saturating_add(RocksDbWeight::get().reads(16 as u64))
+			.saturating_add(RocksDbWeight::get().writes(11 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ZenlinkProtocol PairStatuses (r:1 w:1)
@@ -369,9 +369,9 @@ impl WeightInfo for () {
 	// Storage: System Events (r:1 w:1)
 	// Storage: System Account (r:1 w:0)
 	fn remove_liquidity() -> Weight {
-		(168_013_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(16 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(10 as Weight))
+		Weight::from_ref_time(168_013_000)
+			.saturating_add(RocksDbWeight::get().reads(16 as u64))
+			.saturating_add(RocksDbWeight::get().writes(10 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ParachainInfo ParachainId (r:1 w:0)
@@ -382,9 +382,9 @@ impl WeightInfo for () {
 	// Storage: ZenlinkProtocol PairStatuses (r:2 w:0)
 	// Storage: System Account (r:2 w:0)
 	fn swap_exact_assets_for_assets() -> Weight {
-		(191_434_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(15 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
+		Weight::from_ref_time(191_434_000)
+			.saturating_add(RocksDbWeight::get().reads(15 as u64))
+			.saturating_add(RocksDbWeight::get().writes(8 as u64))
 	}
 	// Storage: System Number (r:1 w:0)
 	// Storage: ParachainInfo ParachainId (r:1 w:0)
@@ -395,8 +395,8 @@ impl WeightInfo for () {
 	// Storage: ZenlinkProtocol PairStatuses (r:2 w:0)
 	// Storage: System Account (r:2 w:0)
 	fn swap_assets_for_exact_assets() -> Weight {
-		(192_004_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(15 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(8 as Weight))
+		Weight::from_ref_time(192_004_000)
+			.saturating_add(RocksDbWeight::get().reads(15 as u64))
+			.saturating_add(RocksDbWeight::get().writes(8 as u64))
 	}
 }
