@@ -227,7 +227,8 @@ impl Config for Test {
 	type Event = Event;
 	type StablePoolId = PoolId;
 	type Balance = Balance;
-	type CurrencyId = CurrencyId;
+	type StableCurrencyId = CurrencyId;
+	type NormalCurrencyId = AssetId;
 	type NormalAmm = Zenlink;
 	type StableAMM = StableAMM;
 	type WeightInfo = ();

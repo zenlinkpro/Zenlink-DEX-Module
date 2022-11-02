@@ -27,7 +27,7 @@ use frame_support::{
 	transactional,
 };
 
-use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
+use zenlink_protocol::{AssetBalance, ExportZenlink};
 use zenlink_stable_amm::traits::StableAmmApi;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo)]
@@ -47,9 +47,9 @@ pub enum StableSwapMode {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo)]
-pub enum Route<PoolId, CurrencyId> {
-	Stable(StablePath<PoolId, CurrencyId>),
-	Normal(Vec<AssetId>),
+pub enum Route<PoolId, StableCurrencyId, NormalCurrencyId> {
+	Stable(StablePath<PoolId, StableCurrencyId>),
+	Normal(Vec<NormalCurrencyId>),
 }
 
 pub use pallet::*;
@@ -88,7 +88,8 @@ pub mod pallet {
 			+ Into<AssetBalance>
 			+ TypeInfo;
 
-		type CurrencyId: Parameter
+		// The currency id use in stable amm
+		type StableCurrencyId: Parameter
 			+ Member
 			+ Copy
 			+ MaybeSerializeDeserialize
@@ -96,11 +97,20 @@ pub mod pallet {
 			+ TypeInfo
 			+ MaxEncodedLen;
 
-		type NormalAmm: ExportZenlink<AccountIdOf<Self>, AssetId>;
+		// The currency id use in standard amm
+		type NormalCurrencyId: Parameter
+			+ Member
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ Ord
+			+ TypeInfo
+			+ MaxEncodedLen;
+
+		type NormalAmm: ExportZenlink<AccountIdOf<Self>, Self::NormalCurrencyId>;
 
 		type StableAMM: StableAmmApi<
 			Self::StablePoolId,
-			Self::CurrencyId,
+			Self::StableCurrencyId,
 			AccountIdOf<Self>,
 			Self::Balance,
 		>;
@@ -135,7 +145,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			amount_in: T::Balance,
 			amount_out_min: T::Balance,
-			routes: Vec<Route<T::StablePoolId, T::CurrencyId>>,
+			routes: Vec<Route<T::StablePoolId, T::StableCurrencyId, T::NormalCurrencyId>>,
 			to: T::AccountId,
 			deadline: T::BlockNumber,
 		) -> DispatchResult {
@@ -175,7 +185,7 @@ pub mod pallet {
 impl<T: Config> Pallet<T> {
 	fn stable_swap(
 		who: &T::AccountId,
-		path: &StablePath<T::StablePoolId, T::CurrencyId>,
+		path: &StablePath<T::StablePoolId, T::StableCurrencyId>,
 		amount_in: T::Balance,
 		to: &T::AccountId,
 	) -> Result<T::Balance, DispatchError> {
@@ -235,7 +245,7 @@ impl<T: Config> Pallet<T> {
 	fn swap(
 		who: &T::AccountId,
 		amount_in: T::Balance,
-		path: &[AssetId],
+		path: &[T::NormalCurrencyId],
 		to: &T::AccountId,
 	) -> DispatchResult {
 		T::NormalAmm::inner_swap_exact_assets_for_assets(
@@ -249,7 +259,7 @@ impl<T: Config> Pallet<T> {
 
 	fn currency_index_from_stable_pool(
 		pool_id: T::StablePoolId,
-		currency_id: T::CurrencyId,
+		currency_id: T::StableCurrencyId,
 	) -> Result<u32, DispatchError> {
 		T::StableAMM::currency_index(pool_id, currency_id)
 			.ok_or_else(|| Error::<T>::MismatchPoolAndCurrencyId.into())

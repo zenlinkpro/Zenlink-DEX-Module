@@ -167,7 +167,8 @@ impl zenlink_swap_router::Config for Runtime {
 	type Event = super::Event;
 	type StablePoolId = PoolId;
 	type Balance = Balance;
-	type CurrencyId = CurrencyId;
+	type StableCurrencyId = CurrencyId;
+	type NormalCurrencyId = AssetId;
 	type NormalAmm = ZenlinkProtocol;
 	type StableAMM = ZenlinkStableAmm;
 	type WeightInfo = ();
