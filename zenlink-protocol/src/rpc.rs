@@ -12,7 +12,7 @@ use super::*;
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct PairInfo<AccountId, AssetBalance> {
+pub struct PairInfo<AccountId, AssetBalance, AssetId> {
 	pub asset_0: AssetId,
 	pub asset_1: AssetId,
 
@@ -26,13 +26,13 @@ pub struct PairInfo<AccountId, AssetBalance> {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn supply_out_amount(supply: AssetBalance, path: Vec<AssetId>) -> AssetBalance {
+	pub fn supply_out_amount(supply: AssetBalance, path: Vec<T::AssetId>) -> AssetBalance {
 		Self::get_amount_out_by_path(supply, &path).map_or(AssetBalance::default(), |amounts| {
 			*amounts.last().unwrap_or(&AssetBalance::default())
 		})
 	}
 
-	pub fn desired_in_amount(desired_amount: AssetBalance, path: Vec<AssetId>) -> AssetBalance {
+	pub fn desired_in_amount(desired_amount: AssetBalance, path: Vec<T::AssetId>) -> AssetBalance {
 		Self::get_amount_in_by_path(desired_amount, &path)
 			.map_or(AssetBalance::default(), |amounts| {
 				*amounts.first().unwrap_or(&AssetBalance::default())
@@ -40,8 +40,8 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_estimate_lptoken(
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 		amount_0_desired: AssetBalance,
 		amount_1_desired: AssetBalance,
 		amount_0_min: AssetBalance,
@@ -75,9 +75,9 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn get_pair_by_asset_id(
-		asset_0: AssetId,
-		asset_1: AssetId,
-	) -> Option<PairInfo<T::AccountId, AssetBalance>> {
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
+	) -> Option<PairInfo<T::AccountId, AssetBalance, T::AssetId>> {
 		let pair_account = Self::pair_account_id(asset_0, asset_1);
 		let lp_asset_id = Self::lp_asset_id(&asset_0, &asset_1);
 
@@ -100,12 +100,12 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn get_sovereigns_info(asset_id: &AssetId) -> Vec<(u32, T::AccountId, AssetBalance)> {
+	pub fn get_sovereigns_info(asset_id: &T::AssetId) -> Vec<(u32, T::AccountId, AssetBalance)> {
 		T::TargetChains::get()
 			.iter()
 			.filter_map(|(location, _)| match location.interior {
 				Junctions::X1(Junction::Parachain(id)) => {
-					if let Ok(sovereign) = T::Conversion::convert_ref(location) {
+					if let Ok(sovereign) = T::AccountIdConverter::convert_ref(location) {
 						Some((id, sovereign))
 					} else {
 						None

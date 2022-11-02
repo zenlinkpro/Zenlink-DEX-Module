@@ -18,11 +18,11 @@ use sp_rpc::number::NumberOrHex;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
-use zenlink_protocol::{AssetBalance, AssetId, PairInfo};
+use zenlink_protocol::{AssetBalance, PairInfo};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 #[rpc(client, server)]
-pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
+pub trait ZenlinkProtocolApi<BlockHash, AccountId, AssetId> {
 	#[method(name = "zenlinkProtocol_getBalance")]
 	fn get_balance(
 		&self,
@@ -44,7 +44,7 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId> {
 		asset_0: AssetId,
 		asset_1: AssetId,
 		at: Option<BlockHash>,
-	) -> RpcResult<Option<PairInfo<AccountId, NumberOrHex>>>;
+	) -> RpcResult<Option<PairInfo<AccountId, NumberOrHex, AssetId>>>;
 
 	#[method(name = "zenlinkProtocol_getAmountInPrice")]
 	fn get_amount_in_price(
@@ -86,15 +86,16 @@ impl<C, M> ZenlinkProtocol<C, M> {
 	}
 }
 
-impl<C, Block, AccountId> ZenlinkProtocolApiServer<<Block as BlockT>::Hash, AccountId>
-	for ZenlinkProtocol<C, Block>
+impl<C, Block, AccountId, AssetId>
+	ZenlinkProtocolApiServer<<Block as BlockT>::Hash, AccountId, AssetId> for ZenlinkProtocol<C, Block>
 where
 	Block: BlockT,
 	AccountId: Codec,
+	AssetId: Codec,
 	C: Send + Sync + 'static,
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId, AssetId>,
 {
 	//buy amount asset price
 	fn get_amount_in_price(
@@ -191,7 +192,7 @@ where
 		asset_0: AssetId,
 		asset_1: AssetId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> RpcResult<Option<PairInfo<AccountId, NumberOrHex>>> {
+	) -> RpcResult<Option<PairInfo<AccountId, NumberOrHex, AssetId>>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 

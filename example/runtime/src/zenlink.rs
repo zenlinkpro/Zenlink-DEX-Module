@@ -13,7 +13,7 @@ use zenlink_vault::VaultAssetGenerate;
 parameter_types! {
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
-	pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
+	pub ZenlinkRegisteredParaChains: Vec<(MultiLocation, u128)> = vec![
 		(make_x2_location(2001), 10_000_000_000),
 	];
 	pub const StringLimit: u32 = 50;
@@ -25,9 +25,12 @@ impl zenlink_protocol::Config for Runtime {
 	type Event = super::Event;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
-	type TargetChains = ZenlinkRegistedParaChains;
+	type AssetId = AssetId;
+	type LpGenerate = PairLpGenerate<Self>;
+	type TargetChains = ZenlinkRegisteredParaChains;
 	type SelfParaId = SelfParaId;
-	type Conversion = ();
+	type AccountIdConverter = ();
+	type AssetIdConverter = AssetIdConverter;
 	type XcmExecutor = ();
 	type WeightInfo = ();
 }

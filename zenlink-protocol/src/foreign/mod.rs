@@ -21,7 +21,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Implement of the transfer function.
 	pub(crate) fn foreign_transfer(
-		id: AssetId,
+		id: T::AssetId,
 		owner: &T::AccountId,
 		target: &T::AccountId,
 		amount: AssetBalance,
@@ -45,7 +45,7 @@ impl<T: Config> Pallet<T> {
 	/// Increase the total supply of the foreign
 	/// Note: no need check Exists, because it be created when it not exist
 	pub(crate) fn foreign_mint(
-		id: AssetId,
+		id: T::AssetId,
 		owner: &T::AccountId,
 		amount: AssetBalance,
 	) -> DispatchResult {
@@ -76,7 +76,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Decrease the total supply of the foreign
 	pub(crate) fn foreign_burn(
-		id: AssetId,
+		id: T::AssetId,
 		owner: &T::AccountId,
 		amount: AssetBalance,
 	) -> DispatchResult {
@@ -100,16 +100,16 @@ impl<T: Config> Pallet<T> {
 	// Public immutable functions
 
 	/// Get the foreign `id` balance of `owner`.
-	pub fn foreign_balance_of(id: AssetId, owner: &T::AccountId) -> AssetBalance {
+	pub fn foreign_balance_of(id: T::AssetId, owner: &T::AccountId) -> AssetBalance {
 		Self::foreign_ledger((id, owner))
 	}
 
 	/// Get the total supply of an foreign `id`.
-	pub fn foreign_total_supply(id: AssetId) -> AssetBalance {
+	pub fn foreign_total_supply(id: T::AssetId) -> AssetBalance {
 		Self::foreign_meta(id)
 	}
 
-	pub fn foreign_is_exists(id: AssetId) -> bool {
+	pub fn foreign_is_exists(id: T::AssetId) -> bool {
 		Self::foreign_list().contains(&id)
 	}
 }

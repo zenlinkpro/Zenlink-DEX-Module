@@ -8,13 +8,13 @@ impl<T: Config> Pallet<T> {
 	// Check the native currency must be more than ExistentialDeposit,
 	// other assets always return true
 	pub(crate) fn check_existential_deposit(
-		asset_id: AssetId,
+		asset_id: T::AssetId,
 		amount: AssetBalance,
 	) -> Option<bool> {
 		T::TargetChains::get()
 			.iter()
-			.find(|(l, _)| *l == make_x2_location(asset_id.chain_id))
-			.map(|&(_, minimum_balance)| amount >= minimum_balance || asset_id.asset_type != NATIVE)
+			.find(|(l, _)| *l == T::AssetIdConverter::make_x2_location(&asset_id))
+			.map(|&(_, minimum_balance)| amount >= minimum_balance)
 	}
 
 	// Make the deposit foreign order
@@ -77,7 +77,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub(crate) fn make_xcm_transfer_to_parachain(
-		asset_id: &AssetId,
+		asset_id: &T::AssetId,
 		para_id: ParaId,
 		recipient: MultiLocation,
 		amount: AssetBalance,
@@ -86,21 +86,15 @@ impl<T: Config> Pallet<T> {
 			return Err(XcmError::FailedToTransactAsset("Invalid AssetId"))
 		}
 
-		let asset_location = MultiLocation::new(
-			1,
-			Junctions::X3(
-				Junction::Parachain(asset_id.chain_id),
-				Junction::PalletInstance(asset_id.asset_type),
-				Junction::GeneralIndex { 0: asset_id.asset_index as u128 },
-			),
-		);
+		let asset_location = T::AssetIdConverter::make_x3_location(asset_id);
 
-		let seld_chain_id: u32 = T::SelfParaId::get();
-		if asset_id.chain_id == seld_chain_id {
+		let self_chain_id: u32 = T::SelfParaId::get();
+		let asset_chain_id = T::AssetIdConverter::chain_id(asset_id);
+		if asset_chain_id == self_chain_id {
 			Ok(Self::make_xcm_lateral_transfer_native(asset_location, para_id, recipient, amount))
 		} else {
 			Ok(Self::make_xcm_lateral_transfer_foreign(
-				ParaId::from(asset_id.chain_id),
+				ParaId::from(asset_chain_id),
 				asset_location,
 				para_id,
 				recipient,

@@ -25,7 +25,10 @@ use sp_runtime::{
 use crate as router;
 use crate::{Config, Pallet};
 use orml_traits::{parameter_type_with_key, MultiCurrency};
-use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets, LOCAL};
+use zenlink_protocol::{
+	AssetBalance, AssetId, AssetIdConverter, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
+	LOCAL,
+};
 use zenlink_stable_amm::traits::{StablePoolLpCurrencyIdGenerate, ValidateCurrency};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -210,10 +213,13 @@ impl zenlink_protocol::Config for Test {
 	type Event = Event;
 	type MultiAssetsHandler = ZenlinkMultiAssets<Zenlink, Balances, LocalAssetAdaptor<Tokens>>;
 	type PalletId = ZenlinkPalletId;
+	type AssetId = AssetId;
+	type LpGenerate = PairLpGenerate<Self>;
 	type TargetChains = ();
 	type SelfParaId = SelfParaId;
 	type XcmExecutor = ();
-	type Conversion = ();
+	type AccountIdConverter = ();
+	type AssetIdConverter = AssetIdConverter;
 	type WeightInfo = ();
 }
 

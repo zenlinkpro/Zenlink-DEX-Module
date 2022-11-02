@@ -23,7 +23,7 @@ impl<T: Config> Pallet<T> {
 	/// only use two byte prefix to support 16 byte account id (used by test)
 	/// "modl" ++ "/zenlink" is 12 bytes, and 4 bytes remaining for hash of AssetId pair.
 	/// for AccountId32, 20 bytes remaining for hash of AssetId pair.
-	pub fn pair_account_id(asset_0: AssetId, asset_1: AssetId) -> T::AccountId {
+	pub fn pair_account_id(asset_0: T::AssetId, asset_1: T::AssetId) -> T::AccountId {
 		let (asset_0, asset_1) = Self::sort_asset_id(asset_0, asset_1);
 		let pair_hash: T::Hash = T::Hashing::hash_of(&(asset_0, asset_1));
 
@@ -31,7 +31,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Sorted the foreign id of assets pair
-	pub fn sort_asset_id(asset_0: AssetId, asset_1: AssetId) -> (AssetId, AssetId) {
+	pub fn sort_asset_id(asset_0: T::AssetId, asset_1: T::AssetId) -> (T::AssetId, T::AssetId) {
 		if asset_0 < asset_1 {
 			(asset_0, asset_1)
 		} else {
@@ -39,29 +39,23 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub(crate) fn mutate_lp_pairs(asset_0: AssetId, asset_1: AssetId) {
+	pub(crate) fn mutate_lp_pairs(asset_0: T::AssetId, asset_1: T::AssetId) {
 		LiquidityPairs::<T>::insert(
 			Self::sort_asset_id(asset_0, asset_1),
 			Some(Self::lp_asset_id(&asset_0, &asset_1)),
 		)
 	}
 
-	pub fn lp_asset_id(asset_0: &AssetId, asset_1: &AssetId) -> AssetId {
+	pub fn lp_asset_id(asset_0: &T::AssetId, asset_1: &T::AssetId) -> T::AssetId {
 		let (asset_0, asset_1) = Self::sort_asset_id(*asset_0, *asset_1);
-		let currency_0 = (asset_0.asset_index & 0x0000_0000_0000_ffff) << 16;
-		let currency_1 = (asset_1.asset_index & 0x0000_0000_0000_ffff) << 32;
-		let discr = 6u64 << 8;
-
-		let index = currency_0 + currency_1 + discr;
-
-		AssetId { chain_id: T::SelfParaId::get(), asset_type: LOCAL, asset_index: index }
+		T::LpGenerate::generate_lp_asset_id(asset_0, asset_1)
 	}
 
 	#[allow(clippy::too_many_arguments)]
 	pub(crate) fn inner_add_liquidity(
 		who: &T::AccountId,
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 		amount_0_desired: AssetBalance,
 		amount_1_desired: AssetBalance,
 		amount_0_min: AssetBalance,
@@ -164,8 +158,8 @@ impl<T: Config> Pallet<T> {
 	#[allow(clippy::too_many_arguments)]
 	pub(crate) fn inner_remove_liquidity(
 		who: &T::AccountId,
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 		remove_liquidity: AssetBalance,
 		amount_0_min: AssetBalance,
 		amount_1_min: AssetBalance,
@@ -274,7 +268,7 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		amount_in: AssetBalance,
 		amount_out_min: AssetBalance,
-		path: &[AssetId],
+		path: &[T::AssetId],
 		recipient: &T::AccountId,
 	) -> DispatchResult {
 		let amounts = Self::get_amount_out_by_path(amount_in, path)?;
@@ -300,7 +294,7 @@ impl<T: Config> Pallet<T> {
 		who: &T::AccountId,
 		amount_out: AssetBalance,
 		amount_in_max: AssetBalance,
-		path: &[AssetId],
+		path: &[T::AssetId],
 		recipient: &T::AccountId,
 	) -> DispatchResult {
 		let amounts = Self::get_amount_in_by_path(amount_out, path)?;
@@ -360,8 +354,8 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn mint_protocol_fee(
 		reserve_0: AssetBalance,
 		reserve_1: AssetBalance,
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 		total_liquidity: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
 		let new_k_last = Self::k_last(Self::sort_asset_id(asset_0, asset_1));
@@ -404,7 +398,7 @@ impl<T: Config> Pallet<T> {
 		Ok(mint_fee)
 	}
 
-	pub(crate) fn mutate_k_last(asset_0: AssetId, asset_1: AssetId, last: U256) {
+	pub(crate) fn mutate_k_last(asset_0: T::AssetId, asset_1: T::AssetId, last: U256) {
 		KLast::<T>::mutate(Self::sort_asset_id(asset_0, asset_1), |k| *k = last)
 	}
 
@@ -494,7 +488,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn get_amount_in_by_path(
 		amount_out: AssetBalance,
-		path: &[AssetId],
+		path: &[T::AssetId],
 	) -> Result<Vec<AssetBalance>, DispatchError> {
 		let len = path.len();
 		ensure!(len > 1, Error::<T>::InvalidPath);
@@ -539,7 +533,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn get_amount_out_by_path(
 		amount_in: AssetBalance,
-		path: &[AssetId],
+		path: &[T::AssetId],
 	) -> Result<Vec<AssetBalance>, DispatchError> {
 		ensure!(path.len() > 1, Error::<T>::InvalidPath);
 
@@ -582,7 +576,7 @@ impl<T: Config> Pallet<T> {
 
 	fn swap(
 		amounts: &[AssetBalance],
-		path: &[AssetId],
+		path: &[T::AssetId],
 		recipient: &T::AccountId,
 	) -> DispatchResult {
 		for i in 0..(amounts.len() - 1) {
@@ -624,8 +618,8 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn pair_swap(
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 		pair_account: &T::AccountId,
 		amount_0: AssetBalance,
 		amount_1: AssetBalance,
@@ -658,8 +652,8 @@ impl<T: Config> Pallet<T> {
 
 	pub(crate) fn do_bootstrap_contribute(
 		who: T::AccountId,
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 		amount_0_contribute: AssetBalance,
 		amount_1_contribute: AssetBalance,
 	) -> DispatchResult {
@@ -746,7 +740,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub(crate) fn do_end_bootstrap(asset_0: AssetId, asset_1: AssetId) -> DispatchResult {
+	pub(crate) fn do_end_bootstrap(asset_0: T::AssetId, asset_1: T::AssetId) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		match Self::pair_status(pair) {
 			Bootstrap(bootstrap_parameter) => {
@@ -815,8 +809,8 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn do_bootstrap_claim(
 		who: T::AccountId,
 		recipient: T::AccountId,
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		match Self::pair_status(pair) {
@@ -932,8 +926,8 @@ impl<T: Config> Pallet<T> {
 
 	pub(crate) fn do_bootstrap_refund(
 		who: T::AccountId,
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 
@@ -1020,8 +1014,8 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub(crate) fn bootstrap_check_limits(
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 		account: &T::AccountId,
 	) -> bool {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
@@ -1039,15 +1033,15 @@ impl<T: Config> Pallet<T> {
 	pub(crate) fn bootstrap_distribute_reward(
 		owner: &T::AccountId,
 		reward_holder: &T::AccountId,
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 		share_lp: AssetBalance,
 		total_lp: AssetBalance,
 	) -> DispatchResult {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		let rewards = Self::get_bootstrap_rewards(pair);
 
-		let mut distribute_rewards = Vec::<(AssetId, AssetBalance)>::new();
+		let mut distribute_rewards = Vec::<(T::AssetId, AssetBalance)>::new();
 		for (asset_id, reward_amount) in rewards.into_iter() {
 			let owner_reward = U256::from(share_lp)
 				.checked_mul(U256::from(reward_amount))
@@ -1073,17 +1067,17 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> ExportZenlink<T::AccountId> for Pallet<T> {
+impl<T: Config> ExportZenlink<T::AccountId, T::AssetId> for Pallet<T> {
 	fn get_amount_in_by_path(
 		amount_out: AssetBalance,
-		path: &[AssetId],
+		path: &[T::AssetId],
 	) -> Result<Vec<AssetBalance>, DispatchError> {
 		Self::get_amount_in_by_path(amount_out, path)
 	}
 
 	fn get_amount_out_by_path(
 		amount_in: AssetBalance,
-		path: &[AssetId],
+		path: &[T::AssetId],
 	) -> Result<Vec<AssetBalance>, DispatchError> {
 		Self::get_amount_out_by_path(amount_in, path)
 	}
@@ -1092,7 +1086,7 @@ impl<T: Config> ExportZenlink<T::AccountId> for Pallet<T> {
 		who: &T::AccountId,
 		amount_out: AssetBalance,
 		amount_in_max: AssetBalance,
-		path: &[AssetId],
+		path: &[T::AssetId],
 		recipient: &T::AccountId,
 	) -> DispatchResult {
 		Self::inner_swap_assets_for_exact_assets(who, amount_out, amount_in_max, path, recipient)
@@ -1102,7 +1096,7 @@ impl<T: Config> ExportZenlink<T::AccountId> for Pallet<T> {
 		who: &T::AccountId,
 		amount_in: AssetBalance,
 		amount_out_min: AssetBalance,
-		path: &[AssetId],
+		path: &[T::AssetId],
 		recipient: &T::AccountId,
 	) -> DispatchResult {
 		Self::inner_swap_exact_assets_for_assets(who, amount_in, amount_out_min, path, recipient)
@@ -1110,8 +1104,8 @@ impl<T: Config> ExportZenlink<T::AccountId> for Pallet<T> {
 
 	fn inner_add_liquidity(
 		who: &T::AccountId,
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 		amount_0_desired: AssetBalance,
 		amount_1_desired: AssetBalance,
 		amount_0_min: AssetBalance,
@@ -1130,8 +1124,8 @@ impl<T: Config> ExportZenlink<T::AccountId> for Pallet<T> {
 
 	fn inner_remove_liquidity(
 		who: &T::AccountId,
-		asset_0: AssetId,
-		asset_1: AssetId,
+		asset_0: T::AssetId,
+		asset_1: T::AssetId,
 		remove_liquidity: AssetBalance,
 		amount_0_min: AssetBalance,
 		amount_1_min: AssetBalance,
@@ -1149,7 +1143,7 @@ impl<T: Config> ExportZenlink<T::AccountId> for Pallet<T> {
 	}
 }
 
-impl<AccountId> ExportZenlink<AccountId> for () {
+impl<AccountId, AssetId> ExportZenlink<AccountId, AssetId> for () {
 	fn get_amount_in_by_path(
 		_amount_out: AssetBalance,
 		_path: &[AssetId],
