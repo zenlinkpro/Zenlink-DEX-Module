@@ -4,7 +4,7 @@
 use super::*;
 
 pub trait GenerateLpAssetId<AssetId> {
-	fn generate_lp_asset_id(asset_0: AssetId, asset_1: AssetId) -> AssetId;
+	fn generate_lp_asset_id(asset_0: AssetId, asset_1: AssetId) -> Option<AssetId>;
 }
 
 pub trait ConvertMultiLocation<AssetId> {

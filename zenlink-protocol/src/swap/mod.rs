@@ -39,14 +39,14 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub(crate) fn mutate_lp_pairs(asset_0: T::AssetId, asset_1: T::AssetId) {
-		LiquidityPairs::<T>::insert(
+	pub(crate) fn mutate_lp_pairs(asset_0: T::AssetId, asset_1: T::AssetId) -> DispatchResult {
+		Ok(LiquidityPairs::<T>::insert(
 			Self::sort_asset_id(asset_0, asset_1),
-			Some(Self::lp_asset_id(&asset_0, &asset_1)),
-		)
+			Some(Self::lp_asset_id(&asset_0, &asset_1).ok_or(Error::<T>::AssetNotExists)?),
+		))
 	}
 
-	pub fn lp_asset_id(asset_0: &T::AssetId, asset_1: &T::AssetId) -> T::AssetId {
+	pub fn lp_asset_id(asset_0: &T::AssetId, asset_1: &T::AssetId) -> Option<T::AssetId> {
 		let (asset_0, asset_1) = Self::sort_asset_id(*asset_0, *asset_1);
 		T::LpGenerate::generate_lp_asset_id(asset_0, asset_1)
 	}
