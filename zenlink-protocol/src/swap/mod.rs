@@ -64,8 +64,10 @@ impl<T: Config> Pallet<T> {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		PairStatuses::<T>::try_mutate(pair, |status| {
 			if let Trading(parameter) = status {
-				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
-				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
+				let reserve_0 =
+					T::MultiAssetsHandler::free_balance(asset_0, &parameter.pair_account);
+				let reserve_1 =
+					T::MultiAssetsHandler::free_balance(asset_1, &parameter.pair_account);
 
 				let (amount_0, amount_1) = Self::calculate_added_amount(
 					amount_0_desired,
@@ -76,8 +78,8 @@ impl<T: Config> Pallet<T> {
 					reserve_1,
 				)?;
 
-				let balance_asset_0 = T::MultiAssetsHandler::balance_of(asset_0, who);
-				let balance_asset_1 = T::MultiAssetsHandler::balance_of(asset_1, who);
+				let balance_asset_0 = T::MultiAssetsHandler::free_balance(asset_0, who);
+				let balance_asset_1 = T::MultiAssetsHandler::free_balance(asset_1, who);
 				ensure!(
 					balance_asset_0 >= amount_0 && balance_asset_1 >= amount_1,
 					Error::<T>::InsufficientAssetBalance
@@ -128,9 +130,9 @@ impl<T: Config> Pallet<T> {
 					if Self::fee_meta().1 > 0 {
 						// update reserve_0 and reserve_1
 						let reserve_0 =
-							T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
+							T::MultiAssetsHandler::free_balance(asset_0, &parameter.pair_account);
 						let reserve_1 =
-							T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
+							T::MultiAssetsHandler::free_balance(asset_1, &parameter.pair_account);
 
 						let last_k_value = U256::from(reserve_0)
 							.checked_mul(U256::from(reserve_1))
@@ -168,8 +170,10 @@ impl<T: Config> Pallet<T> {
 		let pair = Self::sort_asset_id(asset_0, asset_1);
 		PairStatuses::<T>::try_mutate(pair, |status| {
 			if let Trading(parameter) = status {
-				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
-				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
+				let reserve_0 =
+					T::MultiAssetsHandler::free_balance(asset_0, &parameter.pair_account);
+				let reserve_1 =
+					T::MultiAssetsHandler::free_balance(asset_1, &parameter.pair_account);
 
 				let amount_0 = Self::calculate_share_amount(
 					remove_liquidity,
@@ -235,9 +239,9 @@ impl<T: Config> Pallet<T> {
 					if Self::fee_meta().1 > 0 {
 						// update reserve_0 and reserve_1
 						let reserve_0 =
-							T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
+							T::MultiAssetsHandler::free_balance(asset_0, &parameter.pair_account);
 						let reserve_1 =
-							T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
+							T::MultiAssetsHandler::free_balance(asset_1, &parameter.pair_account);
 
 						let last_k_value = U256::from(reserve_0)
 							.checked_mul(U256::from(reserve_1))
@@ -498,8 +502,8 @@ impl<T: Config> Pallet<T> {
 
 		while i > 0 {
 			let pair_account = Self::pair_account_id(path[i], path[i - 1]);
-			let reserve_0 = T::MultiAssetsHandler::balance_of(path[i], &pair_account);
-			let reserve_1 = T::MultiAssetsHandler::balance_of(path[i - 1], &pair_account);
+			let reserve_0 = T::MultiAssetsHandler::free_balance(path[i], &pair_account);
+			let reserve_1 = T::MultiAssetsHandler::free_balance(path[i - 1], &pair_account);
 
 			ensure!(reserve_1 > Zero::zero() && reserve_0 > Zero::zero(), Error::<T>::InvalidPath);
 
@@ -542,8 +546,8 @@ impl<T: Config> Pallet<T> {
 
 		for i in 0..len {
 			let pair_account = Self::pair_account_id(path[i], path[i + 1]);
-			let reserve_0 = T::MultiAssetsHandler::balance_of(path[i], &pair_account);
-			let reserve_1 = T::MultiAssetsHandler::balance_of(path[i + 1], &pair_account);
+			let reserve_0 = T::MultiAssetsHandler::free_balance(path[i], &pair_account);
+			let reserve_1 = T::MultiAssetsHandler::free_balance(path[i + 1], &pair_account);
 
 			ensure!(reserve_1 > Zero::zero() && reserve_0 > Zero::zero(), Error::<T>::InvalidPath);
 
@@ -631,8 +635,8 @@ impl<T: Config> Pallet<T> {
 			_ => Err(Error::<T>::PairNotExists),
 		}?;
 
-		let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, pair_account);
-		let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, pair_account);
+		let reserve_0 = T::MultiAssetsHandler::free_balance(asset_0, pair_account);
+		let reserve_1 = T::MultiAssetsHandler::free_balance(asset_1, pair_account);
 
 		ensure!(
 			amount_0 <= reserve_0 && amount_1 <= reserve_1,
@@ -1022,7 +1026,7 @@ impl<T: Config> Pallet<T> {
 		let limits = Self::get_bootstrap_limits(pair);
 
 		for (asset_id, limit) in limits.into_iter() {
-			if T::MultiAssetsHandler::balance_of(asset_id, account) < limit {
+			if T::MultiAssetsHandler::free_balance(asset_id, account) < limit {
 				return false
 			}
 		}

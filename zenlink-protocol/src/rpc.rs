@@ -50,8 +50,10 @@ impl<T: Config> Pallet<T> {
 		let sorted_pair = Self::sort_asset_id(asset_0, asset_1);
 		match Self::pair_status(sorted_pair) {
 			Trading(metadata) => {
-				let reserve_0 = T::MultiAssetsHandler::balance_of(asset_0, &metadata.pair_account);
-				let reserve_1 = T::MultiAssetsHandler::balance_of(asset_1, &metadata.pair_account);
+				let reserve_0 =
+					T::MultiAssetsHandler::free_balance(asset_0, &metadata.pair_account);
+				let reserve_1 =
+					T::MultiAssetsHandler::free_balance(asset_1, &metadata.pair_account);
 				Self::calculate_added_amount(
 					amount_0_desired,
 					amount_1_desired,
@@ -91,10 +93,10 @@ impl<T: Config> Pallet<T> {
 			asset_0,
 			asset_1,
 			account: pair_account.clone(),
-			total_liquidity: T::MultiAssetsHandler::total_supply(lp_asset_id),
+			total_liquidity: T::MultiAssetsHandler::total_issuance(lp_asset_id),
 			holding_liquidity: Zero::zero(),
-			reserve_0: T::MultiAssetsHandler::balance_of(asset_0, &pair_account),
-			reserve_1: T::MultiAssetsHandler::balance_of(asset_1, &pair_account),
+			reserve_0: T::MultiAssetsHandler::free_balance(asset_0, &pair_account),
+			reserve_1: T::MultiAssetsHandler::free_balance(asset_1, &pair_account),
 			lp_asset_id,
 			status,
 		})
@@ -114,7 +116,7 @@ impl<T: Config> Pallet<T> {
 				_ => None,
 			})
 			.map(|(para_id, account)| {
-				let balance = T::MultiAssetsHandler::balance_of(*asset_id, &account);
+				let balance = T::MultiAssetsHandler::free_balance(*asset_id, &account);
 
 				(para_id, account, balance)
 			})

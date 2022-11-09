@@ -44,7 +44,7 @@ pub struct TransactorAdaptor<
 >(PhantomData<(ZenlinkAssets, AccountIdConverter, AccountId, AssetIdConverter, AssetId)>);
 
 impl<
-		ZenlinkAssets: MultiAssetsHandler<AccountId, AssetId>,
+		ZenlinkAssets: MultiCurrency<AccountId, Balance = AssetBalance, CurrencyId = AssetId>,
 		AccountIdConverter: Convert<MultiLocation, AccountId>,
 		AccountId: sp_std::fmt::Debug + Clone,
 		AssetIdConverter: Convert<MultiLocation, AssetId>,

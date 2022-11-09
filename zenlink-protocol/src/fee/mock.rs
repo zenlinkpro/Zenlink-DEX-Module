@@ -27,8 +27,8 @@ use sp_runtime::{
 
 use crate as pallet_zenlink;
 pub use crate::{
-	AssetBalance, AssetId, AssetIdConverter, Config, LocalAssetHandler, MultiAssetsHandler,
-	PairLpGenerate, Pallet, ParaId, ZenlinkMultiAssets, LIQUIDITY, LOCAL, NATIVE, RESERVED,
+	AssetBalance, AssetId, AssetIdConverter, Config, MultiAssetsHandler, PairLpGenerate, Pallet,
+	ParaId, ZenlinkMultiAssets, LIQUIDITY, LOCAL, NATIVE, RESERVED,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -147,7 +147,7 @@ impl pallet_balances::Config for Test {
 
 impl Config for Test {
 	type Event = Event;
-	type MultiAssetsHandler = ZenlinkMultiAssets<Zenlink, Balances, LocalAssetAdaptor<Tokens>>;
+	type MultiAssetsHandler = ZenlinkMultiAssets<Zenlink, Balances, AssetAdaptor<Tokens>>;
 	type PalletId = ZenlinkPalletId;
 	type AssetId = AssetId;
 	type LpGenerate = PairLpGenerate<Self>;
@@ -192,7 +192,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	t.into()
 }
 
-pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+pub struct AssetAdaptor<Local>(PhantomData<Local>);
 
 type AccountId = u128;
 
@@ -209,54 +209,87 @@ fn asset_id_to_currency_id(asset_id: &AssetId) -> Result<CurrencyId, ()> {
 	Err(())
 }
 
-impl<Local> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+impl<Local> MultiCurrency<AccountId> for AssetAdaptor<Local>
 where
 	Local: MultiCurrency<AccountId, Balance = u128, CurrencyId = CurrencyId>,
 {
-	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
+	type Balance = u128;
+	type CurrencyId = AssetId;
+
+	fn minimum_balance(asset_id: Self::CurrencyId) -> Self::Balance {
 		asset_id_to_currency_id(&asset_id)
-			.map_or(AssetBalance::default(), |currency_id| Local::free_balance(currency_id, who))
+			.map_or(AssetBalance::default(), |currency_id| Local::minimum_balance(currency_id))
 	}
 
-	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
+	fn total_issuance(asset_id: Self::CurrencyId) -> Self::Balance {
 		asset_id_to_currency_id(&asset_id)
 			.map_or(AssetBalance::default(), |currency_id| Local::total_issuance(currency_id))
 	}
 
-	fn local_is_exists(asset_id: AssetId) -> bool {
-		asset_id_to_currency_id(&asset_id).map_or(false, |currency_id| {
-			Local::total_issuance(currency_id) > AssetBalance::default()
-		})
+	fn total_balance(asset_id: Self::CurrencyId, who: &AccountId) -> Self::Balance {
+		asset_id_to_currency_id(&asset_id)
+			.map_or(AssetBalance::default(), |currency_id| Local::total_balance(currency_id, who))
 	}
 
-	fn local_transfer(
-		asset_id: AssetId,
-		origin: &AccountId,
-		target: &AccountId,
-		amount: AssetBalance,
+	fn free_balance(asset_id: Self::CurrencyId, who: &AccountId) -> Self::Balance {
+		asset_id_to_currency_id(&asset_id)
+			.map_or(AssetBalance::default(), |currency_id| Local::free_balance(currency_id, who))
+	}
+
+	fn ensure_can_withdraw(
+		currency_id: Self::CurrencyId,
+		who: &AccountId,
+		amount: Self::Balance,
 	) -> DispatchResult {
 		asset_id_to_currency_id(&asset_id).map_or(Err(DispatchError::CannotLookup), |currency_id| {
-			Local::transfer(currency_id, origin, target, amount)
+			Local::ensure_can_withdraw(currency_id, who, amount)
 		})
 	}
 
-	fn local_deposit(
-		asset_id: AssetId,
-		origin: &AccountId,
-		amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError> {
-		asset_id_to_currency_id(&asset_id).map_or(Ok(AssetBalance::default()), |currency_id| {
-			Local::deposit(currency_id, origin, amount).map(|_| amount)
+	fn transfer(
+		currency_id: Self::CurrencyId,
+		from: &AccountId,
+		to: &AccountId,
+		amount: Self::Balance,
+	) -> DispatchResult {
+		asset_id_to_currency_id(&asset_id).map_or(Err(DispatchError::CannotLookup), |currency_id| {
+			Local::transfer(currency_id, from, to, amount)
 		})
 	}
 
-	fn local_withdraw(
-		asset_id: AssetId,
-		origin: &AccountId,
-		amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError> {
-		asset_id_to_currency_id(&asset_id).map_or(Ok(AssetBalance::default()), |currency_id| {
-			Local::withdraw(currency_id, origin, amount).map(|_| amount)
+	fn deposit(
+		currency_id: Self::CurrencyId,
+		who: &AccountId,
+		amount: Self::Balance,
+	) -> DispatchResult {
+		asset_id_to_currency_id(&asset_id).map_or(Err(DispatchError::CannotLookup), |currency_id| {
+			Local::deposit(currency_id, who, amount)
+		})
+	}
+
+	fn withdraw(
+		currency_id: Self::CurrencyId,
+		who: &AccountId,
+		amount: Self::Balance,
+	) -> DispatchResult {
+		asset_id_to_currency_id(&asset_id).map_or(Err(DispatchError::CannotLookup), |currency_id| {
+			Local::withdraw(currency_id, who, amount)
+		})
+	}
+
+	fn can_slash(currency_id: Self::CurrencyId, who: &AccountId, value: Self::Balance) -> bool {
+		asset_id_to_currency_id(&asset_id).map_or(Err(DispatchError::CannotLookup), |currency_id| {
+			Local::can_slash(currency_id, who, value)
+		})
+	}
+
+	fn slash(
+		currency_id: Self::CurrencyId,
+		who: &AccountId,
+		amount: Self::Balance,
+	) -> Self::Balance {
+		asset_id_to_currency_id(&asset_id).map_or(Err(DispatchError::CannotLookup), |currency_id| {
+			Local::slash(currency_id, who, amount)
 		})
 	}
 }

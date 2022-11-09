@@ -3,97 +3,81 @@
 
 use super::*;
 
-pub trait MultiAssetsHandler<AccountId, AssetId: Copy> {
-	fn balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance;
-
-	fn total_supply(asset_id: AssetId) -> AssetBalance;
-
-	fn is_exists(asset_id: AssetId) -> bool;
-
-	fn transfer(
-		asset_id: AssetId,
-		origin: &AccountId,
-		target: &AccountId,
-		amount: AssetBalance,
-	) -> DispatchResult {
-		let withdrawn = Self::withdraw(asset_id, origin, amount)?;
-		let _ = Self::deposit(asset_id, target, withdrawn)?;
-
-		Ok(())
-	}
-
-	fn deposit(
-		asset_id: AssetId,
-		target: &AccountId,
-		amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError>;
-
-	fn withdraw(
-		asset_id: AssetId,
-		origin: &AccountId,
-		amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError>;
-}
-
 pub struct ZenlinkMultiAssets<T, Native = (), Local = (), Other = ()>(
 	PhantomData<(T, Native, Local, Other)>,
 );
 
-impl<T: Config<AssetId = AssetId>, NativeCurrency, Local, Other>
-	MultiAssetsHandler<T::AccountId, AssetId>
+impl<T: Config<AssetId = AssetId>, NativeCurrency, Local, Other> MultiCurrency<T::AccountId>
 	for ZenlinkMultiAssets<Pallet<T>, NativeCurrency, Local, Other>
 where
 	NativeCurrency: Currency<T::AccountId>,
-	Local: LocalAssetHandler<T::AccountId>,
-	Other: OtherAssetHandler<T::AccountId>,
+	Local: MultiCurrency<T::AccountId, Balance = AssetBalance, CurrencyId = AssetId>,
+	Other: MultiCurrency<T::AccountId, Balance = AssetBalance, CurrencyId = AssetId>,
 {
-	fn balance_of(asset_id: AssetId, who: &<T as frame_system::Config>::AccountId) -> AssetBalance {
+	type Balance = AssetBalance;
+	type CurrencyId = AssetId;
+
+	fn minimum_balance(_asset_id: Self::CurrencyId) -> Self::Balance {
+		Default::default()
+	}
+
+	fn total_issuance(asset_id: Self::CurrencyId) -> Self::Balance {
+		let self_chain_id: u32 = T::SelfParaId::get();
+		match asset_id.asset_type {
+			NATIVE if asset_id.is_native(T::SelfParaId::get()) =>
+				NativeCurrency::total_issuance().saturated_into::<AssetBalance>(),
+			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id =>
+				Local::total_issuance(asset_id).saturated_into::<AssetBalance>(),
+			RESERVED if asset_id.chain_id == self_chain_id =>
+				Other::total_issuance(asset_id).saturated_into::<AssetBalance>(),
+			_ if asset_id.is_foreign(self_chain_id) => Pallet::<T>::foreign_total_supply(asset_id),
+			_ => Default::default(),
+		}
+	}
+
+	fn total_balance(asset_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
 		let self_chain_id: u32 = T::SelfParaId::get();
 		match asset_id.asset_type {
 			NATIVE if asset_id.is_native(self_chain_id) =>
-				NativeCurrency::free_balance(who).saturated_into::<AssetBalance>(),
+				NativeCurrency::total_balance(who).saturated_into::<AssetBalance>(),
 			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id =>
-				Local::local_balance_of(asset_id, who),
+				Local::total_balance(asset_id, who).saturated_into::<AssetBalance>(),
 			RESERVED if asset_id.chain_id == self_chain_id =>
-				Other::other_balance_of(asset_id, who),
+				Other::total_balance(asset_id, who).saturated_into::<AssetBalance>(),
 			_ if asset_id.is_foreign(self_chain_id) =>
 				Pallet::<T>::foreign_balance_of(asset_id, who),
 			_ => Default::default(),
 		}
 	}
 
-	fn total_supply(asset_id: AssetId) -> AssetBalance {
+	fn free_balance(asset_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
 		let self_chain_id: u32 = T::SelfParaId::get();
 		match asset_id.asset_type {
-			NATIVE if asset_id.is_native(T::SelfParaId::get()) =>
-				NativeCurrency::total_issuance().saturated_into::<AssetBalance>(),
+			NATIVE if asset_id.is_native(self_chain_id) =>
+				NativeCurrency::free_balance(who).saturated_into::<AssetBalance>(),
 			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id =>
-				Local::local_total_supply(asset_id),
-			RESERVED if asset_id.chain_id == self_chain_id => Other::other_total_supply(asset_id),
-			_ if asset_id.is_foreign(self_chain_id) => Pallet::<T>::foreign_total_supply(asset_id),
+				Local::free_balance(asset_id, who).saturated_into::<AssetBalance>(),
+			RESERVED if asset_id.chain_id == self_chain_id =>
+				Other::free_balance(asset_id, who).saturated_into::<AssetBalance>(),
+			_ if asset_id.is_foreign(self_chain_id) =>
+				Pallet::<T>::foreign_balance_of(asset_id, who),
 			_ => Default::default(),
 		}
 	}
 
-	fn is_exists(asset_id: AssetId) -> bool {
-		let self_chain_id: u32 = T::SelfParaId::get();
-		match asset_id.asset_type {
-			NATIVE if asset_id.chain_id == self_chain_id =>
-				asset_id.is_native(T::SelfParaId::get()),
-			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id =>
-				Local::local_is_exists(asset_id),
-			RESERVED if asset_id.chain_id == self_chain_id => Other::other_is_exists(asset_id),
-			_ if asset_id.is_foreign(T::SelfParaId::get()) =>
-				Pallet::<T>::foreign_is_exists(asset_id),
-			_ => Default::default(),
-		}
+	fn ensure_can_withdraw(
+		_asset_id: Self::CurrencyId,
+		_who: &T::AccountId,
+		_amount: Self::Balance,
+	) -> DispatchResult {
+		Ok(())
 	}
 
 	fn transfer(
-		asset_id: AssetId,
-		origin: &<T as frame_system::Config>::AccountId,
-		target: &<T as frame_system::Config>::AccountId,
-		amount: AssetBalance,
+		asset_id: Self::CurrencyId,
+		from: &T::AccountId,
+		to: &T::AccountId,
+		amount: Self::Balance,
 	) -> DispatchResult {
 		let self_chain_id: u32 = T::SelfParaId::get();
 		match asset_id.asset_type {
@@ -102,23 +86,24 @@ where
 					.try_into()
 					.map_err(|_| DispatchError::Other("AmountToBalanceConversionFailed"))?;
 
-				NativeCurrency::transfer(origin, target, balance_amount, KeepAlive)
+				NativeCurrency::transfer(from, to, balance_amount, KeepAlive)
 			},
 			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id =>
-				Local::local_transfer(asset_id, origin, target, amount),
+				Local::transfer(asset_id, from, to, amount),
 			RESERVED if asset_id.chain_id == self_chain_id =>
-				Other::other_transfer(asset_id, origin, target, amount),
+				Other::transfer(asset_id, from, to, amount),
 			_ if asset_id.is_foreign(T::SelfParaId::get()) =>
-				Pallet::<T>::foreign_transfer(asset_id, origin, target, amount),
+				Pallet::<T>::foreign_transfer(asset_id, from, to, amount),
 			_ => Err(Error::<T>::UnsupportedAssetType.into()),
-		}
+		}?;
+		Ok(())
 	}
 
 	fn deposit(
-		asset_id: AssetId,
-		target: &<T as frame_system::Config>::AccountId,
-		amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError> {
+		asset_id: Self::CurrencyId,
+		who: &T::AccountId,
+		amount: Self::Balance,
+	) -> DispatchResult {
 		let self_chain_id: u32 = T::SelfParaId::get();
 		match asset_id.asset_type {
 			NATIVE if asset_id.is_native(T::SelfParaId::get()) => {
@@ -126,25 +111,25 @@ where
 					.try_into()
 					.map_err(|_| DispatchError::Other("AmountToBalanceConversionFailed"))?;
 
-				let _ = NativeCurrency::deposit_creating(target, balance_amount);
+				let _ = NativeCurrency::deposit_creating(who, balance_amount);
 
-				Ok(amount)
+				Ok(())
 			},
 			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id =>
-				Local::local_deposit(asset_id, target, amount),
-			RESERVED if asset_id.chain_id == self_chain_id =>
-				Other::other_deposit(asset_id, target, amount),
+				Local::deposit(asset_id, who, amount),
+			RESERVED if asset_id.chain_id == self_chain_id => Other::deposit(asset_id, who, amount),
 			_ if asset_id.is_foreign(T::SelfParaId::get()) =>
-				Pallet::<T>::foreign_mint(asset_id, target, amount).map(|_| amount),
+				Pallet::<T>::foreign_mint(asset_id, who, amount),
 			_ => Err(Error::<T>::UnsupportedAssetType.into()),
-		}
+		}?;
+		Ok(())
 	}
 
 	fn withdraw(
-		asset_id: AssetId,
-		origin: &<T as frame_system::Config>::AccountId,
-		amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError> {
+		asset_id: Self::CurrencyId,
+		who: &T::AccountId,
+		amount: Self::Balance,
+	) -> DispatchResult {
 		let self_chain_id: u32 = T::SelfParaId::get();
 		match asset_id.asset_type {
 			NATIVE if asset_id.is_native(self_chain_id) => {
@@ -153,21 +138,33 @@ where
 					.map_err(|_| DispatchError::Other("AmountToBalanceConversionFailed"))?;
 
 				let _ = NativeCurrency::withdraw(
-					origin,
+					who,
 					balance_amount,
 					WithdrawReasons::TRANSFER,
 					ExistenceRequirement::AllowDeath,
 				)?;
-
-				Ok(amount)
+				Ok(())
 			},
 			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id =>
-				Local::local_withdraw(asset_id, origin, amount),
+				Local::withdraw(asset_id, who, amount),
 			RESERVED if asset_id.chain_id == self_chain_id =>
-				Other::other_withdraw(asset_id, origin, amount),
+				Other::withdraw(asset_id, who, amount),
 			_ if asset_id.is_foreign(T::SelfParaId::get()) =>
-				Pallet::<T>::foreign_burn(asset_id, origin, amount).map(|_| amount),
+				Pallet::<T>::foreign_burn(asset_id, who, amount),
 			_ => Err(Error::<T>::UnsupportedAssetType.into()),
-		}
+		}?;
+		Ok(())
+	}
+
+	fn can_slash(_currency_id: Self::CurrencyId, _who: &T::AccountId, _value: Self::Balance) -> bool {
+		false
+	}
+
+	fn slash(
+		_currency_id: Self::CurrencyId,
+		_who: &T::AccountId,
+		_amount: Self::Balance,
+	) -> Self::Balance {
+		Default::default()
 	}
 }

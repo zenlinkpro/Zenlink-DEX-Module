@@ -32,6 +32,7 @@ use frame_support::{
 	},
 	PalletId, RuntimeDebug,
 };
+use orml_traits::MultiCurrency;
 use sp_core::U256;
 use sp_runtime::traits::{
 	AccountIdConversion, Hash, MaybeSerializeDeserialize, One, StaticLookup, Zero,
@@ -69,7 +70,7 @@ pub mod benchmarking;
 mod default_weights;
 
 pub use default_weights::WeightInfo;
-pub use multiassets::{MultiAssetsHandler, ZenlinkMultiAssets};
+pub use multiassets::ZenlinkMultiAssets;
 pub use primitives::{
 	AssetBalance, AssetId, AssetIdConverter, AssetInfo, BootstrapParameter, PairLpGenerate,
 	PairMetadata, PairStatus,
@@ -78,7 +79,7 @@ pub use primitives::{
 };
 pub use rpc::PairInfo;
 pub use traits::{
-	ConvertMultiLocation, ExportZenlink, GenerateLpAssetId, LocalAssetHandler, OtherAssetHandler,
+	ConvertMultiLocation, ExportZenlink, GenerateLpAssetId,
 };
 pub use transactor::{TransactorAdaptor, TrustedParas};
 
@@ -99,7 +100,11 @@ pub mod pallet {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The assets interface beyond native currency and other assets.
-		type MultiAssetsHandler: MultiAssetsHandler<Self::AccountId, Self::AssetId>;
+		type MultiAssetsHandler: MultiCurrency<
+			Self::AccountId,
+			CurrencyId = Self::AssetId,
+			Balance = AssetBalance,
+		>;
 		/// This pallet id.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -524,7 +529,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
 			let target = T::Lookup::lookup(recipient)?;
-			let balance = T::MultiAssetsHandler::balance_of(asset_id, &origin);
+			let balance = T::MultiAssetsHandler::free_balance(asset_id, &origin);
 			ensure!(balance >= amount, Error::<T>::InsufficientAssetBalance);
 
 			T::MultiAssetsHandler::transfer(asset_id, &origin, &target, amount)?;
@@ -553,7 +558,7 @@ pub mod pallet {
 			max_weight: u64,
 		) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
-			let balance = T::MultiAssetsHandler::balance_of(asset_id, &who);
+			let balance = T::MultiAssetsHandler::free_balance(asset_id, &who);
 			let checked = Self::check_existential_deposit(asset_id, amount);
 			ensure!(asset_id.is_support(), Error::<T>::UnsupportedAssetType);
 			ensure!(para_id != T::SelfParaId::get().into(), Error::<T>::DeniedTransferToSelf);
@@ -626,8 +631,8 @@ pub mod pallet {
 
 			ensure!(asset_0 != asset_1, Error::<T>::DeniedCreatePair);
 
-			ensure!(T::MultiAssetsHandler::is_exists(asset_0), Error::<T>::AssetNotExists);
-			ensure!(T::MultiAssetsHandler::is_exists(asset_1), Error::<T>::AssetNotExists);
+			// ensure!(T::MultiAssetsHandler::is_exists(asset_0), Error::<T>::AssetNotExists);
+			// ensure!(T::MultiAssetsHandler::is_exists(asset_1), Error::<T>::AssetNotExists);
 
 			let pair = Self::sort_asset_id(asset_0, asset_1);
 			PairStatuses::<T>::try_mutate(pair, |status| match status {
