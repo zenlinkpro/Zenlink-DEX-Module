@@ -39,11 +39,11 @@ type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdapt
 
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
-impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+impl<Local, AccountId> MultiAssetsHandler<AccountId, ZenlinkAssetId> for LocalAssetAdaptor<Local>
 where
 	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 {
-	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
+	fn balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
 		if let Ok(currency_id) = asset_id.try_into() {
 			return TryInto::<AssetBalance>::try_into(Local::free_balance(currency_id, &who))
 				.unwrap_or_default()
@@ -51,7 +51,7 @@ where
 		AssetBalance::default()
 	}
 
-	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
+	fn total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
 		if let Ok(currency_id) = asset_id.try_into() {
 			return TryInto::<AssetBalance>::try_into(Local::total_issuance(currency_id))
 				.unwrap_or_default()
@@ -59,7 +59,7 @@ where
 		AssetBalance::default()
 	}
 
-	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
+	fn is_exists(asset_id: ZenlinkAssetId) -> bool {
 		let currency_id: Result<CurrencyId, ()> = asset_id.try_into();
 		match currency_id {
 			Ok(_) => true,
@@ -67,7 +67,7 @@ where
 		}
 	}
 
-	fn local_transfer(
+	fn transfer(
 		asset_id: ZenlinkAssetId,
 		origin: &AccountId,
 		target: &AccountId,
@@ -87,7 +87,7 @@ where
 		}
 	}
 
-	fn local_deposit(
+	fn deposit(
 		asset_id: ZenlinkAssetId,
 		origin: &AccountId,
 		amount: AssetBalance,
@@ -107,7 +107,7 @@ where
 		Ok(amount)
 	}
 
-	fn local_withdraw(
+	fn withdraw(
 		asset_id: ZenlinkAssetId,
 		origin: &AccountId,
 		amount: AssetBalance,

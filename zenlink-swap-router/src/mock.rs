@@ -26,8 +26,8 @@ use crate as router;
 use crate::{Config, Pallet};
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 use zenlink_protocol::{
-	AssetBalance, AssetId, AssetIdConverter, LocalAssetHandler, PairLpGenerate, ZenlinkMultiAssets,
-	LOCAL,
+	AssetBalance, AssetId, AssetIdConverter, MultiAssetsHandler, PairLpGenerate,
+	ZenlinkMultiAssets, LOCAL,
 };
 use zenlink_stable_amm::traits::{StablePoolLpCurrencyIdGenerate, ValidateCurrency};
 
@@ -284,27 +284,27 @@ pub fn asset_id_to_currency_id(asset_id: &AssetId) -> Result<CurrencyId, ()> {
 
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
-impl<Local> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+impl<Local> MultiAssetsHandler<AccountId, AssetId> for LocalAssetAdaptor<Local>
 where
 	Local: MultiCurrency<AccountId, Balance = u128, CurrencyId = CurrencyId>,
 {
-	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
+	fn balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
 		asset_id_to_currency_id(&asset_id)
 			.map_or(AssetBalance::default(), |currency_id| Local::free_balance(currency_id, who))
 	}
 
-	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
+	fn total_supply(asset_id: AssetId) -> AssetBalance {
 		asset_id_to_currency_id(&asset_id)
 			.map_or(AssetBalance::default(), |currency_id| Local::total_issuance(currency_id))
 	}
 
-	fn local_is_exists(asset_id: AssetId) -> bool {
+	fn is_exists(asset_id: AssetId) -> bool {
 		asset_id_to_currency_id(&asset_id).map_or(false, |currency_id| {
 			Local::total_issuance(currency_id) > AssetBalance::default()
 		})
 	}
 
-	fn local_transfer(
+	fn transfer(
 		asset_id: AssetId,
 		origin: &AccountId,
 		target: &AccountId,
@@ -315,7 +315,7 @@ where
 		})
 	}
 
-	fn local_deposit(
+	fn deposit(
 		asset_id: AssetId,
 		origin: &AccountId,
 		amount: AssetBalance,
@@ -325,7 +325,7 @@ where
 		})
 	}
 
-	fn local_withdraw(
+	fn withdraw(
 		asset_id: AssetId,
 		origin: &AccountId,
 		amount: AssetBalance,

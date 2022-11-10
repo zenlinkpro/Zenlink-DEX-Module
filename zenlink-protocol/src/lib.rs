@@ -77,9 +77,7 @@ pub use primitives::{
 	LIQUIDITY, LOCAL, NATIVE, RESERVED,
 };
 pub use rpc::PairInfo;
-pub use traits::{
-	ConvertMultiLocation, ExportZenlink, GenerateLpAssetId, LocalAssetHandler, OtherAssetHandler,
-};
+pub use traits::{ConvertMultiLocation, ExportZenlink, GenerateLpAssetId};
 pub use transactor::{TransactorAdaptor, TrustedParas};
 
 const LOG_TARGET: &str = "zenlink_protocol";
