@@ -36,6 +36,8 @@ fn run_to_block<T: Config>(n: u32) {
 
 benchmarks! {
 
+	where_clause { where T::AssetId: From<AssetId>}
+
 	set_fee_receiver{
 		let caller: T::AccountId = whitelisted_caller();
 	}:_(RawOrigin::Root, lookup_of_account::<T>(caller.clone()).into())
@@ -47,28 +49,28 @@ benchmarks! {
 	create_pair {
 		let caller: T::AccountId = whitelisted_caller();
 
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1.into(), &caller, 1000 * UNIT));
 
-	} : _(RawOrigin::Root, ASSET_0, ASSET_1)
+	} : _(RawOrigin::Root, ASSET_0.into(), ASSET_1.into())
 
 	bootstrap_create {
-		let reward:Vec<AssetId> =  vec![ASSET_0];
-		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
-	}: _(RawOrigin::Root, ASSET_0, ASSET_1, 1000, 1000, 1000_000_000, 1000_000_000, 100u128.saturated_into(), reward, reward_amounts)
+		let reward:Vec<T::AssetId> =  vec![ASSET_0.into()];
+		let reward_amounts: Vec<(T::AssetId, u128)> = vec![(ASSET_1.into(), 0)];
+	}: _(RawOrigin::Root, ASSET_0.into(), ASSET_1.into(), 1000, 1000, 1000_000_000, 1000_000_000, 100u128.saturated_into(), reward, reward_amounts)
 
 	bootstrap_contribute{
 		let caller: T::AccountId = whitelisted_caller();
 
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1.into(), &caller, 1000 * UNIT));
 
-		let reward:Vec<AssetId> =  vec![ASSET_0];
-		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
+		let reward:Vec<T::AssetId> =  vec![ASSET_0.into()];
+		let reward_amounts: Vec<(T::AssetId, u128)> = vec![(ASSET_1.into(), 0)];
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_create(
 			(RawOrigin::Root).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			1000,
 			1000,
 			1000_000_000,
@@ -78,21 +80,21 @@ benchmarks! {
 			reward_amounts,
 		));
 
-	}: _(RawOrigin::Signed(caller.clone()), ASSET_0, ASSET_1, UNIT, UNIT, 100u128.saturated_into())
+	}: _(RawOrigin::Signed(caller.clone()), ASSET_0.into(), ASSET_1.into(), UNIT, UNIT, 100u128.saturated_into())
 
 	bootstrap_claim{
 		let caller: T::AccountId = whitelisted_caller();
 
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1.into(), &caller, 1000 * UNIT));
 
-		let reward:Vec<AssetId> =  vec![ASSET_0];
-		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
+		let reward:Vec<T::AssetId> =  vec![ASSET_0.into()];
+		let reward_amounts: Vec<(T::AssetId, u128)> = vec![(ASSET_1.into(), 0)];
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_create(
 			(RawOrigin::Root).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			1000,
 			1000,
 			10*UNIT,
@@ -104,8 +106,8 @@ benchmarks! {
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(
 			RawOrigin::Signed(caller.clone()).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			10*UNIT,
 			10*UNIT,
 			99u128.saturated_into()
@@ -115,25 +117,25 @@ benchmarks! {
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_end(
 			RawOrigin::Signed(caller.clone()).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 		));
 
-	}:_(RawOrigin::Signed(caller.clone()), lookup_of_account::<T>(caller.clone()), ASSET_0, ASSET_1, 120u128.saturated_into())
+	}:_(RawOrigin::Signed(caller.clone()), lookup_of_account::<T>(caller.clone()), ASSET_0.into(), ASSET_1.into(), 120u128.saturated_into())
 
 	bootstrap_end{
 		let caller: T::AccountId = whitelisted_caller();
 
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1.into(), &caller, 1000 * UNIT));
 
-		let reward:Vec<AssetId> =  vec![ASSET_0];
-		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
+		let reward:Vec<T::AssetId> =  vec![ASSET_0.into()];
+		let reward_amounts: Vec<(T::AssetId, u128)> = vec![(ASSET_1.into(), 0)];
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_create(
 			(RawOrigin::Root).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			1000,
 			1000,
 			10*UNIT,
@@ -145,26 +147,26 @@ benchmarks! {
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(
 			RawOrigin::Signed(caller.clone()).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			10*UNIT,
 			10*UNIT,
 			99u128.saturated_into()
 		));
 
 		run_to_block::<T>(100);
-	}:_(RawOrigin::Signed(caller.clone()), ASSET_0, ASSET_1)
+	}:_(RawOrigin::Signed(caller.clone()), ASSET_0.into(), ASSET_1.into())
 
 	bootstrap_update{
 		let caller: T::AccountId = whitelisted_caller();
 
-		let reward:Vec<AssetId> =  vec![ASSET_0];
-		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
+		let reward:Vec<T::AssetId> =  vec![ASSET_0.into()];
+		let reward_amounts: Vec<(T::AssetId, u128)> = vec![(ASSET_1.into(), 0)];
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_create(
 			(RawOrigin::Root).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			1000,
 			1000,
 			10*UNIT,
@@ -174,21 +176,21 @@ benchmarks! {
 			reward_amounts.clone(),
 		));
 
-	}:_(RawOrigin::Root, ASSET_0, ASSET_1, 1000, 1000, 1000_000_000, 1000_000_000, 100u128.saturated_into(), reward, reward_amounts)
+	}:_(RawOrigin::Root, ASSET_0.into(), ASSET_1.into(), 1000, 1000, 1000_000_000, 1000_000_000, 100u128.saturated_into(), reward, reward_amounts)
 
 	bootstrap_refund{
 		let caller: T::AccountId = whitelisted_caller();
 
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1.into(), &caller, 1000 * UNIT));
 
-		let reward:Vec<AssetId> =  vec![ASSET_0];
-		let reward_amounts: Vec<(AssetId, u128)> = vec![(ASSET_1, 0)];
+		let reward:Vec<T::AssetId> =  vec![ASSET_0.into()];
+		let reward_amounts: Vec<(T::AssetId, u128)> = vec![(ASSET_1.into(), 0)];
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_create(
 			(RawOrigin::Root).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			2*UNIT,
 			2*UNIT,
 			10*UNIT,
@@ -200,60 +202,60 @@ benchmarks! {
 
 		assert_ok!(ZenlinkPallet::<T>::bootstrap_contribute(
 			RawOrigin::Signed(caller.clone()).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			1*UNIT,
 			1*UNIT,
 			99u128.saturated_into()
 		));
 		run_to_block::<T>(100);
-	}:_(RawOrigin::Signed(caller.clone()), ASSET_0, ASSET_1)
+	}:_(RawOrigin::Signed(caller.clone()), ASSET_0.into(), ASSET_1.into())
 
 	add_liquidity{
 		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1.into(), &caller, 1000 * UNIT));
 
-		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_0, ASSET_1));
+		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_0.into(), ASSET_1.into()));
 
 		assert_ok!(ZenlinkPallet::<T>::set_fee_receiver((RawOrigin::Root).into(), lookup_of_account::<T>(caller.clone()).into()));
 
-	}:_(RawOrigin::Signed(caller.clone()), ASSET_0, ASSET_1, 10 * UNIT, 10* UNIT, 0,0, 100u32.saturated_into())
+	}:_(RawOrigin::Signed(caller.clone()), ASSET_0.into(), ASSET_1.into(), 10 * UNIT, 10* UNIT, 0,0, 100u32.saturated_into())
 
 	remove_liquidity{
 		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1.into(), &caller, 1000 * UNIT));
 
-		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_0, ASSET_1));
+		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_0.into(), ASSET_1.into()));
 
 		assert_ok!(ZenlinkPallet::<T>::set_fee_receiver((RawOrigin::Root).into(), lookup_of_account::<T>(caller.clone()).into()));
 
 		assert_ok!(ZenlinkPallet::<T>::add_liquidity(
 			RawOrigin::Signed(caller.clone()).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			10 * UNIT,
 			10* UNIT,
 			0,
 			0,
 			100u32.saturated_into()));
 
-	}:_(RawOrigin::Signed(caller.clone()), ASSET_0, ASSET_1, 1 * UNIT, 0, 0, lookup_of_account::<T>(caller.clone()).into(), 100u32.saturated_into())
+	}:_(RawOrigin::Signed(caller.clone()), ASSET_0.into(), ASSET_1.into(), 1 * UNIT, 0, 0, lookup_of_account::<T>(caller.clone()).into(), 100u32.saturated_into())
 
 	swap_exact_assets_for_assets{
 		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_2, &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_2.into(), &caller, 1000 * UNIT));
 
-		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_0, ASSET_1));
-		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_1, ASSET_2));
+		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_0.into(), ASSET_1.into()));
+		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_1.into(), ASSET_2.into()));
 
 		assert_ok!(ZenlinkPallet::<T>::add_liquidity(
 			RawOrigin::Signed(caller.clone()).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			10 * UNIT,
 			10* UNIT,
 			0,
@@ -262,31 +264,31 @@ benchmarks! {
 
 		assert_ok!(ZenlinkPallet::<T>::add_liquidity(
 			RawOrigin::Signed(caller.clone()).into(),
-			ASSET_1,
-			ASSET_2,
+			ASSET_1.into(),
+			ASSET_2.into(),
 			10 * UNIT,
 			10* UNIT,
 			0,
 			0,
 			100u32.saturated_into()));
 
-		let path: Vec<AssetId> = vec![ASSET_0, ASSET_1, ASSET_2];
+		let path: Vec<T::AssetId> = vec![ASSET_0.into(), ASSET_1.into(), ASSET_2.into()];
 
 	}:_(RawOrigin::Signed(caller.clone()), 1* UNIT, 0,path, lookup_of_account::<T>(caller.clone()).into(), 100u32.saturated_into())
 
 	swap_assets_for_exact_assets{
 		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1, &caller, 1000 * UNIT));
-		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_2, &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_0.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_1.into(), &caller, 1000 * UNIT));
+		assert_ok!(<T as Config>::MultiAssetsHandler::deposit(ASSET_2.into(), &caller, 1000 * UNIT));
 
-		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_1, ASSET_2));
-		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_0, ASSET_1));
+		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_1.into(), ASSET_2.into()));
+		assert_ok!(ZenlinkPallet::<T>::create_pair((RawOrigin::Root).into(), ASSET_0.into(), ASSET_1.into()));
 
 		assert_ok!(ZenlinkPallet::<T>::add_liquidity(
 			RawOrigin::Signed(caller.clone()).into(),
-			ASSET_1,
-			ASSET_2,
+			ASSET_1.into(),
+			ASSET_2.into(),
 			10 * UNIT,
 			10* UNIT,
 			0,
@@ -295,14 +297,14 @@ benchmarks! {
 
 		assert_ok!(ZenlinkPallet::<T>::add_liquidity(
 			RawOrigin::Signed(caller.clone()).into(),
-			ASSET_0,
-			ASSET_1,
+			ASSET_0.into(),
+			ASSET_1.into(),
 			10 * UNIT,
 			10* UNIT,
 			0,
 			0,
 			100u32.saturated_into()));
 
-		let path: Vec<AssetId> = vec![ASSET_0, ASSET_1, ASSET_2];
+		let path: Vec<T::AssetId> = vec![ASSET_0.into(), ASSET_1.into(), ASSET_2.into()];
 	}:_(RawOrigin::Signed(caller.clone()), 1* UNIT, 10*UNIT,path, lookup_of_account::<T>(caller.clone()).into(), 100u32.saturated_into())
 }

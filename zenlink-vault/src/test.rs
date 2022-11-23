@@ -2,6 +2,7 @@
 // Licensed under Apache 2.0.
 
 use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
 use sp_runtime::DispatchError::BadOrigin;
 
 use super::*;
@@ -21,7 +22,7 @@ const VAULT_PALLET_ACCOUNT: AccountId = 36018076922747156782236594029;
 fn basic_create_vault_asset_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(VaultPallet::create_vault_asset(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			ASSET1,
 			TOKEN1_DECIMAL,
 			12,
@@ -50,7 +51,7 @@ fn create_vault_asset_with_non_admin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
 			VaultPallet::create_vault_asset(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				ASSET1,
 				TOKEN1_DECIMAL,
 				TOKEN1_DECIMAL,
@@ -66,7 +67,7 @@ fn create_vault_asset_with_non_admin_should_fail() {
 fn create_vault_asset_repeatedly_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(VaultPallet::create_vault_asset(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			ASSET1,
 			TOKEN1_DECIMAL,
 			TOKEN1_DECIMAL,
@@ -76,7 +77,7 @@ fn create_vault_asset_repeatedly_should_fail() {
 
 		assert_noop!(
 			VaultPallet::create_vault_asset(
-				Origin::root(),
+				RawOrigin::Root.into(),
 				ASSET1,
 				TOKEN1_DECIMAL,
 				TOKEN2_DECIMAL,
@@ -107,7 +108,7 @@ fn create_vault_asset_repeatedly_should_fail() {
 fn first_deposit_with_empty_vault_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(VaultPallet::create_vault_asset(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			ASSET1,
 			TOKEN1_DECIMAL,
 			TOKEN1_DECIMAL,
@@ -120,7 +121,12 @@ fn first_deposit_with_empty_vault_should_work() {
 
 		let alice_asset1_balance_before = get_user_balance(ASSET1, &ALICE);
 
-		assert_ok!(VaultPallet::deposit(Origin::signed(ALICE), ASSET1, 1e18 as Balance, ALICE,));
+		assert_ok!(VaultPallet::deposit(
+			RawOrigin::Signed(ALICE).into(),
+			ASSET1,
+			1e18 as Balance,
+			ALICE,
+		));
 
 		let alice_asset1_balance_after = get_user_balance(ASSET1, &ALICE);
 
@@ -133,7 +139,7 @@ fn first_deposit_with_empty_vault_should_work() {
 fn first_mint_with_empty_vault_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(VaultPallet::create_vault_asset(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			ASSET1,
 			TOKEN1_DECIMAL,
 			TOKEN1_DECIMAL,
@@ -146,7 +152,12 @@ fn first_mint_with_empty_vault_should_work() {
 
 		let alice_asset1_balance_before = get_user_balance(ASSET1, &ALICE);
 
-		assert_ok!(VaultPallet::mint(Origin::signed(ALICE), ASSET1, 1e18 as Balance, ALICE,));
+		assert_ok!(VaultPallet::mint(
+			RawOrigin::Signed(ALICE).into(),
+			ASSET1,
+			1e18 as Balance,
+			ALICE,
+		));
 
 		let alice_asset1_balance_after = get_user_balance(ASSET1, &ALICE);
 
@@ -159,7 +170,7 @@ fn first_mint_with_empty_vault_should_work() {
 fn first_withdraw_with_empty_vault_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(VaultPallet::create_vault_asset(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			ASSET1,
 			TOKEN1_DECIMAL,
 			TOKEN1_DECIMAL,
@@ -172,7 +183,7 @@ fn first_withdraw_with_empty_vault_should_work() {
 
 		let alice_asset1_balance_before = get_user_balance(ASSET1, &ALICE);
 
-		assert_ok!(VaultPallet::withdraw(Origin::signed(ALICE), ASSET1, 0, ALICE,));
+		assert_ok!(VaultPallet::withdraw(RawOrigin::Signed(ALICE).into(), ASSET1, 0, ALICE,));
 
 		let alice_asset1_balance_after = get_user_balance(ASSET1, &ALICE);
 
@@ -185,7 +196,7 @@ fn first_withdraw_with_empty_vault_should_work() {
 fn first_redeem_with_empty_vault_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(VaultPallet::create_vault_asset(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			ASSET1,
 			TOKEN1_DECIMAL,
 			TOKEN1_DECIMAL,
@@ -198,7 +209,7 @@ fn first_redeem_with_empty_vault_should_work() {
 
 		let alice_asset1_balance_before = get_user_balance(ASSET1, &ALICE);
 
-		assert_ok!(VaultPallet::redeem(Origin::signed(ALICE), ASSET1, 0, ALICE,));
+		assert_ok!(VaultPallet::redeem(RawOrigin::Signed(ALICE).into(), ASSET1, 0, ALICE,));
 
 		let alice_asset1_balance_after = get_user_balance(ASSET1, &ALICE);
 
@@ -209,7 +220,7 @@ fn first_redeem_with_empty_vault_should_work() {
 
 fn prepare_vault_with_asset_but_no_share(underlying_asset_id: CurrencyId) -> CurrencyId {
 	assert_ok!(VaultPallet::create_vault_asset(
-		Origin::root(),
+		RawOrigin::Root.into(),
 		underlying_asset_id,
 		TOKEN1_DECIMAL,
 		TOKEN1_DECIMAL,
@@ -244,7 +255,12 @@ fn deposit_vault_with_assets_but_no_share_should_work() {
 
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &ALICE);
 
-		assert_ok!(VaultPallet::deposit(Origin::signed(ALICE), ASSET1, 1e18 as Balance, ALICE,));
+		assert_ok!(VaultPallet::deposit(
+			RawOrigin::Signed(ALICE).into(),
+			ASSET1,
+			1e18 as Balance,
+			ALICE,
+		));
 
 		let underlying_balance_after = get_user_balance(underlying_asset_id, &ALICE);
 
@@ -266,7 +282,12 @@ fn mint_vault_with_assets_but_no_share_should_work() {
 
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &ALICE);
 
-		assert_ok!(VaultPallet::mint(Origin::signed(ALICE), ASSET1, 1e18 as Balance, ALICE,));
+		assert_ok!(VaultPallet::mint(
+			RawOrigin::Signed(ALICE).into(),
+			ASSET1,
+			1e18 as Balance,
+			ALICE,
+		));
 
 		let underlying_balance_after = get_user_balance(underlying_asset_id, &ALICE);
 
@@ -288,7 +309,7 @@ fn withdraw_vault_with_assets_but_no_share_should_work() {
 
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &ALICE);
 
-		assert_ok!(VaultPallet::withdraw(Origin::signed(ALICE), ASSET1, 0, ALICE,));
+		assert_ok!(VaultPallet::withdraw(RawOrigin::Signed(ALICE).into(), ASSET1, 0, ALICE,));
 
 		let underlying_balance_after = get_user_balance(underlying_asset_id, &ALICE);
 
@@ -310,7 +331,7 @@ fn redeem_vault_with_assets_but_no_share_should_work() {
 
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &ALICE);
 
-		assert_ok!(VaultPallet::redeem(Origin::signed(ALICE), ASSET1, 0, ALICE,));
+		assert_ok!(VaultPallet::redeem(RawOrigin::Signed(ALICE).into(), ASSET1, 0, ALICE,));
 
 		let underlying_balance_after = get_user_balance(underlying_asset_id, &ALICE);
 
@@ -324,7 +345,7 @@ fn prepare_vault_with_shares_but_no_assets(
 	share_amounts: Balance,
 ) -> CurrencyId {
 	assert_ok!(VaultPallet::create_vault_asset(
-		Origin::root(),
+		RawOrigin::Root.into(),
 		underlying_asset_id,
 		TOKEN1_DECIMAL,
 		TOKEN1_DECIMAL,
@@ -364,7 +385,7 @@ fn deposit_vault_with_shares_but_no_assets() {
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &ALICE);
 
 		assert_noop!(
-			VaultPallet::deposit(Origin::signed(ALICE), ASSET1, 1e18 as Balance, ALICE,),
+			VaultPallet::deposit(RawOrigin::Signed(ALICE).into(), ASSET1, 1e18 as Balance, ALICE,),
 			Error::<Test>::ExceedMaxDeposit
 		);
 
@@ -387,7 +408,12 @@ fn mint_vault_with_shares_but_no_assets() {
 
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &ALICE);
 
-		assert_ok!(VaultPallet::mint(Origin::signed(ALICE), ASSET1, 1e18 as Balance, BOB,));
+		assert_ok!(VaultPallet::mint(
+			RawOrigin::Signed(ALICE).into(),
+			ASSET1,
+			1e18 as Balance,
+			BOB,
+		));
 
 		let underlying_balance_after = get_user_balance(underlying_asset_id, &ALICE);
 
@@ -411,7 +437,7 @@ fn withdraw_vault_with_shares_but_no_assets() {
 
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &ALICE);
 
-		assert_ok!(VaultPallet::withdraw(Origin::signed(ALICE), ASSET1, 0, BOB,));
+		assert_ok!(VaultPallet::withdraw(RawOrigin::Signed(ALICE).into(), ASSET1, 0, BOB,));
 
 		let underlying_balance_after = get_user_balance(underlying_asset_id, &ALICE);
 
@@ -434,7 +460,7 @@ fn redeem_vault_with_shares_but_no_assets() {
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &ALICE);
 
 		assert_ok!(VaultPallet::redeem(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			underlying_asset_id,
 			1e18 as Balance,
 			BOB,
@@ -453,7 +479,7 @@ fn prepare_ongoing_vault(
 	shares: Balance,
 ) -> CurrencyId {
 	assert_ok!(VaultPallet::create_vault_asset(
-		Origin::root(),
+		RawOrigin::Root.into(),
 		underlying_asset_id,
 		TOKEN1_DECIMAL,
 		TOKEN1_DECIMAL,
@@ -492,7 +518,12 @@ fn deposit_with_ongoing_vault_should_work() {
 
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &ALICE);
 
-		assert_ok!(VaultPallet::deposit(Origin::signed(ALICE), underlying_asset_id, amounts, BOB));
+		assert_ok!(VaultPallet::deposit(
+			RawOrigin::Signed(ALICE).into(),
+			underlying_asset_id,
+			amounts,
+			BOB
+		));
 
 		let underlying_balance_after = get_user_balance(underlying_asset_id, &ALICE);
 		assert_eq!(underlying_balance_before - underlying_balance_after, amounts);
@@ -513,7 +544,12 @@ fn mint_with_ongoing_vault_should_work() {
 
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &ALICE);
 
-		assert_ok!(VaultPallet::mint(Origin::signed(ALICE), underlying_asset_id, shares, BOB));
+		assert_ok!(VaultPallet::mint(
+			RawOrigin::Signed(ALICE).into(),
+			underlying_asset_id,
+			shares,
+			BOB
+		));
 
 		let underlying_balance_after = get_user_balance(underlying_asset_id, &ALICE);
 		assert_eq!(underlying_balance_before - underlying_balance_after, amounts);
@@ -537,7 +573,12 @@ fn withdraw_with_ongoing_vault_should_work() {
 
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &BOB);
 
-		assert_ok!(VaultPallet::withdraw(Origin::signed(ALICE), underlying_asset_id, amounts, BOB));
+		assert_ok!(VaultPallet::withdraw(
+			RawOrigin::Signed(ALICE).into(),
+			underlying_asset_id,
+			amounts,
+			BOB
+		));
 
 		let underlying_balance_after = get_user_balance(underlying_asset_id, &BOB);
 		assert_eq!(
@@ -564,7 +605,12 @@ fn redeem_with_ongoing_vault_should_work() {
 
 		let underlying_balance_before = get_user_balance(underlying_asset_id, &BOB);
 
-		assert_ok!(VaultPallet::redeem(Origin::signed(ALICE), underlying_asset_id, shares, BOB));
+		assert_ok!(VaultPallet::redeem(
+			RawOrigin::Signed(ALICE).into(),
+			underlying_asset_id,
+			shares,
+			BOB
+		));
 
 		let underlying_balance_after = get_user_balance(underlying_asset_id, &BOB);
 		assert_eq!(
@@ -580,7 +626,7 @@ fn mixed_transactions_should_work() {
 	new_test_ext().execute_with(|| {
 		let underlying_asset_id = ASSET1;
 		assert_ok!(VaultPallet::create_vault_asset(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			ASSET1,
 			TOKEN1_DECIMAL,
 			TOKEN1_DECIMAL,
@@ -591,7 +637,12 @@ fn mixed_transactions_should_work() {
 		let vault_asset_id = VaultPallet::vault_asset(underlying_asset_id).unwrap();
 
 		// 1. Alice mints 2000 shares (costs 2000 tokens)
-		assert_ok!(VaultPallet::mint(Origin::signed(ALICE), underlying_asset_id, 2000, ALICE));
+		assert_ok!(VaultPallet::mint(
+			RawOrigin::Signed(ALICE).into(),
+			underlying_asset_id,
+			2000,
+			ALICE
+		));
 		assert_eq!(VaultPallet::preview_deposit(underlying_asset_id, 2000), Ok(2000));
 		assert_eq!(get_user_balance(vault_asset_id, &ALICE), 2000);
 		assert_eq!(get_user_balance(vault_asset_id, &BOB), 0);
@@ -600,7 +651,12 @@ fn mixed_transactions_should_work() {
 		assert_eq!(VaultPallet::total_assets(underlying_asset_id), Ok(2000));
 
 		// 2. Bob deposit 4000 tokens (mint 4000 shares)
-		assert_ok!(VaultPallet::deposit(Origin::signed(BOB), underlying_asset_id, 4000, BOB));
+		assert_ok!(VaultPallet::deposit(
+			RawOrigin::Signed(BOB).into(),
+			underlying_asset_id,
+			4000,
+			BOB
+		));
 		assert_eq!(get_user_balance(vault_asset_id, &BOB), 4000);
 		assert_eq!(VaultPallet::convert_to_assets(underlying_asset_id, 2000), Ok(2000));
 		assert_eq!(VaultPallet::convert_to_assets(underlying_asset_id, 4000), Ok(4000));
@@ -615,7 +671,12 @@ fn mixed_transactions_should_work() {
 		assert_eq!(VaultPallet::total_assets(underlying_asset_id), Ok(9000));
 
 		// 4. Alice deposits 2000 tokens (mints 1333 shares)
-		assert_ok!(VaultPallet::deposit(Origin::signed(ALICE), underlying_asset_id, 2000, ALICE));
+		assert_ok!(VaultPallet::deposit(
+			RawOrigin::Signed(ALICE).into(),
+			underlying_asset_id,
+			2000,
+			ALICE
+		));
 		assert_eq!(get_user_balance(vault_asset_id, &ALICE), 3333);
 		assert_eq!(VaultPallet::convert_to_assets(underlying_asset_id, 3333), Ok(4999));
 		assert_eq!(VaultPallet::convert_to_assets(underlying_asset_id, 4000), Ok(6000));
@@ -623,7 +684,12 @@ fn mixed_transactions_should_work() {
 		assert_eq!(VaultPallet::total_assets(underlying_asset_id), Ok(11000));
 
 		// 5. Bob mints 2000 shares (costs 3001 assets)
-		assert_ok!(VaultPallet::mint(Origin::signed(BOB), underlying_asset_id, 2000, BOB));
+		assert_ok!(VaultPallet::mint(
+			RawOrigin::Signed(BOB).into(),
+			underlying_asset_id,
+			2000,
+			BOB
+		));
 		assert_eq!(get_user_balance(vault_asset_id, &ALICE), 3333);
 		assert_eq!(get_user_balance(vault_asset_id, &BOB), 6000);
 		assert_eq!(VaultPallet::convert_to_assets(underlying_asset_id, 3333), Ok(5000));
@@ -641,7 +707,12 @@ fn mixed_transactions_should_work() {
 		assert_eq!(VaultPallet::total_assets(underlying_asset_id), Ok(17001));
 
 		// 7. Alice redeem 1333 shares (2428 assets)
-		assert_ok!(VaultPallet::redeem(Origin::signed(ALICE), underlying_asset_id, 1333, ALICE));
+		assert_ok!(VaultPallet::redeem(
+			RawOrigin::Signed(ALICE).into(),
+			underlying_asset_id,
+			1333,
+			ALICE
+		));
 		assert_eq!(get_user_balance(vault_asset_id, &ALICE), 2000);
 		assert_eq!(get_user_balance(vault_asset_id, &BOB), 6000);
 		assert_eq!(VaultPallet::convert_to_assets(underlying_asset_id, 2000), Ok(3946));
@@ -651,7 +722,12 @@ fn mixed_transactions_should_work() {
 
 		// 8. Bob withdraws 2929 assets (1485 shares)
 		assert_eq!(VaultPallet::preview_withdraw(underlying_asset_id, 2929), Ok(1485));
-		assert_ok!(VaultPallet::withdraw(Origin::signed(BOB), underlying_asset_id, 2929, BOB));
+		assert_ok!(VaultPallet::withdraw(
+			RawOrigin::Signed(BOB).into(),
+			underlying_asset_id,
+			2929,
+			BOB
+		));
 		assert_eq!(get_user_balance(vault_asset_id, &ALICE), 2000);
 		assert_eq!(get_user_balance(vault_asset_id, &BOB), 4515);
 		assert_eq!(VaultPallet::convert_to_assets(underlying_asset_id, 2000), Ok(4396));
@@ -661,14 +737,24 @@ fn mixed_transactions_should_work() {
 
 		// 9. Alice withdraws 4396 assets (2000 shares)
 		assert_eq!(VaultPallet::preview_withdraw(underlying_asset_id, 4396), Ok(2000));
-		assert_ok!(VaultPallet::withdraw(Origin::signed(ALICE), underlying_asset_id, 4396, ALICE));
+		assert_ok!(VaultPallet::withdraw(
+			RawOrigin::Signed(ALICE).into(),
+			underlying_asset_id,
+			4396,
+			ALICE
+		));
 		assert_eq!(get_user_balance(vault_asset_id, &ALICE), 0);
 		assert_eq!(get_user_balance(vault_asset_id, &BOB), 4515);
 		assert_eq!(VaultPallet::convert_to_assets(underlying_asset_id, 4515), Ok(12124));
 
 		// 10. Bob redeem 4515 shares (12124 tokens)
 		assert_eq!(VaultPallet::preview_redeem(underlying_asset_id, 4515), Ok(12124));
-		assert_ok!(VaultPallet::redeem(Origin::signed(BOB), underlying_asset_id, 4515, BOB));
+		assert_ok!(VaultPallet::redeem(
+			RawOrigin::Signed(BOB).into(),
+			underlying_asset_id,
+			4515,
+			BOB
+		));
 		assert_eq!(get_user_balance(vault_asset_id, &ALICE), 0);
 		assert_eq!(get_user_balance(vault_asset_id, &BOB), 0);
 		assert_eq!(VaultPallet::convert_to_assets(underlying_asset_id, 0), Ok(0));

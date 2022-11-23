@@ -5,6 +5,7 @@ use crate::{
 };
 
 use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
 
 const VOTE_CURRENCY: CurrencyId = Token(TOKEN1_SYMBOL);
 const HOUR: u64 = 3600;
@@ -19,7 +20,7 @@ fn now() -> u64 {
 fn update_admin_with_root_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_eq!(GaugePallet::admin(), None);
-		assert_ok!(GaugePallet::update_admin(Origin::root(), ALICE));
+		assert_ok!(GaugePallet::update_admin(RawOrigin::Root.into(), ALICE));
 		assert_eq!(GaugePallet::admin(), Some(ALICE));
 	})
 }
@@ -31,7 +32,7 @@ fn initialize_with_no_admin_should_fail() {
 		let start = now();
 		assert_noop!(
 			GaugePallet::initialize(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				VOTE_CURRENCY,
 				VOTE_DURATON,
 				VOTE_SET_WINDOW,
@@ -45,14 +46,14 @@ fn initialize_with_no_admin_should_fail() {
 #[test]
 fn initialize_with_old_timestamp_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(GaugePallet::update_admin(Origin::root(), ALICE));
+		assert_ok!(GaugePallet::update_admin(RawOrigin::Root.into(), ALICE));
 
 		mine_block();
 		let start = now() - 1;
 
 		assert_noop!(
 			GaugePallet::initialize(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				VOTE_CURRENCY,
 				VOTE_DURATON,
 				VOTE_SET_WINDOW,
@@ -66,13 +67,13 @@ fn initialize_with_old_timestamp_should_fail() {
 #[test]
 fn initialize_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(GaugePallet::update_admin(Origin::root(), ALICE));
+		assert_ok!(GaugePallet::update_admin(RawOrigin::Root.into(), ALICE));
 
 		mine_block();
 		let start = now() + 10;
 
 		assert_ok!(GaugePallet::initialize(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			VOTE_CURRENCY,
 			VOTE_DURATON,
 			VOTE_SET_WINDOW,
@@ -94,27 +95,27 @@ fn initialize_should_work() {
 #[test]
 fn initialize_repeatedly_should_failed() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(GaugePallet::update_admin(Origin::root(), ALICE));
+		assert_ok!(GaugePallet::update_admin(RawOrigin::Root.into(), ALICE));
 
 		mine_block();
 		let start = now() + 10;
 
 		assert_ok!(GaugePallet::initialize(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			VOTE_CURRENCY,
 			VOTE_DURATON,
 			VOTE_SET_WINDOW,
 			start,
 		));
 
-		assert_ok!(GaugePallet::update_admin(Origin::root(), ALICE));
+		assert_ok!(GaugePallet::update_admin(RawOrigin::Root.into(), ALICE));
 
 		mine_block();
 		let start = now() + 10;
 
 		assert_noop!(
 			GaugePallet::initialize(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				VOTE_CURRENCY,
 				VOTE_DURATON,
 				VOTE_SET_WINDOW,
@@ -126,13 +127,13 @@ fn initialize_repeatedly_should_failed() {
 }
 
 fn initialize_gauge() {
-	assert_ok!(GaugePallet::update_admin(Origin::root(), ALICE));
+	assert_ok!(GaugePallet::update_admin(RawOrigin::Root.into(), ALICE));
 
 	mine_block();
 	let start = now() + 10;
 
 	assert_ok!(GaugePallet::initialize(
-		Origin::signed(ALICE),
+		RawOrigin::Signed(ALICE).into(),
 		VOTE_CURRENCY,
 		VOTE_DURATON,
 		VOTE_SET_WINDOW,
@@ -147,7 +148,7 @@ fn set_voteable_pools_with_admin_should_work() {
 
 		let pools = vec![0, 1, 3];
 
-		assert_ok!(GaugePallet::set_voteable_pools(Origin::signed(ALICE), pools.clone()));
+		assert_ok!(GaugePallet::set_voteable_pools(RawOrigin::Signed(ALICE).into(), pools.clone()));
 		for pid in pools.iter() {
 			assert_eq!(GaugePallet::global_pool_state(0, pid).unwrap().votable, true);
 		}
@@ -162,7 +163,7 @@ fn set_voteable_pools_with_no_admin_should_failed() {
 		let pools = vec![0, 1, 3];
 
 		assert_noop!(
-			GaugePallet::set_voteable_pools(Origin::signed(BOB), pools.clone()),
+			GaugePallet::set_voteable_pools(RawOrigin::Signed(BOB).into(), pools.clone()),
 			Error::<Test>::OnlyAdmin
 		);
 
@@ -179,7 +180,10 @@ fn set_non_voteable_pools_with_admin_should_work() {
 
 		let pools = vec![0, 1, 3];
 
-		assert_ok!(GaugePallet::set_non_voteable_pools(Origin::signed(ALICE), pools.clone()));
+		assert_ok!(GaugePallet::set_non_voteable_pools(
+			RawOrigin::Signed(ALICE).into(),
+			pools.clone()
+		));
 		for pid in pools.iter() {
 			assert_eq!(GaugePallet::global_pool_state(0, pid).unwrap().votable, false);
 		}
@@ -194,7 +198,7 @@ fn set_non_voteable_pools_with_no_admin_should_failed() {
 		let pools = vec![0, 1, 3];
 
 		assert_noop!(
-			GaugePallet::set_non_voteable_pools(Origin::signed(BOB), pools.clone()),
+			GaugePallet::set_non_voteable_pools(RawOrigin::Signed(BOB).into(), pools.clone()),
 			Error::<Test>::OnlyAdmin
 		);
 
@@ -209,7 +213,7 @@ fn update_vote_set_window_with_admin_should_work() {
 	new_test_ext().execute_with(|| {
 		initialize_gauge();
 		assert_ok!(GaugePallet::update_vote_set_window(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			VOTE_SET_WINDOW + 1000
 		));
 
@@ -222,7 +226,10 @@ fn update_vote_set_window_with_no_admin_should_work() {
 	new_test_ext().execute_with(|| {
 		initialize_gauge();
 		assert_noop!(
-			GaugePallet::update_vote_set_window(Origin::signed(BOB), VOTE_SET_WINDOW + 1000),
+			GaugePallet::update_vote_set_window(
+				RawOrigin::Signed(BOB).into(),
+				VOTE_SET_WINDOW + 1000
+			),
 			Error::<Test>::OnlyAdmin
 		);
 
@@ -234,7 +241,10 @@ fn update_vote_set_window_with_no_admin_should_work() {
 fn update_vote_duration_with_admin_should_work() {
 	new_test_ext().execute_with(|| {
 		initialize_gauge();
-		assert_ok!(GaugePallet::update_vote_duration(Origin::signed(ALICE), VOTE_DURATON + 1000));
+		assert_ok!(GaugePallet::update_vote_duration(
+			RawOrigin::Signed(ALICE).into(),
+			VOTE_DURATON + 1000
+		));
 
 		assert_eq!(GaugePallet::vote_duration(), VOTE_DURATON + 1000);
 	})
@@ -245,7 +255,10 @@ fn update_vote_duration_with_no_admin_should_work() {
 	new_test_ext().execute_with(|| {
 		initialize_gauge();
 		assert_noop!(
-			GaugePallet::update_vote_duration(Origin::signed(BOB), VOTE_SET_WINDOW + 1000),
+			GaugePallet::update_vote_duration(
+				RawOrigin::Signed(BOB).into(),
+				VOTE_SET_WINDOW + 1000
+			),
 			Error::<Test>::OnlyAdmin
 		);
 
@@ -258,17 +271,17 @@ fn update_vote_period_should_work() {
 	new_test_ext().execute_with(|| {
 		initialize_gauge();
 		let period0 = GaugePallet::vote_period(0).unwrap();
-		assert_ok!(GaugePallet::update_vote_period(Origin::signed(BOB)));
+		assert_ok!(GaugePallet::update_vote_period(RawOrigin::Signed(BOB).into()));
 
 		// in period0, updateVotePeriod do nothing
 		let mut next_block_timestamp = period0.start + HOUR;
 		set_block_timestamp(next_block_timestamp);
-		assert_ok!(GaugePallet::update_vote_period(Origin::signed(BOB)));
+		assert_ok!(GaugePallet::update_vote_period(RawOrigin::Signed(BOB).into()));
 
 		// after period0, update vote period success
 		next_block_timestamp = period0.end + VOTE_SET_WINDOW / 2;
 		set_block_timestamp(next_block_timestamp);
-		assert_ok!(GaugePallet::update_vote_period(Origin::signed(BOB)));
+		assert_ok!(GaugePallet::update_vote_period(RawOrigin::Signed(BOB).into()));
 
 		let period1 = GaugePallet::vote_period(1).unwrap();
 		let next_period_start = period0.end + VOTE_SET_WINDOW;
@@ -279,7 +292,7 @@ fn update_vote_period_should_work() {
 		// after period1.end + voteSetWindow, period2.start = block.Timestamp
 		next_block_timestamp = period1.end + VOTE_SET_WINDOW + 10;
 		set_block_timestamp(next_block_timestamp);
-		assert_ok!(GaugePallet::update_vote_period(Origin::signed(BOB)));
+		assert_ok!(GaugePallet::update_vote_period(RawOrigin::Signed(BOB).into()));
 		let period2 = GaugePallet::vote_period(2).unwrap();
 		let current_timestmap = now();
 		assert_eq!(period2.start, current_timestmap);
@@ -292,14 +305,17 @@ fn update_vote_period_params_should_work() {
 	new_test_ext().execute_with(|| {
 		initialize_gauge();
 		let period0 = GaugePallet::vote_period(0).unwrap();
-		assert_ok!(GaugePallet::update_vote_duration(Origin::signed(ALICE), VOTE_DURATON - HOUR));
+		assert_ok!(GaugePallet::update_vote_duration(
+			RawOrigin::Signed(ALICE).into(),
+			VOTE_DURATON - HOUR
+		));
 		assert_ok!(GaugePallet::update_vote_set_window(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			VOTE_SET_WINDOW + HOUR
 		));
 
 		// The period 0 is not expired, so nothing changed.
-		assert_ok!(GaugePallet::update_vote_period(Origin::signed(BOB)));
+		assert_ok!(GaugePallet::update_vote_period(RawOrigin::Signed(BOB).into()));
 
 		let period0_after_update = GaugePallet::vote_period(0).unwrap();
 		assert_eq!(period0, period0_after_update);
@@ -307,7 +323,7 @@ fn update_vote_period_params_should_work() {
 		let next_block_timestamp = period0.start + VOTE_DURATON + HOUR + 10;
 		set_block_timestamp(next_block_timestamp);
 
-		assert_ok!(GaugePallet::update_vote_period(Origin::signed(BOB)));
+		assert_ok!(GaugePallet::update_vote_period(RawOrigin::Signed(BOB).into()));
 		let period1 = GaugePallet::vote_period(1).unwrap();
 		assert_eq!(period1.start, period0.end + VOTE_SET_WINDOW + HOUR);
 		assert_eq!(period1.end, period1.start + VOTE_DURATON - HOUR);
@@ -319,19 +335,19 @@ fn update_pool_votable_at_any_time_should_work() {
 	new_test_ext().execute_with(|| {
 		initialize_gauge();
 		// in period0
-		assert_ok!(GaugePallet::set_voteable_pools(Origin::signed(ALICE), vec![1]));
+		assert_ok!(GaugePallet::set_voteable_pools(RawOrigin::Signed(ALICE).into(), vec![1]));
 		assert_eq!(GaugePallet::global_pool_state(0, 1).unwrap().reset_votable, true);
 
 		//after period0
 		let period0 = GaugePallet::vote_period(0).unwrap();
 		let mut next_timestamp = period0.end + 10;
 		set_block_timestamp(next_timestamp);
-		assert_ok!(GaugePallet::set_voteable_pools(Origin::signed(ALICE), vec![1]));
+		assert_ok!(GaugePallet::set_voteable_pools(RawOrigin::Signed(ALICE).into(), vec![1]));
 		let mut pool_state = GaugePallet::global_pool_state(1, 1).unwrap();
 		assert_eq!(pool_state.reset_votable, true);
 		assert_eq!(pool_state.votable, true);
 
-		assert_ok!(GaugePallet::set_non_voteable_pools(Origin::signed(ALICE), vec![1]));
+		assert_ok!(GaugePallet::set_non_voteable_pools(RawOrigin::Signed(ALICE).into(), vec![1]));
 		pool_state = GaugePallet::global_pool_state(1, 1).unwrap();
 		assert_eq!(pool_state.reset_votable, true);
 		assert_eq!(pool_state.votable, false);
@@ -356,13 +372,13 @@ fn admin_update_vote_not_overwrite_should_work() {
 		let next_timestamp = period0.end + 10;
 		set_block_timestamp(next_timestamp);
 
-		assert_ok!(GaugePallet::set_voteable_pools(Origin::signed(ALICE), vec![1]));
+		assert_ok!(GaugePallet::set_voteable_pools(RawOrigin::Signed(ALICE).into(), vec![1]));
 		let mut pool_state = GaugePallet::global_pool_state(1, 1).unwrap();
 		assert_eq!(pool_state.reset_votable, true);
 		assert_eq!(pool_state.votable, true);
 
-		assert_ok!(GaugePallet::update_vote_period(Origin::signed(BOB)));
-		assert_ok!(GaugePallet::update_pool_histroy(Origin::signed(BOB), 1, 1));
+		assert_ok!(GaugePallet::update_vote_period(RawOrigin::Signed(BOB).into()));
+		assert_ok!(GaugePallet::update_pool_histroy(RawOrigin::Signed(BOB).into(), 1, 1));
 
 		pool_state = GaugePallet::global_pool_state(1, 1).unwrap();
 		assert_eq!(pool_state.reset_votable, true);
@@ -380,11 +396,11 @@ fn vote_should_work() {
 		initialize_gauge();
 		// vote before period0 start
 		assert_noop!(
-			GaugePallet::vote(Origin::signed(BOB), 1, 100 * TOKEN1_UNIT),
+			GaugePallet::vote(RawOrigin::Signed(BOB).into(), 1, 100 * TOKEN1_UNIT),
 			Error::<Test>::NonVotablePool
 		);
-		assert_ok!(GaugePallet::set_voteable_pools(Origin::signed(ALICE), vec![1]));
-		assert_ok!(GaugePallet::vote(Origin::signed(BOB), 1, 10 * TOKEN1_UNIT));
+		assert_ok!(GaugePallet::set_voteable_pools(RawOrigin::Signed(ALICE).into(), vec![1]));
+		assert_ok!(GaugePallet::vote(RawOrigin::Signed(BOB).into(), 1, 10 * TOKEN1_UNIT));
 
 		assert_eq!(GaugePallet::account_vote_amount(BOB, 1), Some(10 * TOKEN1_UNIT));
 
@@ -397,7 +413,7 @@ fn vote_should_work() {
 		let mut next_block_timestamp = period0.start + HOUR + 2;
 		set_block_timestamp(next_block_timestamp);
 
-		assert_ok!(GaugePallet::vote(Origin::signed(BOB), 1, 10 * TOKEN1_UNIT));
+		assert_ok!(GaugePallet::vote(RawOrigin::Signed(BOB).into(), 1, 10 * TOKEN1_UNIT));
 
 		assert_eq!(GaugePallet::account_vote_amount(BOB, 1), Some(20 * TOKEN1_UNIT));
 
@@ -410,7 +426,7 @@ fn vote_should_work() {
 		next_block_timestamp = period0.end + 10;
 		set_block_timestamp(next_block_timestamp);
 		// vote after period0 end, it vote to period1
-		assert_ok!(GaugePallet::vote(Origin::signed(BOB), 1, 10 * TOKEN1_UNIT));
+		assert_ok!(GaugePallet::vote(RawOrigin::Signed(BOB).into(), 1, 10 * TOKEN1_UNIT));
 
 		// the period has been update
 		assert_eq!(GaugePallet::next_period_id(), 2);
@@ -441,8 +457,8 @@ fn vote_should_work() {
 fn update_pool_histroy_should_work() {
 	new_test_ext().execute_with(|| {
 		initialize_gauge();
-		assert_ok!(GaugePallet::set_voteable_pools(Origin::signed(ALICE), vec![1]));
-		assert_ok!(GaugePallet::vote(Origin::signed(BOB), 1, 10 * TOKEN1_UNIT));
+		assert_ok!(GaugePallet::set_voteable_pools(RawOrigin::Signed(ALICE).into(), vec![1]));
+		assert_ok!(GaugePallet::vote(RawOrigin::Signed(BOB).into(), 1, 10 * TOKEN1_UNIT));
 
 		let mut pool_state = GaugePallet::global_pool_state(0, 1).unwrap();
 		assert_eq!(pool_state.total_amount, 10 * TOKEN1_UNIT);
@@ -454,10 +470,10 @@ fn update_pool_histroy_should_work() {
 			let next_period_end = next_period_start + VOTE_DURATON;
 			let next_block_timestamp = next_period_end + 10;
 			set_block_timestamp(next_block_timestamp);
-			assert_ok!(GaugePallet::update_vote_period(Origin::signed(BOB)));
+			assert_ok!(GaugePallet::update_vote_period(RawOrigin::Signed(BOB).into()));
 		}
 
-		assert_ok!(GaugePallet::update_pool_histroy(Origin::signed(BOB), 1, 2));
+		assert_ok!(GaugePallet::update_pool_histroy(RawOrigin::Signed(BOB).into(), 1, 2));
 
 		for i in 1..=2 {
 			pool_state = GaugePallet::global_pool_state(i, 1).unwrap();
@@ -471,7 +487,7 @@ fn update_pool_histroy_should_work() {
 			assert_eq!(GaugePallet::global_pool_state(i, 1), None);
 		}
 
-		assert_ok!(GaugePallet::update_pool_histroy(Origin::signed(BOB), 1, 4));
+		assert_ok!(GaugePallet::update_pool_histroy(RawOrigin::Signed(BOB).into(), 1, 4));
 
 		for i in 3..=4 {
 			pool_state = GaugePallet::global_pool_state(i, 1).unwrap();
@@ -489,9 +505,9 @@ fn update_pool_histroy_should_work() {
 fn cancel_vote_should_work() {
 	new_test_ext().execute_with(|| {
 		initialize_gauge();
-		assert_ok!(GaugePallet::set_voteable_pools(Origin::signed(ALICE), vec![1]));
-		assert_ok!(GaugePallet::vote(Origin::signed(BOB), 1, 10 * TOKEN1_UNIT));
-		assert_ok!(GaugePallet::cancel_vote(Origin::signed(BOB), 1, 10 * TOKEN1_UNIT));
+		assert_ok!(GaugePallet::set_voteable_pools(RawOrigin::Signed(ALICE).into(), vec![1]));
+		assert_ok!(GaugePallet::vote(RawOrigin::Signed(BOB).into(), 1, 10 * TOKEN1_UNIT));
+		assert_ok!(GaugePallet::cancel_vote(RawOrigin::Signed(BOB).into(), 1, 10 * TOKEN1_UNIT));
 		let mut pool_state = GaugePallet::global_pool_state(0, 1).unwrap();
 
 		assert_eq!(pool_state.total_amount, 0);
@@ -502,12 +518,12 @@ fn cancel_vote_should_work() {
 		let period0 = GaugePallet::vote_period(0).unwrap();
 		let mut next_block_timestamp = period0.start + HOUR * 2;
 		set_block_timestamp(next_block_timestamp);
-		assert_ok!(GaugePallet::vote(Origin::signed(BOB), 1, 10 * TOKEN1_UNIT));
+		assert_ok!(GaugePallet::vote(RawOrigin::Signed(BOB).into(), 1, 10 * TOKEN1_UNIT));
 		let added_score = calculate_score(next_block_timestamp, 10 * TOKEN1_UNIT, &period0);
 
 		next_block_timestamp = period0.start + HOUR * 2;
 		set_block_timestamp(next_block_timestamp);
-		assert_ok!(GaugePallet::cancel_vote(Origin::signed(BOB), 1, 5 * TOKEN1_UNIT));
+		assert_ok!(GaugePallet::cancel_vote(RawOrigin::Signed(BOB).into(), 1, 5 * TOKEN1_UNIT));
 		let removed_score = calculate_score(next_block_timestamp, 5 * TOKEN1_UNIT, &period0);
 
 		pool_state = GaugePallet::global_pool_state(0, 1).unwrap();
@@ -519,7 +535,7 @@ fn cancel_vote_should_work() {
 		// cancel vote after period0
 		next_block_timestamp = period0.end + 10;
 		set_block_timestamp(next_block_timestamp);
-		assert_ok!(GaugePallet::cancel_vote(Origin::signed(BOB), 1, 5 * TOKEN1_UNIT));
+		assert_ok!(GaugePallet::cancel_vote(RawOrigin::Signed(BOB).into(), 1, 5 * TOKEN1_UNIT));
 		// pool1 change nothing in period0
 		pool_state = GaugePallet::global_pool_state(0, 1).unwrap();
 		assert_eq!(pool_state.total_amount, 5 * TOKEN1_UNIT);

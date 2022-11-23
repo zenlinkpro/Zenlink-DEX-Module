@@ -3,15 +3,12 @@
 
 use super::*;
 use codec::{Decode, Encode, MaxEncodedLen};
+use frame_system::RawOrigin;
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 
 use frame_support::{
-	assert_ok,
-	pallet_prelude::GenesisBuild,
-	parameter_types,
-	traits::{ConstU32, Contains},
-	PalletId,
+	assert_ok, pallet_prelude::GenesisBuild, parameter_types, traits::Contains, PalletId,
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -75,16 +72,16 @@ pub enum CurrencyId {
 
 impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
-	type Origin = Origin;
+	type RuntimeOrigin = RuntimeOrigin;
 	type Index = u64;
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = u128;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
@@ -100,27 +97,24 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-pub type ReserveIdentifier = [u8; 8];
 impl orml_tokens::Config for Test {
-	type Event = Event;
-	type Balance = u128;
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
 	type Amount = i128;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-	type MaxLocks = MaxLocks;
+	type MaxLocks = ();
 	type DustRemovalWhitelist = MockDustRemovalWhitelist;
-	type ReserveIdentifier = ReserveIdentifier;
-	type MaxReserves = ConstU32<100_000>;
-	type OnNewTokenAccount = ();
-	type OnKilledTokenAccount = ();
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = [u8; 8];
+	type CurrencyHooks = ();
 }
 
 impl pallet_balances::Config for Test {
 	type Balance = u128;
 	type DustRemoval = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = frame_system::Pallet<Test>;
 	type WeightInfo = ();
@@ -141,7 +135,7 @@ impl VaultAssetGenerate<CurrencyId> for VaultAssetGenerator {
 }
 
 impl Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type AssetId = CurrencyId;
 	type MultiAsset = Tokens;
 	type VaultAssetGenerate = VaultAssetGenerator;
@@ -206,7 +200,7 @@ pub fn get_user_balance(currency_id: CurrencyId, user: &AccountId) -> Balance {
 
 pub fn transfer_from(currency_id: CurrencyId, from: &AccountId, amount: Balance, to: &AccountId) {
 	assert_ok!(<Test as Config>::MultiAsset::transfer(
-		Origin::signed(from.clone()),
+		RawOrigin::Signed(from.clone()).into(),
 		to.clone(),
 		currency_id,
 		amount
@@ -215,7 +209,7 @@ pub fn transfer_from(currency_id: CurrencyId, from: &AccountId, amount: Balance,
 
 pub fn set_balance(currency_id: CurrencyId, amount: Balance, to: &AccountId) {
 	assert_ok!(<Test as Config>::MultiAsset::set_balance(
-		Origin::root(),
+		RawOrigin::Root.into(),
 		to.clone(),
 		currency_id,
 		amount,

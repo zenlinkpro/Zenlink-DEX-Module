@@ -22,7 +22,7 @@ parameter_types! {
 }
 
 impl zenlink_protocol::Config for Runtime {
-	type Event = super::Event;
+	type RuntimeEvent = super::RuntimeEvent;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
 	type AssetId = AssetId;
@@ -130,7 +130,7 @@ where
 
 type PoolId = u32;
 impl zenlink_stable_amm::Config for Runtime {
-	type Event = super::Event;
+	type RuntimeEvent = super::RuntimeEvent;
 	type CurrencyId = CurrencyId;
 	type MultiCurrency = Tokens;
 	type PoolId = PoolId;
@@ -164,7 +164,7 @@ impl ValidateCurrency<CurrencyId> for StableAmmVerifyPoolAsset {
 }
 
 impl zenlink_swap_router::Config for Runtime {
-	type Event = super::Event;
+	type RuntimeEvent = super::RuntimeEvent;
 	type StablePoolId = PoolId;
 	type Balance = Balance;
 	type StableCurrencyId = CurrencyId;
@@ -186,7 +186,7 @@ impl VaultAssetGenerate<CurrencyId> for VaultAssetGenerator {
 }
 
 impl zenlink_vault::Config for Runtime {
-	type Event = super::Event;
+	type RuntimeEvent = super::RuntimeEvent;
 	type AssetId = CurrencyId;
 	type MultiAsset = Tokens;
 	type VaultAssetGenerate = VaultAssetGenerator;

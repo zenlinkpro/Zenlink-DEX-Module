@@ -6,7 +6,7 @@
 use super::*;
 use crate::Pallet as VaultPallet;
 
-use frame_benchmarking::{benchmarks, whitelisted_caller};
+use frame_benchmarking::{benchmarks, benchmarks_instance_pallet, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 

@@ -14,7 +14,7 @@ use frame_support::{
 	dispatch::{DispatchError, DispatchResult},
 	pallet_prelude::GenesisBuild,
 	parameter_types,
-	traits::{ConstU32, Contains},
+	traits::Contains,
 	PalletId,
 };
 use orml_traits::{parameter_type_with_key, MultiCurrency};
@@ -77,16 +77,16 @@ parameter_types! {
 
 impl frame_system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
-	type Origin = Origin;
+	type RuntimeOrigin = RuntimeOrigin;
 	type Index = u64;
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = u128;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type DbWeight = ();
 	type Version = ();
@@ -115,28 +115,24 @@ impl Contains<AccountId> for MockDustRemovalWhitelist {
 	}
 }
 
-pub type ReserveIdentifier = [u8; 8];
-
 impl orml_tokens::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Balance = u128;
 	type Amount = i128;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-	type MaxLocks = MaxLocks;
+	type MaxLocks = ();
 	type DustRemovalWhitelist = MockDustRemovalWhitelist;
-	type ReserveIdentifier = ReserveIdentifier;
-	type MaxReserves = ConstU32<100_000>;
-	type OnNewTokenAccount = ();
-	type OnKilledTokenAccount = ();
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = [u8; 8];
+	type CurrencyHooks = ();
 }
 
 impl pallet_balances::Config for Test {
 	type Balance = u128;
 	type DustRemoval = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = frame_system::Pallet<Test>;
 	type WeightInfo = ();
@@ -146,7 +142,7 @@ impl pallet_balances::Config for Test {
 }
 
 impl Config for Test {
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type MultiAssetsHandler = ZenlinkMultiAssets<Zenlink, Balances, LocalAssetAdaptor<Tokens>>;
 	type PalletId = ZenlinkPalletId;
 	type AssetId = AssetId;
