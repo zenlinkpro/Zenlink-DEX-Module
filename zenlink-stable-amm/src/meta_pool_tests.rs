@@ -2,6 +2,7 @@
 // Licensed under Apache 2.0.
 
 use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
 use sp_runtime::DispatchError::BadOrigin;
 
 use super::{
@@ -16,7 +17,7 @@ const ADMIN_FEE: Number = 0;
 
 fn create_mock_base_pool() {
 	assert_ok!(StableAmm::create_base_pool(
-		Origin::root(),
+		RawOrigin::Root.into(),
 		vec![Token(TOKEN1_SYMBOL), Token(TOKEN3_SYMBOL), Token(TOKEN4_SYMBOL)],
 		vec![TOKEN1_DECIMAL, TOKEN3_DECIMAL, TOKEN4_DECIMAL],
 		200,
@@ -32,7 +33,7 @@ fn create_mock_meta_pool() {
 	let base_pool_lp_currency = base_pool.lp_currency_id;
 
 	assert_ok!(StableAmm::create_meta_pool(
-		Origin::root(),
+		RawOrigin::Root.into(),
 		vec![Token(TOKEN2_SYMBOL), base_pool_lp_currency],
 		vec![TOKEN2_DECIMAL, STABLE_LP_DECIMAL],
 		INITIAL_A_VALUE,
@@ -50,7 +51,7 @@ fn setup_test_meta_pool() -> (u32, u32) {
 	let base_pool_lp_currency = base_pool.lp_currency_id;
 
 	assert_ok!(StableAmm::add_liquidity(
-		Origin::signed(ALICE),
+		RawOrigin::Signed(ALICE).into(),
 		0,
 		vec![1e20 as Balance, 1e8 as Balance, 1e8 as Balance],
 		0,
@@ -59,7 +60,7 @@ fn setup_test_meta_pool() -> (u32, u32) {
 	));
 
 	assert_ok!(StableAmm::add_liquidity(
-		Origin::signed(BOB),
+		RawOrigin::Signed(BOB).into(),
 		0,
 		vec![1e20 as Balance, 1e8 as Balance, 1e8 as Balance],
 		0,
@@ -68,7 +69,7 @@ fn setup_test_meta_pool() -> (u32, u32) {
 	));
 
 	assert_ok!(StableAmm::add_liquidity(
-		Origin::signed(CHARLIE),
+		RawOrigin::Signed(CHARLIE).into(),
 		0,
 		vec![1e20 as Balance, 1e8 as Balance, 1e8 as Balance],
 		0,
@@ -79,7 +80,7 @@ fn setup_test_meta_pool() -> (u32, u32) {
 	create_mock_meta_pool();
 
 	assert_ok!(StableAmm::add_liquidity(
-		Origin::signed(ALICE),
+		RawOrigin::Signed(ALICE).into(),
 		1,
 		vec![1e18 as Balance, 1e18 as Balance],
 		0,
@@ -103,7 +104,7 @@ fn create_meta_pool_with_incorrect_parameter_should_not_work() {
 		// only root can create pool
 		assert_noop!(
 			StableAmm::create_meta_pool(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				vec![
 					Token(TOKEN1_SYMBOL),
 					Token(TOKEN2_SYMBOL),
@@ -125,7 +126,7 @@ fn create_meta_pool_with_incorrect_parameter_should_not_work() {
 		// create meta_pool use not exist base pool id should failed
 		assert_noop!(
 			StableAmm::create_meta_pool(
-				Origin::root(),
+				RawOrigin::Root.into(),
 				vec![
 					Token(TOKEN1_SYMBOL),
 					Token(TOKEN2_SYMBOL),
@@ -147,7 +148,7 @@ fn create_meta_pool_with_incorrect_parameter_should_not_work() {
 		//create mismatch parameter should not work
 		assert_noop!(
 			StableAmm::create_base_pool(
-				Origin::root(),
+				RawOrigin::Root.into(),
 				vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), base_pool_lp_currency],
 				vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL, STABLE_LP_DECIMAL],
 				0,
@@ -165,7 +166,7 @@ fn create_meta_pool_with_incorrect_parameter_should_not_work() {
 		// create with forbidden token should not work
 		assert_noop!(
 			StableAmm::create_base_pool(
-				Origin::root(),
+				RawOrigin::Root.into(),
 				vec![
 					Forbidden(TOKEN1_SYMBOL),
 					Token(TOKEN2_SYMBOL),
@@ -187,7 +188,7 @@ fn create_meta_pool_with_incorrect_parameter_should_not_work() {
 		// Create with invalid decimal should not work
 		assert_noop!(
 			StableAmm::create_base_pool(
-				Origin::root(),
+				RawOrigin::Root.into(),
 				vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), base_pool_lp_currency,],
 				vec![TOKEN1_DECIMAL, 20, TOKEN3_DECIMAL],
 				0,
@@ -210,7 +211,7 @@ fn create_meta_pool_with_parameters_exceed_threshold_should_not_work() {
 		let (_, base_lp_currency) = setup_test_base_pool();
 		assert_noop!(
 			StableAmm::create_meta_pool(
-				Origin::root(),
+				RawOrigin::Root.into(),
 				vec![
 					Token(TOKEN1_SYMBOL),
 					Token(TOKEN2_SYMBOL),
@@ -232,7 +233,7 @@ fn create_meta_pool_with_parameters_exceed_threshold_should_not_work() {
 		// exceed max admin fee
 		assert_noop!(
 			StableAmm::create_base_pool(
-				Origin::root(),
+				RawOrigin::Root.into(),
 				vec![
 					Token(TOKEN1_SYMBOL),
 					Token(TOKEN2_SYMBOL),
@@ -254,7 +255,7 @@ fn create_meta_pool_with_parameters_exceed_threshold_should_not_work() {
 		// exceed max a
 		assert_noop!(
 			StableAmm::create_meta_pool(
-				Origin::root(),
+				RawOrigin::Root.into(),
 				vec![
 					Token(TOKEN1_SYMBOL),
 					Token(TOKEN2_SYMBOL),
@@ -286,7 +287,7 @@ fn create_meta_pool_should_work() {
 		set_block_timestamp(now);
 
 		assert_ok!(StableAmm::create_meta_pool(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			vec![
 				Token(TOKEN1_SYMBOL),
 				Token(TOKEN2_SYMBOL),
@@ -359,7 +360,7 @@ fn add_liquidity_with_incorrect_params_in_meta_pool_should_not_work() {
 		let (base_pool_id, base_pool_lp_currency) = setup_test_base_pool();
 
 		assert_ok!(StableAmm::create_meta_pool(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			vec![Token(TOKEN1_SYMBOL), base_pool_lp_currency],
 			vec![TOKEN1_DECIMAL, STABLE_LP_DECIMAL],
 			INITIAL_A_VALUE,
@@ -374,7 +375,7 @@ fn add_liquidity_with_incorrect_params_in_meta_pool_should_not_work() {
 		// case0: add_liquidity with incorrect pool id
 		assert_noop!(
 			StableAmm::add_liquidity(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id + 1,
 				vec![1e16 as Balance, 2e18 as Balance],
 				0,
@@ -387,7 +388,7 @@ fn add_liquidity_with_incorrect_params_in_meta_pool_should_not_work() {
 		// case1: add_liquidity with invalid amounts length
 		assert_noop!(
 			StableAmm::add_liquidity(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				vec![1e16 as Balance],
 				0,
@@ -400,7 +401,7 @@ fn add_liquidity_with_incorrect_params_in_meta_pool_should_not_work() {
 		// case2: initial add liquidity require all currencies
 		assert_noop!(
 			StableAmm::add_liquidity(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				vec![1e16 as Balance, 0 as Balance],
 				0,
@@ -441,7 +442,7 @@ fn add_liquidity_with_expected_lp_amount_in_meta_pool_should_success() {
 		.unwrap();
 		let calculated_pool_token_amount_with_slippage = calculated_pool_token_amount * 999 / 1000;
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 3e18 as Balance],
 			calculated_pool_token_amount_with_slippage,
@@ -471,7 +472,7 @@ fn add_liquidity_when_lp_token_amount_has_small_slippage_in_meta_pool_should_wor
 		let calculated_pool_token_amount_with_positive_slippage =
 			calculated_pool_token_amount * 1001 / 1000;
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 3e18 as Balance],
 			calculated_pool_token_amount_with_negative_slippage,
@@ -493,7 +494,7 @@ fn add_liquidity_in_meta_pool_update_pool_balances_should_correct() {
 		setup_test_meta_pool();
 		let meta_pool_id = 1;
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 3e18 as Balance],
 			0,
@@ -527,7 +528,7 @@ fn add_liquidity_in_meta_pool_when_mint_amount_not_reach_due_to_front_running_sh
 			calculated_pool_token_amount * 999 / 1000;
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 3e18 as Balance],
 			0,
@@ -537,7 +538,7 @@ fn add_liquidity_in_meta_pool_when_mint_amount_not_reach_due_to_front_running_sh
 
 		assert_noop!(
 			StableAmm::add_liquidity(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				vec![1e18 as Balance, 3e18 as Balance],
 				calculated_pool_token_amount_with_negative_slippage,
@@ -558,7 +559,7 @@ fn add_liquidity_in_meta_pool_when_block_expired_should_revert() {
 		System::set_block_number(100);
 		assert_noop!(
 			StableAmm::add_liquidity(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				vec![1e18 as Balance, 3e18 as Balance],
 				0,
@@ -586,7 +587,7 @@ fn remove_liquidity_in_meta_pool_with_incorrect_min_amounts_length_should_not_wo
 		let (_, meta_pool_id) = setup_test_meta_pool();
 		assert_noop!(
 			StableAmm::remove_liquidity(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				meta_pool_id,
 				2e18 as Balance,
 				vec![0],
@@ -604,7 +605,7 @@ fn remove_liquidity_in_meta_pool_should_work() {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			1,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -617,7 +618,7 @@ fn remove_liquidity_in_meta_pool_should_work() {
 		assert_eq!(bob_balance, 1996275270169644725);
 
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			2e18 as Balance,
 			vec![0, 0],
@@ -626,7 +627,7 @@ fn remove_liquidity_in_meta_pool_should_work() {
 		),);
 
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			bob_balance,
 			vec![0, 0],
@@ -645,7 +646,7 @@ fn remove_liquidity_in_meta_pool_with_expected_return_amount_underlying_currency
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -669,7 +670,7 @@ fn remove_liquidity_in_meta_pool_with_expected_return_amount_underlying_currency
 		assert_eq!(expected_balances[1], 504529314564897436);
 
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			pool_token_balance_before,
 			expected_balances.clone(),
@@ -691,7 +692,7 @@ fn remove_liquidity_in_meta_pool_exceed_own_lp_tokens_should_not_work() {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -705,7 +706,7 @@ fn remove_liquidity_in_meta_pool_exceed_own_lp_tokens_should_not_work() {
 		assert_eq!(pool_token_balance, 1996275270169644725);
 		assert_noop!(
 			StableAmm::remove_liquidity(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				pool_token_balance + 1,
 				vec![Balance::MAX, Balance::MAX],
@@ -724,7 +725,7 @@ fn remove_liquidity_in_meta_pool_when_min_amounts_not_reached_due_to_front_runni
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -743,7 +744,7 @@ fn remove_liquidity_in_meta_pool_when_min_amounts_not_reached_due_to_front_runni
 		assert_eq!(expected_balances[1], 504529314564897436);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![1e16 as Balance, 2e18 as Balance],
 			0,
@@ -753,7 +754,7 @@ fn remove_liquidity_in_meta_pool_when_min_amounts_not_reached_due_to_front_runni
 
 		assert_noop!(
 			StableAmm::remove_liquidity(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				pool_token_balance,
 				expected_balances,
@@ -772,7 +773,7 @@ fn remove_liquidity_in_meta_pool_with_expired_deadline_should_not_work() {
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -785,7 +786,7 @@ fn remove_liquidity_in_meta_pool_with_expired_deadline_should_not_work() {
 
 		assert_noop!(
 			StableAmm::remove_liquidity(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				pool_token_balance,
 				vec![0, 0],
@@ -803,7 +804,7 @@ fn remove_liquidity_imbalance_in_meta_pool_with_mismatch_amounts_should_not_work
 		let (_, meta_pool_id) = setup_test_meta_pool();
 		assert_noop!(
 			StableAmm::remove_liquidity_imbalance(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				meta_pool_id,
 				vec![1e18 as Balance],
 				Balance::MAX,
@@ -821,7 +822,7 @@ fn remove_liquidity_imbalance_in_meta_pool_when_withdraw_more_than_available_sho
 		let (_, meta_pool_id) = setup_test_meta_pool();
 		assert_noop!(
 			StableAmm::remove_liquidity_imbalance(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				meta_pool_id,
 				vec![Balance::MAX, Balance::MAX],
 				1,
@@ -840,7 +841,7 @@ fn remove_liquidity_imbalance_in_meta_pool_with_max_burn_lp_token_amount_range_s
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -868,7 +869,7 @@ fn remove_liquidity_imbalance_in_meta_pool_with_max_burn_lp_token_amount_range_s
 		let balance_before = get_user_token_balances(&currency_ids, &BOB);
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 1e16 as Balance],
 			max_pool_token_amount_to_be_burned_negative_slippage,
@@ -896,7 +897,7 @@ fn remove_liquidity_imbalance_in_meta_pool_exceed_own_lp_token_amount_should_not
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -909,7 +910,7 @@ fn remove_liquidity_imbalance_in_meta_pool_exceed_own_lp_token_amount_should_not
 
 		assert_noop!(
 			StableAmm::remove_liquidity_imbalance(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				vec![2e18 as Balance, 1e16 as Balance],
 				current_balance + 1,
@@ -927,7 +928,7 @@ fn remove_liquidity_imbalance_in_meta_pool_when_min_amounts_of_underlying_tokens
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -946,7 +947,7 @@ fn remove_liquidity_imbalance_in_meta_pool_when_min_amounts_of_underlying_tokens
 			max_pool_token_amount_to_be_burned * 1001 / 1000;
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![1e16 as Balance, 2e20 as Balance],
 			0,
@@ -956,7 +957,7 @@ fn remove_liquidity_imbalance_in_meta_pool_when_min_amounts_of_underlying_tokens
 
 		assert_noop!(
 			StableAmm::remove_liquidity_imbalance(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				vec![1e18 as Balance, 1e16 as Balance],
 				max_pool_token_amount_to_be_burned_negative_slippage,
@@ -975,7 +976,7 @@ fn remove_liquidity_imbalance_in_meta_pool_with_expired_deadline_should_not_work
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -987,7 +988,7 @@ fn remove_liquidity_imbalance_in_meta_pool_with_expired_deadline_should_not_work
 
 		assert_noop!(
 			StableAmm::remove_liquidity_imbalance(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				vec![1e18 as Balance, 1e16 as Balance],
 				current_balance,
@@ -1017,7 +1018,7 @@ fn remove_liquidity_one_currency_calculation_should_work() {
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -1047,7 +1048,7 @@ fn remove_liquidity_one_currency_calculated_amount_as_min_amount_should_work() {
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -1070,7 +1071,7 @@ fn remove_liquidity_one_currency_calculated_amount_as_min_amount_should_work() {
 		let before = get_user_balance(pool.currency_ids[0], &BOB);
 
 		assert_ok!(StableAmm::remove_liquidity_one_currency(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			pool_token_balance,
 			0,
@@ -1091,7 +1092,7 @@ fn remove_liquidity_one_currency_with_lp_token_amount_exceed_own_should_work() {
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -1104,7 +1105,7 @@ fn remove_liquidity_one_currency_with_lp_token_amount_exceed_own_should_work() {
 
 		assert_noop!(
 			StableAmm::remove_liquidity_one_currency(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				pool_token_balance + 1,
 				0,
@@ -1125,7 +1126,7 @@ fn remove_liquidity_one_currency_with_min_amount_not_reached_due_to_front_runnin
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -1146,7 +1147,7 @@ fn remove_liquidity_one_currency_with_min_amount_not_reached_due_to_front_runnin
 		assert_eq!(calculated_first_token_amount, 2008990034631583696);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![1e16 as Balance, 1e20 as Balance],
 			0,
@@ -1156,7 +1157,7 @@ fn remove_liquidity_one_currency_with_min_amount_not_reached_due_to_front_runnin
 
 		assert_noop!(
 			StableAmm::remove_liquidity_one_currency(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				pool_token_balance,
 				0,
@@ -1176,7 +1177,7 @@ fn remove_liquidity_one_currency_with_expired_deadline_should_not_work() {
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e16 as Balance],
 			0,
@@ -1190,7 +1191,7 @@ fn remove_liquidity_one_currency_with_expired_deadline_should_not_work() {
 
 		assert_noop!(
 			StableAmm::remove_liquidity_one_currency(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				pool_token_balance,
 				0,
@@ -1221,7 +1222,7 @@ fn swap_with_currency_amount_exceed_own_should_not_work() {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 		assert_noop!(
 			StableAmm::swap(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				0,
 				1,
@@ -1251,7 +1252,7 @@ fn swap_with_expected_amounts_should_work() {
 		let token_to_balance_before = get_user_balance(pool.currency_ids[1], &CHARLIE);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1279,7 +1280,7 @@ fn swap_when_min_amount_receive_not_reached_due_to_front_running_should_not_work
 		assert_eq!(calculated_swap_return, 99702611562565289);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1291,7 +1292,7 @@ fn swap_when_min_amount_receive_not_reached_due_to_front_running_should_not_work
 
 		assert_noop!(
 			StableAmm::swap(
-				Origin::signed(BOB),
+				RawOrigin::Signed(BOB).into(),
 				meta_pool_id,
 				0,
 				1,
@@ -1324,7 +1325,7 @@ fn swap_with_lower_min_dy_when_transaction_is_front_ran_should_work() {
 
 		// CHARLIE swaps before User 1 does
 		assert_ok!(StableAmm::swap(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1336,7 +1337,7 @@ fn swap_with_lower_min_dy_when_transaction_is_front_ran_should_work() {
 
 		// BOB swap with slippage
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1366,7 +1367,16 @@ fn swap_with_expired_deadline_should_not_work() {
 		System::set_block_number(100);
 
 		assert_noop!(
-			StableAmm::swap(Origin::signed(BOB), meta_pool_id, 0, 1, 1e17 as Balance, 0, BOB, 99),
+			StableAmm::swap(
+				RawOrigin::Signed(BOB).into(),
+				meta_pool_id,
+				0,
+				1,
+				1e17 as Balance,
+				0,
+				BOB,
+				99
+			),
 			Error::<Test>::Deadline
 		);
 	})
@@ -1378,7 +1388,16 @@ fn swap_underlying_with_token_index_out_range_should_not_work() {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
 		assert_noop!(
-			StableAmm::swap(Origin::signed(BOB), meta_pool_id, 0, 9, 1e17 as Balance, 0, BOB, 99),
+			StableAmm::swap(
+				RawOrigin::Signed(BOB).into(),
+				meta_pool_id,
+				0,
+				9,
+				1e17 as Balance,
+				0,
+				BOB,
+				99
+			),
 			Error::<Test>::CurrencyIndexOutRange
 		);
 	})
@@ -1410,7 +1429,7 @@ fn swap_underlying_from_meta_to_base_between_same_decimal_token_should_work() {
 		let bob_unchanged_balance_before = get_user_token_balances(&bob_unchanged_token, &BOB);
 
 		assert_ok!(StableAmm::swap_meta_pool_underlying(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1462,7 +1481,7 @@ fn swap_underlying_from_base_to_meta_between_different_decimal_token_should_work
 		let unchanged_balance_before = get_user_token_balances(&unchanged_token, &ALICE);
 
 		assert_ok!(StableAmm::swap_meta_pool_underlying(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			2,
 			0,
@@ -1510,7 +1529,7 @@ fn swap_underlying_from_base_to_base_between_different_decimal_token_should_work
 		let unchanged_balance_before = get_user_token_balances(&unchanged_token, &ALICE);
 
 		assert_ok!(StableAmm::swap_meta_pool_underlying(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			1,
 			3,
@@ -1547,7 +1566,7 @@ fn swap_underlying_not_reach_min_dy_due_to_front_running_should_revert() {
 		assert_eq!(calculated_swap_return, 99682616104034773);
 
 		assert_ok!(StableAmm::swap_meta_pool_underlying(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1559,7 +1578,7 @@ fn swap_underlying_not_reach_min_dy_due_to_front_running_should_revert() {
 
 		assert_noop!(
 			StableAmm::swap_meta_pool_underlying(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				meta_pool_id,
 				0,
 				1,
@@ -1592,7 +1611,7 @@ fn swap_underlying_with_lower_min_dy_after_front_running_should_work() {
 		let token_to_balance_before = get_user_balance(base_pool.currency_ids[0], &ALICE);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1603,7 +1622,7 @@ fn swap_underlying_with_lower_min_dy_after_front_running_should_work() {
 		));
 
 		assert_ok!(StableAmm::swap_meta_pool_underlying(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1629,7 +1648,7 @@ fn swap_underlying_with_expired_block_should_revert() {
 		System::set_block_number(100);
 		assert_noop!(
 			StableAmm::swap_meta_pool_underlying(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				meta_pool_id,
 				0,
 				1,
@@ -1660,7 +1679,7 @@ fn get_meta_virtual_price_after_swap_should_work() {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1674,7 +1693,7 @@ fn get_meta_virtual_price_after_swap_should_work() {
 		assert_eq!(meta_virtual_price, 1000050005862349911);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1692,7 +1711,7 @@ fn get_expected_meta_virtual_price_after_imbalance_withdrawal_should_work() {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
@@ -1701,7 +1720,7 @@ fn get_expected_meta_virtual_price_after_imbalance_withdrawal_should_work() {
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
@@ -1710,7 +1729,7 @@ fn get_expected_meta_virtual_price_after_imbalance_withdrawal_should_work() {
 		));
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 0],
 			2e18 as Balance,
@@ -1722,7 +1741,7 @@ fn get_expected_meta_virtual_price_after_imbalance_withdrawal_should_work() {
 		assert_eq!(meta_virtual_price, 1000100094088440633);
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![0, 1e18 as Balance],
 			2e18 as Balance,
@@ -1743,7 +1762,7 @@ fn meta_virtual_price_unchanged_after_balanced_deposit_should_work() {
 		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1e18 as Balance);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
@@ -1754,7 +1773,7 @@ fn meta_virtual_price_unchanged_after_balanced_deposit_should_work() {
 		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1e18 as Balance);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 0],
 			0,
@@ -1766,7 +1785,7 @@ fn meta_virtual_price_unchanged_after_balanced_deposit_should_work() {
 		assert_eq!(meta_virtual_price, 1000167146429977312);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e18 as Balance],
 			0,
@@ -1787,7 +1806,7 @@ fn meta_virtual_price_unchanged_after_balanced_withdrawal_should_work() {
 		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1e18 as Balance);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
@@ -1798,7 +1817,7 @@ fn meta_virtual_price_unchanged_after_balanced_withdrawal_should_work() {
 		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1e18 as Balance);
 
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			1e18 as Balance,
 			vec![0, 0],
@@ -1815,7 +1834,11 @@ fn set_meta_fee_with_no_admin_should_revert() {
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 		assert_noop!(
-			StableAmm::set_swap_fee(Origin::signed(CHARLIE), meta_pool_id, 1e8 as Balance),
+			StableAmm::set_swap_fee(
+				RawOrigin::Signed(CHARLIE).into(),
+				meta_pool_id,
+				1e8 as Balance
+			),
 			BadOrigin
 		);
 	})
@@ -1825,7 +1848,7 @@ fn set_meta_fee_with_no_admin_should_revert() {
 fn set_meta_fee_in_limit_should_work() {
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
-		assert_ok!(StableAmm::set_swap_fee(Origin::root(), meta_pool_id, 1e8 as Balance,),);
+		assert_ok!(StableAmm::set_swap_fee(RawOrigin::Root.into(), meta_pool_id, 1e8 as Balance,),);
 		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 		assert_eq!(meta_pool.fee, 1e8 as Balance);
 	})
@@ -1836,7 +1859,11 @@ fn set_meta_admin_fee_with_no_admin_should_revert() {
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 		assert_noop!(
-			StableAmm::set_admin_fee(Origin::signed(CHARLIE), meta_pool_id, 1e8 as Balance),
+			StableAmm::set_admin_fee(
+				RawOrigin::Signed(CHARLIE).into(),
+				meta_pool_id,
+				1e8 as Balance
+			),
 			BadOrigin
 		);
 	})
@@ -1847,7 +1874,7 @@ fn set_meta_admin_fee_exceed_limit_should_revert() {
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 		assert_noop!(
-			StableAmm::set_admin_fee(Origin::root(), meta_pool_id, (1e10 as Balance) + 1),
+			StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, (1e10 as Balance) + 1),
 			Error::<Test>::ExceedThreshold
 		);
 	})
@@ -1857,7 +1884,7 @@ fn set_meta_admin_fee_exceed_limit_should_revert() {
 fn set_meta_admin_fee_in_limit_should_work() {
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e10 as Balance),);
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, 1e10 as Balance),);
 
 		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 		assert_eq!(meta_pool.admin_fee, 1e10 as Balance);
@@ -1881,7 +1908,7 @@ fn get_meta_admin_balance_is_zero_with_zero_admin_fee_should_work() {
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(0));
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1904,10 +1931,10 @@ fn get_expected_admin_balance_after_set_admin_fee_should_work() {
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(0));
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(0));
 
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e8 as Balance),);
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, 1e8 as Balance),);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -1918,7 +1945,7 @@ fn get_expected_admin_balance_after_set_admin_fee_should_work() {
 		));
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			1,
 			0,
@@ -1941,10 +1968,10 @@ fn get_expected_admin_balance_after_remove_one_currency_should_work() {
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(0));
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(0));
 
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e8 as Balance),);
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, 1e8 as Balance),);
 
 		assert_ok!(StableAmm::remove_liquidity_one_currency(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			1e16 as Balance,
 			1,
@@ -1957,7 +1984,7 @@ fn get_expected_admin_balance_after_remove_one_currency_should_work() {
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(49992612012));
 
 		assert_ok!(StableAmm::remove_liquidity_one_currency(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			1e16 as Balance,
 			0,
@@ -1979,10 +2006,10 @@ fn get_expected_admin_balance_after_remove_imbalance_should_work() {
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(0));
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(0));
 
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e8 as Balance),);
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, 1e8 as Balance),);
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			vec![4000000000000000, 5000000000000000],
 			Balance::MAX,
@@ -1994,7 +2021,7 @@ fn get_expected_admin_balance_after_remove_imbalance_should_work() {
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(2499987689));
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			vec![5000000000000000, 4000000000000000],
 			Balance::MAX,
@@ -2015,10 +2042,10 @@ fn get_expected_admin_balance_after_add_liquidity_should_work() {
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 0), Some(0));
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(0));
 
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e8 as Balance),);
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, 1e8 as Balance),);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 2e18 as Balance],
 			0,
@@ -2030,7 +2057,7 @@ fn get_expected_admin_balance_after_add_liquidity_should_work() {
 		assert_eq!(StableAmm::get_admin_balance(meta_pool_id, 1), Some(2505100022864));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			vec![2e18 as Balance, 1e18 as Balance],
 			0,
@@ -2053,7 +2080,7 @@ fn withdraw_admin_balance_with_zero_admin_fee_should_work() {
 
 		let unchanged_balance_before = get_user_token_balances(&unchanged_token, &ALICE);
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), meta_pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(RawOrigin::Signed(BOB).into(), meta_pool_id));
 
 		let unchanged_balance_after = get_user_token_balances(&unchanged_token, &ALICE);
 
@@ -2066,12 +2093,12 @@ fn withdraw_admin_balance_with_expected_amount_after_swap_should_work() {
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e8 as Balance));
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, 1e8 as Balance));
 
 		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -2081,7 +2108,7 @@ fn withdraw_admin_balance_with_expected_amount_after_swap_should_work() {
 			u64::MAX
 		));
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			1,
 			0,
@@ -2098,7 +2125,7 @@ fn withdraw_admin_balance_with_expected_amount_after_swap_should_work() {
 
 		let fee_tokens_balance_before = get_user_token_balances(&fee_tokens, &ALICE);
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), meta_pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(RawOrigin::Signed(BOB).into(), meta_pool_id));
 
 		let fee_tokens_balance_after = get_user_token_balances(&fee_tokens, &ALICE);
 
@@ -2112,12 +2139,12 @@ fn withdraw_admin_balance_with_expected_amount_after_swap_underlying_should_work
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e8 as Balance));
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, 1e8 as Balance));
 
 		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -2128,7 +2155,7 @@ fn withdraw_admin_balance_with_expected_amount_after_swap_underlying_should_work
 		));
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			1,
 			0,
@@ -2145,7 +2172,7 @@ fn withdraw_admin_balance_with_expected_amount_after_swap_underlying_should_work
 
 		let fee_tokens_balance_before = get_user_token_balances(&fee_tokens, &ALICE);
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), meta_pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(RawOrigin::Signed(BOB).into(), meta_pool_id));
 
 		let fee_tokens_balance_after = get_user_token_balances(&fee_tokens, &ALICE);
 
@@ -2159,11 +2186,11 @@ fn withdraw_admin_balance_has_no_impact_on_user_withdrawal_should_work() {
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, 1e8 as Balance));
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, 1e8 as Balance));
 
 		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			1,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
@@ -2173,7 +2200,7 @@ fn withdraw_admin_balance_has_no_impact_on_user_withdrawal_should_work() {
 
 		for _i in 0..10 {
 			assert_ok!(StableAmm::swap(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				meta_pool_id,
 				0,
 				1,
@@ -2183,7 +2210,7 @@ fn withdraw_admin_balance_has_no_impact_on_user_withdrawal_should_work() {
 				u64::MAX
 			));
 			assert_ok!(StableAmm::swap(
-				Origin::signed(ALICE),
+				RawOrigin::Signed(ALICE).into(),
 				meta_pool_id,
 				1,
 				0,
@@ -2194,14 +2221,14 @@ fn withdraw_admin_balance_has_no_impact_on_user_withdrawal_should_work() {
 			));
 		}
 
-		assert_ok!(StableAmm::withdraw_admin_fee(Origin::signed(BOB), meta_pool_id));
+		assert_ok!(StableAmm::withdraw_admin_fee(RawOrigin::Signed(BOB).into(), meta_pool_id));
 
 		let impacted_tokens = vec![meta_pool.currency_ids[0], meta_pool.currency_ids[1]];
 		let impacted_tokens_balance_before = get_user_token_balances(&impacted_tokens, &BOB);
 
 		let lp_balance = get_user_balance(meta_pool.lp_currency_id, &BOB);
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			lp_balance,
 			vec![0, 0],
@@ -2230,7 +2257,7 @@ fn ramp_meta_a_upwards_should_work() {
 		mine_block();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 0],
 			0,
@@ -2241,7 +2268,12 @@ fn ramp_meta_a_upwards_should_work() {
 		mine_block();
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 1;
-		assert_ok!(StableAmm::ramp_a(Origin::root(), meta_pool_id, 100, end_timestamp.into()));
+		assert_ok!(StableAmm::ramp_a(
+			RawOrigin::Root.into(),
+			meta_pool_id,
+			100,
+			end_timestamp.into()
+		));
 
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5000));
@@ -2268,7 +2300,7 @@ fn ramp_meta_a_downward_should_work() {
 		mine_block();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 0],
 			0,
@@ -2279,7 +2311,12 @@ fn ramp_meta_a_downward_should_work() {
 		mine_block();
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 1;
-		assert_ok!(StableAmm::ramp_a(Origin::root(), meta_pool_id, 25, end_timestamp.into()));
+		assert_ok!(StableAmm::ramp_a(
+			RawOrigin::Root.into(),
+			meta_pool_id,
+			25,
+			end_timestamp.into()
+		));
 
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
@@ -2308,7 +2345,12 @@ fn ramp_meta_a_with_non_owner_should_not_work() {
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 1;
 
 		assert_noop!(
-			StableAmm::ramp_a(Origin::signed(BOB), meta_pool_id, 55, end_timestamp.into()),
+			StableAmm::ramp_a(
+				RawOrigin::Signed(BOB).into(),
+				meta_pool_id,
+				55,
+				end_timestamp.into()
+			),
 			BadOrigin
 		);
 	})
@@ -2321,10 +2363,15 @@ fn ramp_meta_a_not_delay_should_not_work() {
 		mine_block();
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 1;
-		assert_ok!(StableAmm::ramp_a(Origin::root(), meta_pool_id, 55, end_timestamp.into()));
+		assert_ok!(StableAmm::ramp_a(
+			RawOrigin::Root.into(),
+			meta_pool_id,
+			55,
+			end_timestamp.into()
+		));
 
 		assert_noop!(
-			StableAmm::ramp_a(Origin::root(), meta_pool_id, 55, end_timestamp.into()),
+			StableAmm::ramp_a(RawOrigin::Root.into(), meta_pool_id, 55, end_timestamp.into()),
 			Error::<Test>::RampADelay
 		);
 	})
@@ -2339,12 +2386,12 @@ fn ramp_meta_a_out_of_range_should_not_work() {
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 1;
 
 		assert_noop!(
-			StableAmm::ramp_a(Origin::root(), meta_pool_id, 0, end_timestamp.into()),
+			StableAmm::ramp_a(RawOrigin::Root.into(), meta_pool_id, 0, end_timestamp.into()),
 			Error::<Test>::ExceedThreshold
 		);
 
 		assert_noop!(
-			StableAmm::ramp_a(Origin::root(), meta_pool_id, 501, end_timestamp.into()),
+			StableAmm::ramp_a(RawOrigin::Root.into(), meta_pool_id, 501, end_timestamp.into()),
 			Error::<Test>::ExceedMaxAChange
 		);
 	})
@@ -2357,14 +2404,19 @@ fn stop_ramp_meta_a_should_work() {
 		mine_block();
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 100;
-		assert_ok!(StableAmm::ramp_a(Origin::root(), meta_pool_id, 100, end_timestamp.into()));
+		assert_ok!(StableAmm::ramp_a(
+			RawOrigin::Root.into(),
+			meta_pool_id,
+			100,
+			end_timestamp.into()
+		));
 
 		mine_block_with_timestamp(Timestamp::now() / 1000 + 100000);
 
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5413));
 
-		assert_ok!(StableAmm::stop_ramp_a(Origin::root(), meta_pool_id));
+		assert_ok!(StableAmm::stop_ramp_a(RawOrigin::Root.into(), meta_pool_id));
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5413));
 
@@ -2381,19 +2433,24 @@ fn stop_ramp_meta_a_repeat_should_not_work() {
 		mine_block();
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 100;
-		assert_ok!(StableAmm::ramp_a(Origin::root(), meta_pool_id, 100, end_timestamp.into()));
+		assert_ok!(StableAmm::ramp_a(
+			RawOrigin::Root.into(),
+			meta_pool_id,
+			100,
+			end_timestamp.into()
+		));
 
 		mine_block_with_timestamp(Timestamp::now() / 1000 + 100000);
 
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5413));
 
-		assert_ok!(StableAmm::stop_ramp_a(Origin::root(), meta_pool_id));
+		assert_ok!(StableAmm::stop_ramp_a(RawOrigin::Root.into(), meta_pool_id));
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 		assert_eq!(StableAmm::get_a_precise(&pool), Some(5413));
 
 		assert_noop!(
-			StableAmm::stop_ramp_a(Origin::root(), meta_pool_id),
+			StableAmm::stop_ramp_a(RawOrigin::Root.into(), meta_pool_id),
 			Error::<Test>::AlreadyStoppedRampA
 		);
 	})
@@ -2408,7 +2465,7 @@ fn meta_pool_check_maximum_differences_in_a_and_virtual_price_when_time_manipula
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 0],
 			0,
@@ -2421,7 +2478,12 @@ fn meta_pool_check_maximum_differences_in_a_and_virtual_price_when_time_manipula
 		assert_eq!(StableAmm::get_virtual_price(meta_pool_id), 1000167146429977312);
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 100;
-		assert_ok!(StableAmm::ramp_a(Origin::root(), meta_pool_id, 100, end_timestamp.into()));
+		assert_ok!(StableAmm::ramp_a(
+			RawOrigin::Root.into(),
+			meta_pool_id,
+			100,
+			end_timestamp.into()
+		));
 
 		// Malicious miner skips 900 seconds
 		set_block_timestamp(Timestamp::now() / 1000 + 900);
@@ -2441,7 +2503,7 @@ fn meta_check_maximum_differences_in_a_and_virtual_price_when_time_manipulations
 		let (_, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 0],
 			0,
@@ -2455,7 +2517,12 @@ fn meta_check_maximum_differences_in_a_and_virtual_price_when_time_manipulations
 
 		let end_timestamp = Timestamp::now() / 1000 + 14 * DAYS + 100;
 
-		assert_ok!(StableAmm::ramp_a(Origin::root(), meta_pool_id, 25, end_timestamp.into()));
+		assert_ok!(StableAmm::ramp_a(
+			RawOrigin::Root.into(),
+			meta_pool_id,
+			25,
+			end_timestamp.into()
+		));
 
 		// Malicious miner skips 900 seconds
 		set_block_timestamp(Timestamp::now() / 1000 + 900);
@@ -2488,7 +2555,7 @@ fn prepare_attack_meta_context(new_a: Balance) -> AttackContext {
 	}
 
 	assert_ok!(StableAmm::ramp_a(
-		Origin::root(),
+		RawOrigin::Root.into(),
 		meta_pool_id,
 		new_a,
 		(Timestamp::now() / 1000 + 14 * DAYS).into()
@@ -2516,7 +2583,7 @@ fn check_when_ramp_a_upwards_and_tokens_price_equally() {
 
 		// Swap 1e18 of firstToken to secondToken, causing massive imbalance in the pool
 		assert_ok!(StableAmm::swap(
-			Origin::signed(context.attacker),
+			RawOrigin::Signed(context.attacker).into(),
 			context.pool_id,
 			0,
 			1,
@@ -2546,7 +2613,7 @@ fn check_when_ramp_a_upwards_and_tokens_price_equally() {
 		let balances_before = get_user_token_balances(&context.pool_currencies, &context.attacker);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(context.attacker),
+			RawOrigin::Signed(context.attacker).into(),
 			context.pool_id,
 			1,
 			0,
@@ -2590,7 +2657,7 @@ fn meta_check_when_ramp_a_upwards_and_tokens_price_unequally() {
 
 		// Set up pool to be imbalanced prior to the attack
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			context.pool_id,
 			vec![0, 2e18 as Balance],
 			0,
@@ -2607,7 +2674,7 @@ fn meta_check_when_ramp_a_upwards_and_tokens_price_unequally() {
 
 		// Swap 1e18 of firstToken to secondToken, resolving imbalance in the pool
 		assert_ok!(StableAmm::swap(
-			Origin::signed(context.attacker),
+			RawOrigin::Signed(context.attacker).into(),
 			context.pool_id,
 			0,
 			1,
@@ -2636,7 +2703,7 @@ fn meta_check_when_ramp_a_upwards_and_tokens_price_unequally() {
 		let balances_before = get_user_token_balances(&context.pool_currencies, &context.attacker);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(context.attacker),
+			RawOrigin::Signed(context.attacker).into(),
 			context.pool_id,
 			1,
 			0,
@@ -2679,7 +2746,7 @@ fn meta_check_when_ramp_a_downwards_and_tokens_price_equally() {
 		let context = prepare_attack_meta_context(25);
 		// Swap 1e18 of firstToken to secondToken, causing massive imbalance in the pool
 		assert_ok!(StableAmm::swap(
-			Origin::signed(context.attacker),
+			RawOrigin::Signed(context.attacker).into(),
 			context.pool_id,
 			0,
 			1,
@@ -2709,7 +2776,7 @@ fn meta_check_when_ramp_a_downwards_and_tokens_price_equally() {
 		let balances_before = get_user_token_balances(&context.pool_currencies, &context.attacker);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(context.attacker),
+			RawOrigin::Signed(context.attacker).into(),
 			context.pool_id,
 			1,
 			0,
@@ -2753,7 +2820,7 @@ fn meta_check_when_ramp_a_downwards_and_tokens_price_unequally() {
 
 		// Set up pool to be imbalanced prior to the attack
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			context.pool_id,
 			vec![0, 2e18 as Balance],
 			0,
@@ -2770,7 +2837,7 @@ fn meta_check_when_ramp_a_downwards_and_tokens_price_unequally() {
 
 		// Swap 1e18 of firstToken to secondToken, resolving imbalance in the pool
 		assert_ok!(StableAmm::swap(
-			Origin::signed(context.attacker),
+			RawOrigin::Signed(context.attacker).into(),
 			context.pool_id,
 			0,
 			1,
@@ -2799,7 +2866,7 @@ fn meta_check_when_ramp_a_downwards_and_tokens_price_unequally() {
 		let balances_before = get_user_token_balances(&context.pool_currencies, &context.attacker);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(context.attacker),
+			RawOrigin::Signed(context.attacker).into(),
 			context.pool_id,
 			1,
 			0,
@@ -2850,7 +2917,7 @@ fn meta_check_arithmetic_in_add_liquidity_should_successfully() {
 		);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
@@ -2859,7 +2926,7 @@ fn meta_check_arithmetic_in_add_liquidity_should_successfully() {
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000], /* [100_000_000e18,
 			                                                                 * 300_000_000e18] */
@@ -2882,7 +2949,7 @@ fn meta_check_arithmetic_in_add_liquidity_should_successfully() {
 		);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000], /* [300_000_000e18,
 			                                                                 * 100_000_000e18] */
@@ -2911,7 +2978,7 @@ fn meta_check_arithmetic_in_remove_liquidity_should_successfully() {
 		);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
@@ -2920,7 +2987,7 @@ fn meta_check_arithmetic_in_remove_liquidity_should_successfully() {
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000], /* [100_000_000e18,
 			                                                                 * 300_000_000e18] */
@@ -2930,7 +2997,7 @@ fn meta_check_arithmetic_in_remove_liquidity_should_successfully() {
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000], /* [300_000_000e18,
 			                                                                 * 100_000_000e18] */
@@ -2947,7 +3014,7 @@ fn meta_check_arithmetic_in_remove_liquidity_should_successfully() {
 			<Test as Config>::MultiCurrency::free_balance(pool.currency_ids[1], &BOB);
 
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			user1_pool_lp_balance_before,
 			vec![0, 0],
@@ -2981,7 +3048,7 @@ fn meta_check_arithmetic_in_remove_liquidity_should_successfully() {
 			<Test as Config>::MultiCurrency::free_balance(pool.currency_ids[1], &CHARLIE);
 
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			user2_pool_lp_balance_before,
 			vec![0, 0],
@@ -3020,7 +3087,7 @@ fn meta_check_arithmetic_in_remove_liquidity_one_currency_should_successfully() 
 		);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
@@ -3029,7 +3096,7 @@ fn meta_check_arithmetic_in_remove_liquidity_one_currency_should_successfully() 
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000], /* [100_000_000e18,
 			                                                                 * 300_000_000e18] */
@@ -3039,7 +3106,7 @@ fn meta_check_arithmetic_in_remove_liquidity_one_currency_should_successfully() 
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000], /* [300_000_000e18,
 			                                                                 * 100_000_000e18] */
@@ -3063,7 +3130,7 @@ fn meta_check_arithmetic_in_remove_liquidity_one_currency_should_successfully() 
 			<Test as Config>::MultiCurrency::free_balance(pool.currency_ids[1], &CHARLIE);
 
 		assert_ok!(StableAmm::remove_liquidity_one_currency(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			user1_pool_lp_balance_before,
 			0,
@@ -3087,7 +3154,7 @@ fn meta_check_arithmetic_in_remove_liquidity_one_currency_should_successfully() 
 		assert_eq!(user1_token1_balance_after - user1_token1_balance_before, 0);
 
 		assert_ok!(StableAmm::remove_liquidity_one_currency(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			user2_pool_lp_balance_before,
 			0,
@@ -3124,7 +3191,7 @@ fn meta_check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 		);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
@@ -3133,7 +3200,7 @@ fn meta_check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000], /* [100_000_000e18,
 			                                                                 * 300_000_000e18] */
@@ -3143,7 +3210,7 @@ fn meta_check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000], /* [300_000_000e18,
 			                                                                 * 100_000_000e18] */
@@ -3167,7 +3234,7 @@ fn meta_check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 			<Test as Config>::MultiCurrency::free_balance(pool.currency_ids[1], &CHARLIE);
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000],
 			user1_pool_lp_balance_before,
@@ -3196,7 +3263,7 @@ fn meta_check_arithmetic_in_remove_liquidity_imbalance_should_successfully() {
 		);
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000],
 			user2_pool_lp_balance_before,
@@ -3235,7 +3302,7 @@ fn meta_check_arithmetic_in_swap_should_successfully() {
 		);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
@@ -3244,7 +3311,7 @@ fn meta_check_arithmetic_in_swap_should_successfully() {
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000], /* [100_000_000e18,
 			                                                                 * 300_000_000e18] */
@@ -3254,7 +3321,7 @@ fn meta_check_arithmetic_in_swap_should_successfully() {
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000], /* [300_000_000e18,
 			                                                                 * 100_000_000e18] */
@@ -3278,7 +3345,7 @@ fn meta_check_arithmetic_in_swap_should_successfully() {
 			<Test as Config>::MultiCurrency::free_balance(pool.currency_ids[1], &CHARLIE);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -3306,7 +3373,7 @@ fn meta_check_arithmetic_in_swap_should_successfully() {
 		);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			1,
 			0,
@@ -3359,11 +3426,11 @@ fn meta_check_arithmetic_in_add_liquidity_with_admin_fee_should_successfully() {
 			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
 		);
 
-		assert_ok!(StableAmm::set_swap_fee(Origin::root(), meta_pool_id, SWAP_FEE,));
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, MAX_ADMIN_FEE,));
+		assert_ok!(StableAmm::set_swap_fee(RawOrigin::Root.into(), meta_pool_id, SWAP_FEE,));
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, MAX_ADMIN_FEE,));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
@@ -3372,7 +3439,7 @@ fn meta_check_arithmetic_in_add_liquidity_with_admin_fee_should_successfully() {
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000], /* [100_000_000e18,
 			                                                                 * 300_000_000e18] */
@@ -3382,7 +3449,7 @@ fn meta_check_arithmetic_in_add_liquidity_with_admin_fee_should_successfully() {
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000], /* [300_000_000e18,
 			                                                                 * 100_000_000e18] */
@@ -3408,11 +3475,11 @@ fn meta_check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully(
 			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
 		);
 
-		assert_ok!(StableAmm::set_swap_fee(Origin::root(), meta_pool_id, SWAP_FEE,));
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, MAX_ADMIN_FEE,));
+		assert_ok!(StableAmm::set_swap_fee(RawOrigin::Root.into(), meta_pool_id, SWAP_FEE,));
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, MAX_ADMIN_FEE,));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
@@ -3421,7 +3488,7 @@ fn meta_check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully(
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000], /* [100_000_000e18,
 			                                                                 * 300_000_000e18] */
@@ -3431,7 +3498,7 @@ fn meta_check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully(
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000], /* [300_000_000e18,
 			                                                                 * 100_000_000e18] */
@@ -3444,7 +3511,7 @@ fn meta_check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully(
 			<Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &BOB);
 
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			user1_pool_lp_balance_before,
 			vec![0, 0],
@@ -3456,7 +3523,7 @@ fn meta_check_arithmetic_in_remove_liquidity_with_admin_fee_should_successfully(
 			<Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &CHARLIE);
 
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			user2_pool_lp_balance_before,
 			vec![0, 0],
@@ -3481,11 +3548,11 @@ fn meta_check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_
 			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
 		);
 
-		assert_ok!(StableAmm::set_swap_fee(Origin::root(), meta_pool_id, SWAP_FEE,));
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, MAX_ADMIN_FEE,));
+		assert_ok!(StableAmm::set_swap_fee(RawOrigin::Root.into(), meta_pool_id, SWAP_FEE,));
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, MAX_ADMIN_FEE,));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
@@ -3494,7 +3561,7 @@ fn meta_check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000], /* [100_000_000e18,
 			                                                                 * 300_000_000e18] */
@@ -3504,7 +3571,7 @@ fn meta_check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000], /* [300_000_000e18,
 			                                                                 * 100_000_000e18] */
@@ -3519,7 +3586,7 @@ fn meta_check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_
 			<Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &CHARLIE);
 
 		assert_ok!(StableAmm::remove_liquidity_one_currency(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			user1_pool_lp_balance_before,
 			0,
@@ -3529,7 +3596,7 @@ fn meta_check_arithmetic_in_remove_liquidity_one_currency_with_admin_fee_should_
 		));
 
 		assert_ok!(StableAmm::remove_liquidity_one_currency(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			user2_pool_lp_balance_before,
 			1,
@@ -3559,11 +3626,11 @@ fn meta_check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_suc
 			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
 		);
 
-		assert_ok!(StableAmm::set_swap_fee(Origin::root(), meta_pool_id, SWAP_FEE,));
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, MAX_ADMIN_FEE,));
+		assert_ok!(StableAmm::set_swap_fee(RawOrigin::Root.into(), meta_pool_id, SWAP_FEE,));
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, MAX_ADMIN_FEE,));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
@@ -3572,7 +3639,7 @@ fn meta_check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_suc
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000], /* [100_000_000e18,
 			                                                                 * 300_000_000e18] */
@@ -3582,7 +3649,7 @@ fn meta_check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_suc
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000], /* [300_000_000e18,
 			                                                                 * 100_000_000e18] */
@@ -3597,7 +3664,7 @@ fn meta_check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_suc
 			<Test as Config>::MultiCurrency::free_balance(pool.lp_currency_id, &CHARLIE);
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![200000000000000000000000000, 100000000000000000000000000],
 			user1_pool_lp_balance_before,
@@ -3606,7 +3673,7 @@ fn meta_check_arithmetic_in_remove_liquidity_imbalance_with_admin_fee_should_suc
 		));
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 200000000000000000000000000],
 			user2_pool_lp_balance_before,
@@ -3635,11 +3702,11 @@ fn meta_check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() 
 			vec![10_000_000_000e18 as Balance, 10_000_000_000e18 as Balance],
 		);
 
-		assert_ok!(StableAmm::set_swap_fee(Origin::root(), meta_pool_id, SWAP_FEE,));
-		assert_ok!(StableAmm::set_admin_fee(Origin::root(), meta_pool_id, MAX_ADMIN_FEE,));
+		assert_ok!(StableAmm::set_swap_fee(RawOrigin::Root.into(), meta_pool_id, SWAP_FEE,));
+		assert_ok!(StableAmm::set_admin_fee(RawOrigin::Root.into(), meta_pool_id, MAX_ADMIN_FEE,));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![100000000000000000000000, 200000000000000000000000], // [100_000e18, 200_00018]
 			0,
@@ -3648,7 +3715,7 @@ fn meta_check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() 
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			vec![100000000000000000000000000, 300000000000000000000000000], /* [100_000_000e18,
 			                                                                 * 300_000_000e18] */
@@ -3658,7 +3725,7 @@ fn meta_check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() 
 		));
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![300000000000000000000000000, 100000000000000000000000000], /* [300_000_000e18,
 			                                                                 * 100_000_000e18] */
@@ -3668,7 +3735,7 @@ fn meta_check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() 
 		));
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -3679,7 +3746,7 @@ fn meta_check_arithmetic_in_swap_imbalance_with_admin_fee_should_successfully() 
 		));
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(CHARLIE),
+			RawOrigin::Signed(CHARLIE).into(),
 			meta_pool_id,
 			1,
 			0,
@@ -3706,7 +3773,7 @@ fn add_pool_and_base_pool_liquidity_should_work() {
 
 		// remove all initial lp balance.
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			2e18 as Balance,
 			vec![0, 0],
@@ -3724,7 +3791,7 @@ fn add_pool_and_base_pool_liquidity_should_work() {
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_pool_and_base_pool_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			basic_pool_id,
 			vec![1e18 as Balance, 0],
@@ -3750,7 +3817,7 @@ fn remove_pool_and_base_pool_liquidity_should_work() {
 		let base_pool = StableAmm::pools(base_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			base_pool_id,
 			vec![1e18 as Balance, 1e6 as Balance, 1e6 as Balance],
 			0,
@@ -3763,7 +3830,7 @@ fn remove_pool_and_base_pool_liquidity_should_work() {
 		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance],
 			0,
@@ -3772,7 +3839,7 @@ fn remove_pool_and_base_pool_liquidity_should_work() {
 		));
 
 		assert_ok!(StableAmm::remove_pool_and_base_pool_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			base_pool_id,
 			1e18 as Balance,
@@ -3807,7 +3874,7 @@ fn remove_pool_and_base_pool_liquidity_should_work() {
 fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(StableAmm::create_base_pool(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL)],
 			vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL],
 			50,
@@ -3820,7 +3887,7 @@ fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
 		let base_pool_id = 0;
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			base_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
 			0,
@@ -3832,7 +3899,7 @@ fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
 		let base_pool_lp_currency = base_pool.lp_currency_id;
 
 		assert_ok!(StableAmm::create_meta_pool(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			vec![Token(TOKEN4_SYMBOL), base_pool_lp_currency],
 			vec![TOKEN4_DECIMAL, STABLE_LP_DECIMAL],
 			50,
@@ -3846,7 +3913,7 @@ fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
 		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e6 as Balance, 1e18 as Balance],
 			0,
@@ -3855,7 +3922,7 @@ fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
 		));
 
 		assert_ok!(StableAmm::remove_pool_and_base_pool_liquidity_one_currency(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			base_pool_id,
 			1e18 as Balance,
@@ -3890,7 +3957,7 @@ fn remove_pool_and_base_pool_liquidity_one_currency_should_work() {
 fn swap_pool_from_base_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(StableAmm::create_base_pool(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL)],
 			vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL],
 			50,
@@ -3902,7 +3969,7 @@ fn swap_pool_from_base_should_work() {
 
 		let base_pool_id = 0;
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			base_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
 			0,
@@ -3914,7 +3981,7 @@ fn swap_pool_from_base_should_work() {
 		let base_pool_lp_currency = base_pool.lp_currency_id;
 
 		assert_ok!(StableAmm::create_meta_pool(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			vec![Token(TOKEN4_SYMBOL), base_pool_lp_currency],
 			vec![TOKEN4_DECIMAL, STABLE_LP_DECIMAL],
 			50,
@@ -3928,7 +3995,7 @@ fn swap_pool_from_base_should_work() {
 		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			vec![1e6 as Balance, 1e18 as Balance],
 			0,
@@ -3937,7 +4004,7 @@ fn swap_pool_from_base_should_work() {
 		));
 
 		assert_ok!(StableAmm::swap_pool_from_base(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_pool_id,
 			base_pool_id,
 			0,
@@ -3973,7 +4040,7 @@ fn swap_pool_from_base_should_work() {
 fn swap_pool_to_base_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(StableAmm::create_base_pool(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL)],
 			vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL],
 			50,
@@ -3987,7 +4054,7 @@ fn swap_pool_to_base_should_work() {
 		let base_pool = StableAmm::pools(base_pool_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			base_pool_id,
 			vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
 			0,
@@ -3996,7 +4063,7 @@ fn swap_pool_to_base_should_work() {
 		));
 
 		assert_ok!(StableAmm::create_meta_pool(
-			Origin::root(),
+			RawOrigin::Root.into(),
 			vec![Token(TOKEN4_SYMBOL), base_pool.lp_currency_id],
 			vec![TOKEN4_DECIMAL, STABLE_LP_DECIMAL],
 			50,
@@ -4010,7 +4077,7 @@ fn swap_pool_to_base_should_work() {
 		let meta_pool = StableAmm::pools(meta_poo_id).unwrap().get_pool_info();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_poo_id,
 			vec![1e6 as Balance, 1e18 as Balance],
 			0,
@@ -4019,7 +4086,7 @@ fn swap_pool_to_base_should_work() {
 		));
 
 		assert_ok!(StableAmm::swap_pool_to_base(
-			Origin::signed(BOB),
+			RawOrigin::Signed(BOB).into(),
 			meta_poo_id,
 			base_pool_id,
 			0,
@@ -4058,7 +4125,7 @@ fn get_meta_virtual_price_impact_on_base_pool_should_work() {
 		assert_eq!(StableAmm::get_virtual_price(base_pool_id), 1e18 as Balance);
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			base_pool_id,
 			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
 			0,
@@ -4080,7 +4147,7 @@ fn meta_pool_add_liquidity_impact_on_base_pool_price_should_work() {
 		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			base_pool_id,
 			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
 			0,
@@ -4094,7 +4161,7 @@ fn meta_pool_add_liquidity_impact_on_base_pool_price_should_work() {
 		let meta_pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();
 		let meta_lp_currency_amount_before = get_user_balance(meta_pool.lp_currency_id, &ALICE);
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			vec![1e18 as Balance, 3e18 as Balance],
 			0,
@@ -4116,7 +4183,7 @@ fn meta_pool_remove_liquidity_impact_on_base_pool_price_should_work() {
 		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			base_pool_id,
 			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
 			0,
@@ -4132,7 +4199,7 @@ fn meta_pool_remove_liquidity_impact_on_base_pool_price_should_work() {
 		let meta_pool_currency_amount_before = get_user_balance(meta_pool.currency_ids[0], &ALICE);
 
 		assert_ok!(StableAmm::remove_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			1e16 as Balance,
 			vec![0, 0],
@@ -4160,7 +4227,7 @@ fn meta_pool_remove_liquidity_one_currency_impact_on_base_pool_price_should_work
 		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			base_pool_id,
 			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
 			0,
@@ -4176,7 +4243,7 @@ fn meta_pool_remove_liquidity_one_currency_impact_on_base_pool_price_should_work
 		let meta_pool_currency_amount_before = get_user_balance(meta_pool.currency_ids[0], &ALICE);
 
 		assert_ok!(StableAmm::remove_liquidity_one_currency(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			1e16 as Balance,
 			0,
@@ -4203,7 +4270,7 @@ fn meta_pool_remove_liquidity_imbalance_impact_on_base_pool_price_should_work() 
 		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			base_pool_id,
 			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
 			0,
@@ -4220,7 +4287,7 @@ fn meta_pool_remove_liquidity_imbalance_impact_on_base_pool_price_should_work() 
 		let meta_lp_currency_amount_before = get_user_balance(meta_pool.lp_currency_id, &ALICE);
 
 		assert_ok!(StableAmm::remove_liquidity_imbalance(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			vec![5000000000000000, 5000000000000000],
 			Balance::MAX,
@@ -4253,7 +4320,7 @@ fn meta_pool_swap_impact_on_base_pool_price_should_work() {
 		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			base_pool_id,
 			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
 			0,
@@ -4270,7 +4337,7 @@ fn meta_pool_swap_impact_on_base_pool_price_should_work() {
 		let meta_lp_currency_amount_before = get_user_balance(meta_pool.lp_currency_id, &ALICE);
 
 		assert_ok!(StableAmm::swap(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			0,
 			1,
@@ -4304,7 +4371,7 @@ fn meta_pool_swap_underlying_impact_on_base_pool_price_should_work() {
 		let (base_pool_id, meta_pool_id) = setup_test_meta_pool();
 
 		assert_ok!(StableAmm::add_liquidity(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			base_pool_id,
 			vec![2e20 as Balance, 1e8 as Balance, 1e8 as Balance],
 			0,
@@ -4322,7 +4389,7 @@ fn meta_pool_swap_underlying_impact_on_base_pool_price_should_work() {
 		let target_currency_amount_before = get_user_balance(base_pool.currency_ids[0], &ALICE);
 
 		assert_ok!(StableAmm::swap_meta_pool_underlying(
-			Origin::signed(ALICE),
+			RawOrigin::Signed(ALICE).into(),
 			meta_pool_id,
 			0,
 			1,

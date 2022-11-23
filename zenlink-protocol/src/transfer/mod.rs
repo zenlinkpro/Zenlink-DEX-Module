@@ -32,7 +32,7 @@ impl<T: Config> Pallet<T> {
 		para_id: ParaId,
 		recipient: MultiLocation,
 		amount: AssetBalance,
-	) -> Xcm<T::Call> {
+	) -> Xcm<T::RuntimeCall> {
 		Xcm::WithdrawAsset {
 			assets: MultiAssets::from(MultiAsset::from((
 				XcmAssetId::Concrete(location),
@@ -53,7 +53,7 @@ impl<T: Config> Pallet<T> {
 		para_id: ParaId,
 		recipient: MultiLocation,
 		amount: AssetBalance,
-	) -> Xcm<T::Call> {
+	) -> Xcm<T::RuntimeCall> {
 		Xcm::WithdrawAsset {
 			assets: MultiAssets::from(MultiAsset::from((
 				XcmAssetId::Concrete(location),
@@ -81,7 +81,7 @@ impl<T: Config> Pallet<T> {
 		para_id: ParaId,
 		recipient: MultiLocation,
 		amount: AssetBalance,
-	) -> Result<Xcm<T::Call>, XcmError> {
+	) -> Result<Xcm<T::RuntimeCall>, XcmError> {
 		if !asset_id.is_support() {
 			return Err(XcmError::FailedToTransactAsset("Invalid AssetId"))
 		}

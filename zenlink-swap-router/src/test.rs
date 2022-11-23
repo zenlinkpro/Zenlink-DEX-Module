@@ -1,13 +1,13 @@
 // Copyright 2021-2022 Zenlink.
 // Licensed under Apache 2.0.
 
-use frame_support::{assert_noop, assert_ok};
-
 use super::{
 	mock::{CurrencyId::*, *},
 	StableSwapMode::FromBase,
 	*,
 };
+use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
 
 const INITIAL_A_VALUE: Balance = 50;
 const SWAP_FEE: Balance = 1e7 as Balance;
@@ -15,7 +15,7 @@ const ADMIN_FEE: Balance = 0;
 
 fn setup_stable_pools() {
 	assert_ok!(StableAMM::create_base_pool(
-		Origin::root(),
+		RawOrigin::Root.into(),
 		vec![Token(TOKEN1_SYMBOL), Token(TOKEN2_SYMBOL), Token(TOKEN3_SYMBOL)],
 		vec![TOKEN1_DECIMAL, TOKEN2_DECIMAL, TOKEN3_DECIMAL],
 		INITIAL_A_VALUE,
@@ -29,7 +29,7 @@ fn setup_stable_pools() {
 	let first_pool_lp_currency_id = StableLPV2(pool_id);
 
 	assert_ok!(StableAMM::add_liquidity(
-		Origin::signed(USER1),
+		RawOrigin::Signed(USER1).into(),
 		0,
 		vec![1e18 as Balance, 1e18 as Balance, 1e6 as Balance],
 		0,
@@ -38,7 +38,7 @@ fn setup_stable_pools() {
 	));
 
 	assert_ok!(StableAMM::create_meta_pool(
-		Origin::root(),
+		RawOrigin::Root.into(),
 		vec![Token(TOKEN4_SYMBOL), first_pool_lp_currency_id],
 		vec![TOKEN4_DECIMAL, 18],
 		INITIAL_A_VALUE,
@@ -49,7 +49,7 @@ fn setup_stable_pools() {
 	));
 
 	assert_ok!(StableAMM::add_liquidity(
-		Origin::signed(USER1),
+		RawOrigin::Signed(USER1).into(),
 		1,
 		vec![1e6 as Balance, 1e18 as Balance],
 		0,
@@ -59,9 +59,9 @@ fn setup_stable_pools() {
 }
 
 fn setup_pools() {
-	assert_ok!(Zenlink::create_pair(Origin::root(), TOKEN1_ASSET_ID, TOKEN2_ASSET_ID));
+	assert_ok!(Zenlink::create_pair(RawOrigin::Root.into(), TOKEN1_ASSET_ID, TOKEN2_ASSET_ID));
 	assert_ok!(Zenlink::add_liquidity(
-		Origin::signed(USER1),
+		RawOrigin::Signed(USER1).into(),
 		TOKEN1_ASSET_ID,
 		TOKEN2_ASSET_ID,
 		1e18 as Balance,
@@ -91,7 +91,7 @@ fn swap_exact_token_for_tokens_through_stable_pool_with_amount_slippage_should_f
 
 		assert_noop!(
 			RouterPallet::swap_exact_token_for_tokens_through_stable_pool(
-				Origin::signed(USER2),
+				RawOrigin::Signed(USER2).into(),
 				1e16 as Balance,
 				u128::MAX,
 				routes,
@@ -125,7 +125,7 @@ fn swap_exact_token_for_tokens_through_stable_pool_should_work() {
 		let token4_balance_before = Tokens::accounts(USER2, Token(TOKEN4_SYMBOL)).free;
 
 		assert_ok!(RouterPallet::swap_exact_token_for_tokens_through_stable_pool(
-			Origin::signed(USER1),
+			RawOrigin::Signed(USER1).into(),
 			1e16 as Balance,
 			0,
 			routes,

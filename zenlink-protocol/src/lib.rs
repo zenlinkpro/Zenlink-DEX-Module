@@ -97,7 +97,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// The assets interface beyond native currency and other assets.
 		type MultiAssetsHandler: MultiAssetsHandler<Self::AccountId, Self::AssetId>;
 		/// This pallet id.
@@ -125,7 +125,7 @@ pub mod pallet {
 		/// This parachain id.
 		type SelfParaId: Get<u32>;
 		/// Something to execute an XCM message.
-		type XcmExecutor: ExecuteXcm<Self::Call>;
+		type XcmExecutor: ExecuteXcm<Self::RuntimeCall>;
 		/// AccountId to be used in XCM as a corresponding AccountId32
 		/// and convert from MultiLocation in XCM
 		type AccountIdConverter: Convert<MultiLocation, Self::AccountId>;
@@ -484,7 +484,7 @@ pub mod pallet {
 				None => None,
 			};
 
-			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).0 = receiver);
+			FeeMeta::<T>::mutate(|fee_meta| fee_meta.0 = receiver);
 
 			Ok(())
 		}
@@ -503,7 +503,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 			ensure!(fee_point <= 30, Error::<T>::InvalidFeePoint);
 
-			FeeMeta::<T>::mutate(|fee_meta| (*fee_meta).1 = fee_point);
+			FeeMeta::<T>::mutate(|fee_meta| fee_meta.1 = fee_point);
 
 			Ok(())
 		}

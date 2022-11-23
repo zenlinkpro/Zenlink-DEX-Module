@@ -2,6 +2,7 @@
 // Licensed under Apache 2.0.
 
 use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
 
 use super::{mock::*, AssetId, Error, MultiAssetsHandler};
 
@@ -108,7 +109,7 @@ fn transferring_amount_above_available_balance_should_work() {
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, 100));
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &ALICE), 100);
 
-		assert_ok!(DexPallet::transfer(Origin::signed(ALICE), DOT_ASSET_ID, BOB, 50));
+		assert_ok!(DexPallet::transfer(RawOrigin::Signed(ALICE).into(), DOT_ASSET_ID, BOB, 50));
 
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &ALICE), 50);
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &BOB), 50);
@@ -122,7 +123,7 @@ fn transferring_zero_unit_should_work() {
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &ALICE), 100);
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &BOB), 0);
 
-		assert_ok!(DexPallet::transfer(Origin::signed(ALICE), DOT_ASSET_ID, BOB, 0));
+		assert_ok!(DexPallet::transfer(RawOrigin::Signed(ALICE).into(), DOT_ASSET_ID, BOB, 0));
 
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &ALICE), 100);
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &BOB), 0);
@@ -135,7 +136,7 @@ fn transferring_more_units_than_total_supply_should_not_work() {
 		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, 100));
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &ALICE), 100);
 		assert_noop!(
-			DexPallet::transfer(Origin::signed(ALICE), DOT_ASSET_ID, BOB, 101),
+			DexPallet::transfer(RawOrigin::Signed(ALICE).into(), DOT_ASSET_ID, BOB, 101),
 			Error::<Test>::InsufficientAssetBalance
 		);
 	});
@@ -181,7 +182,7 @@ fn foreign_mint_transfer_burn_should_work() {
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &ALICE), 200);
 		assert_eq!(DexPallet::foreign_total_supply(DOT_ASSET_ID), 200);
 
-		assert_ok!(DexPallet::transfer(Origin::signed(ALICE), DOT_ASSET_ID, BOB, 50));
+		assert_ok!(DexPallet::transfer(RawOrigin::Signed(ALICE).into(), DOT_ASSET_ID, BOB, 50));
 
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &ALICE), 150);
 		assert_eq!(DexPallet::foreign_balance_of(DOT_ASSET_ID, &BOB), 50);
