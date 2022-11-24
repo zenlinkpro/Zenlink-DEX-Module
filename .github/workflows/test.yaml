@@ -34,7 +34,7 @@ jobs:
       - name: Test zenlink-stable-amm
         run: cargo test -p zenlink-stable-amm
       - name: Test zenlink-swap-router
-        run: cargo test -p zenlink-stable-router
+        run: cargo test -p zenlink-swap-router
       - name: Test zenlink-vault
         run: cargo test -p zenlink-vault
       - name: Test zenlink-gauge
