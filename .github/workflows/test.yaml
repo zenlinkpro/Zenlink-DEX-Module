@@ -29,5 +29,13 @@ jobs:
           default: true
       - name: Install Wasm toolchain
         run: rustup target add wasm32-unknown-unknown
-      - name: Run tests
-        run: cargo test
+      - name: Test zenlink-protocol
+        run: cargo test -p zenlink-protocol
+      - name: Test zenlink-stable-amm
+        run: cargo test -p zenlink-stable-amm
+      - name: Test zenlink-swap-router
+        run: cargo test -p zenlink-stable-router
+      - name: Test zenlink-vault
+        run: cargo test -p zenlink-vault
+      - name: Test zenlink-gauge
+        run: cargo test -p zenlink-gauge
