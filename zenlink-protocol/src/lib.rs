@@ -653,7 +653,7 @@ pub mod pallet {
 				},
 			})?;
 
-			Self::mutate_lp_pairs(asset_0, asset_1);
+			Self::mutate_lp_pairs(asset_0, asset_1)?;
 
 			Self::deposit_event(Event::PairCreated(asset_0, asset_1));
 			Ok(())
@@ -1004,7 +1004,7 @@ pub mod pallet {
 			asset_1: T::AssetId,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
-			Self::mutate_lp_pairs(asset_0, asset_1);
+			Self::mutate_lp_pairs(asset_0, asset_1)?;
 
 			Self::do_end_bootstrap(asset_0, asset_1)
 		}

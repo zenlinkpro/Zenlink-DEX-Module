@@ -79,7 +79,7 @@ impl<T: Config> Pallet<T> {
 		asset_1: T::AssetId,
 	) -> Option<PairInfo<T::AccountId, AssetBalance, T::AssetId>> {
 		let pair_account = Self::pair_account_id(asset_0, asset_1);
-		let lp_asset_id = Self::lp_asset_id(&asset_0, &asset_1);
+		let lp_asset_id = Self::lp_asset_id(&asset_0, &asset_1)?;
 
 		let status = match Self::pair_status(Self::sort_asset_id(asset_0, asset_1)) {
 			Trading(_) => 0,

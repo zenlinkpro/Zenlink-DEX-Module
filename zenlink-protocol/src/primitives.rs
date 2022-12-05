@@ -62,12 +62,12 @@ impl AssetId {
 
 pub struct PairLpGenerate<T>(PhantomData<T>);
 impl<T: Config> GenerateLpAssetId<AssetId> for PairLpGenerate<T> {
-	fn generate_lp_asset_id(asset_0: AssetId, asset_1: AssetId) -> AssetId {
+	fn generate_lp_asset_id(asset_0: AssetId, asset_1: AssetId) -> Option<AssetId> {
 		let currency_0 = (asset_0.asset_index & 0x0000_0000_0000_ffff) << 16;
 		let currency_1 = (asset_1.asset_index & 0x0000_0000_0000_ffff) << 32;
 		let discr = 6u64 << 8;
 		let index = currency_0 + currency_1 + discr;
-		AssetId { chain_id: T::SelfParaId::get(), asset_type: LOCAL, asset_index: index }
+		Some(AssetId { chain_id: T::SelfParaId::get(), asset_type: LOCAL, asset_index: index })
 	}
 }
 
