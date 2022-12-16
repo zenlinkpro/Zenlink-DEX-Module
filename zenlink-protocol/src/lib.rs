@@ -37,7 +37,8 @@ use sp_runtime::traits::{
 	AccountIdConversion, Hash, MaybeSerializeDeserialize, One, StaticLookup, Zero,
 };
 use sp_std::{
-	collections::btree_map::BTreeMap, convert::TryInto, fmt::Debug, marker::PhantomData, prelude::*,
+	collections::btree_map::BTreeMap, convert::TryInto, fmt::Debug, marker::PhantomData,
+	prelude::*, vec,
 };
 
 // -------xcm--------
