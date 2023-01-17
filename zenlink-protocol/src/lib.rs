@@ -74,7 +74,7 @@ pub use primitives::{
 	AssetBalance, AssetId, AssetIdConverter, AssetInfo, BootstrapParameter, PairLpGenerate,
 	PairMetadata, PairStatus,
 	PairStatus::{Bootstrap, Disable, Trading},
-	LIQUIDITY, LOCAL, NATIVE, RESERVED,
+	DEFAULT_FEE_RATE, FEE_ADJUSTMENT, LIQUIDITY, LOCAL, NATIVE, RESERVED,
 };
 pub use rpc::PairInfo;
 pub use traits::{
@@ -393,6 +393,8 @@ pub mod pallet {
 		RequireProtocolAdminCandidate,
 		/// Invalid fee_point
 		InvalidFeePoint,
+		/// Invalid fee_rate
+		InvalidFeeRate,
 		/// Unsupported AssetId by this ZenlinkProtocol Version.
 		UnsupportedAssetType,
 		/// Account balance must be greater than or equal to the transfer amount.
@@ -504,6 +506,39 @@ pub mod pallet {
 			ensure!(fee_point <= 30, Error::<T>::InvalidFeePoint);
 
 			FeeMeta::<T>::mutate(|fee_meta| fee_meta.1 = fee_point);
+
+			Ok(())
+		}
+
+		/// Set the exchange fee rate.
+		#[pallet::weight(T::WeightInfo::set_fee_point())]
+		pub fn set_exchange_fee(
+			origin: OriginFor<T>,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
+			fee_rate: u128,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			// only allow fees higher than 0.3%
+			ensure!(fee_rate >= DEFAULT_FEE_RATE, Error::<T>::InvalidFeeRate);
+			// can't be more than 100%, paths are only valid
+			// if the amount is greater than one
+			ensure!(fee_rate < FEE_ADJUSTMENT, Error::<T>::InvalidFeeRate);
+
+			let pair = Self::sort_asset_id(asset_0, asset_1);
+			PairStatuses::<T>::try_mutate(pair, |status| match status {
+				Trading(pair) => {
+					*status = Trading(PairMetadata {
+						pair_account: pair.pair_account.clone(),
+						total_supply: pair.total_supply,
+						fee_rate,
+					});
+					Ok(())
+				},
+				Bootstrap(_) => Err(Error::<T>::PairAlreadyExists),
+				Disable => Err(Error::<T>::PairNotExists),
+			})?;
 
 			Ok(())
 		}
@@ -639,6 +674,7 @@ pub mod pallet {
 						*status = Trading(PairMetadata {
 							pair_account: Self::pair_account_id(pair.0, pair.1),
 							total_supply: Zero::zero(),
+							fee_rate: DEFAULT_FEE_RATE,
 						});
 						Ok(())
 					} else {
@@ -648,6 +684,7 @@ pub mod pallet {
 					*status = Trading(PairMetadata {
 						pair_account: Self::pair_account_id(pair.0, pair.1),
 						total_supply: Zero::zero(),
+						fee_rate: DEFAULT_FEE_RATE,
 					});
 					Ok(())
 				},

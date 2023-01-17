@@ -7,6 +7,10 @@ use sp_std::marker::PhantomData;
 
 pub type AssetBalance = u128;
 
+// 0.3% exchange fee rate
+pub const DEFAULT_FEE_RATE: u128 = 3;
+pub const FEE_ADJUSTMENT: u128 = 1000;
+
 /// Native currency
 pub const NATIVE: u8 = 0;
 /// Swap module asset
@@ -114,6 +118,15 @@ impl<Balance, BlockNumber, Account> Default for PairStatus<Balance, BlockNumber,
 	}
 }
 
+impl<BlockNumber, Account> PairStatus<AssetBalance, BlockNumber, Account> {
+	pub fn fee_rate(&self) -> AssetBalance {
+		match self {
+			Self::Trading(pair) => pair.fee_rate,
+			_ => DEFAULT_FEE_RATE,
+		}
+	}
+}
+
 /// Parameters of pair in Bootstrap status
 #[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub struct BootstrapParameter<Balance, BlockNumber, Account> {
@@ -133,4 +146,5 @@ pub struct BootstrapParameter<Balance, BlockNumber, Account> {
 pub struct PairMetadata<Balance, Account> {
 	pub pair_account: Account,
 	pub total_supply: Balance,
+	pub fee_rate: Balance,
 }

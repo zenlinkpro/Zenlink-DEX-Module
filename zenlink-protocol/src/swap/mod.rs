@@ -426,11 +426,11 @@ impl<T: Config> Pallet<T> {
 		Ok((amount_0_optimal, amount_1_desired))
 	}
 
-	// 0.3% exchange fee rate
 	fn get_amount_in(
 		output_amount: AssetBalance,
 		input_reserve: AssetBalance,
 		output_reserve: AssetBalance,
+		fee_rate: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
 		ensure!(
 			!input_reserve.is_zero() && !output_reserve.is_zero() && !output_amount.is_zero(),
@@ -439,11 +439,11 @@ impl<T: Config> Pallet<T> {
 
 		let numerator = U256::from(input_reserve)
 			.checked_mul(U256::from(output_amount))
-			.and_then(|n| n.checked_mul(U256::from(1000u128)))
+			.and_then(|n| n.checked_mul(U256::from(FEE_ADJUSTMENT)))
 			.ok_or(Error::<T>::Overflow)?;
 
 		let denominator = (U256::from(output_reserve).checked_sub(U256::from(output_amount)))
-			.and_then(|n| n.checked_mul(U256::from(997u128)))
+			.and_then(|n| n.checked_mul(U256::from(FEE_ADJUSTMENT.saturating_sub(fee_rate))))
 			.ok_or(Error::<T>::Overflow)?;
 
 		let amount_in = numerator
@@ -455,11 +455,11 @@ impl<T: Config> Pallet<T> {
 		Ok(amount_in)
 	}
 
-	// 0.3% exchange fee rate
 	fn get_amount_out(
 		input_amount: AssetBalance,
 		input_reserve: AssetBalance,
 		output_reserve: AssetBalance,
+		fee_rate: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
 		ensure!(
 			!input_reserve.is_zero() && !output_reserve.is_zero() && !input_amount.is_zero(),
@@ -467,7 +467,7 @@ impl<T: Config> Pallet<T> {
 		);
 
 		let input_amount_with_fee = U256::from(input_amount)
-			.checked_mul(U256::from(997u128))
+			.checked_mul(U256::from(FEE_ADJUSTMENT.saturating_sub(fee_rate)))
 			.ok_or(Error::<T>::Overflow)?;
 
 		let numerator = input_amount_with_fee
@@ -475,7 +475,7 @@ impl<T: Config> Pallet<T> {
 			.ok_or(Error::<T>::Overflow)?;
 
 		let denominator = U256::from(input_reserve)
-			.checked_mul(U256::from(1000u128))
+			.checked_mul(U256::from(FEE_ADJUSTMENT))
 			.and_then(|n| n.checked_add(input_amount_with_fee))
 			.ok_or(Error::<T>::Overflow)?;
 
@@ -503,7 +503,8 @@ impl<T: Config> Pallet<T> {
 
 			ensure!(reserve_1 > Zero::zero() && reserve_0 > Zero::zero(), Error::<T>::InvalidPath);
 
-			let amount = Self::get_amount_in(out_vec[len - 1 - i], reserve_1, reserve_0)?;
+			let fee_rate = Self::pair_status(Self::sort_asset_id(path[i], path[i - 1])).fee_rate();
+			let amount = Self::get_amount_in(out_vec[len - 1 - i], reserve_1, reserve_0, fee_rate)?;
 			ensure!(amount > One::one(), Error::<T>::InvalidPath);
 
 			// check K
@@ -547,7 +548,8 @@ impl<T: Config> Pallet<T> {
 
 			ensure!(reserve_1 > Zero::zero() && reserve_0 > Zero::zero(), Error::<T>::InvalidPath);
 
-			let amount = Self::get_amount_out(out_vec[i], reserve_0, reserve_1)?;
+			let fee_rate = Self::pair_status(Self::sort_asset_id(path[i], path[i + 1])).fee_rate();
+			let amount = Self::get_amount_out(out_vec[i], reserve_0, reserve_1, fee_rate)?;
 			ensure!(amount > Zero::zero(), Error::<T>::InvalidPath);
 
 			// check K
@@ -787,7 +789,11 @@ impl<T: Config> Pallet<T> {
 
 				PairStatuses::<T>::insert(
 					pair,
-					Trading(PairMetadata { pair_account, total_supply: total_lp_supply }),
+					Trading(PairMetadata {
+						pair_account,
+						total_supply: total_lp_supply,
+						fee_rate: DEFAULT_FEE_RATE,
+					}),
 				);
 
 				BootstrapEndStatus::<T>::insert(pair, Bootstrap(bootstrap_parameter.clone()));

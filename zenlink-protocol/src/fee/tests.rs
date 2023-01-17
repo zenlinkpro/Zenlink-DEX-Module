@@ -193,7 +193,7 @@ fn turn_on_protocol_fee_remove_liquidity_should_work() {
 		let lp_of_alice_0 = 316227766016;
 		assert_eq!(
 			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
-			316227766016
+			lp_of_alice_0
 		);
 		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
 		assert_eq!(DexPallet::k_last(sorted_pair), U256::from(DOT_UNIT) * U256::from(BTC_UNIT));
@@ -505,5 +505,91 @@ fn turn_on_protocol_fee_swap_have_fee_at_should_work() {
 			expect_fee
 		);
 		assert_eq!(lp_total, lp_of_alice_0 + alice_lp_add + lp_of_bob);
+	});
+}
+
+// https://docs.uniswap.org/contracts/v1/guides/trade-tokens#amount-bought-sell-order
+fn get_amount_out(
+	input_amount: AssetBalance,
+	input_reserve: AssetBalance,
+	output_reserve: AssetBalance,
+	fee_rate: AssetBalance,
+) -> AssetBalance {
+	let numerator = input_amount * output_reserve * fee_rate;
+	let denominator = input_reserve * 1000 + input_amount * fee_rate;
+	numerator / denominator
+}
+
+#[test]
+fn should_set_custom_exchange_fee() {
+	new_test_ext().execute_with(|| {
+		// add_liquidity
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, 100_000_000 * DOT_UNIT));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, 100_000_000 * BTC_UNIT));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, 100_000_000 * DOT_UNIT));
+
+		assert_ok!(DexPallet::create_pair(RawOrigin::Root.into(), DOT_ASSET_ID, BTC_ASSET_ID,));
+
+		// increase exchange fee to 0.5%
+		assert_ok!(DexPallet::set_exchange_fee(
+			RawOrigin::Root.into(),
+			DOT_ASSET_ID,
+			BTC_ASSET_ID,
+			5
+		));
+
+		let total_supply_dot: u128 = 1_000_000 * DOT_UNIT;
+		let total_supply_btc: u128 = 1_000_000 * BTC_UNIT;
+
+		assert_ok!(DexPallet::add_liquidity(
+			RawOrigin::Signed(ALICE).into(),
+			DOT_ASSET_ID,
+			BTC_ASSET_ID,
+			total_supply_dot,
+			total_supply_btc,
+			0,
+			0,
+			100
+		));
+
+		let lp_of_alice_0 = U256::from(total_supply_btc)
+			.saturating_mul(U256::from(total_supply_dot))
+			.integer_sqrt()
+			.as_u128();
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
+			lp_of_alice_0
+		);
+		assert_eq!(<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &BOB), 0);
+
+		// swap
+		assert_ok!(DexPallet::inner_swap_exact_assets_for_assets(
+			&CHARLIE,                          // who
+			DOT_UNIT,                          // amount_in
+			1,                                 // amount_out_min
+			&vec![DOT_ASSET_ID, BTC_ASSET_ID], // path
+			&CHARLIE,                          // recipient
+		));
+
+		assert_eq!(
+			<Test as Config>::MultiAssetsHandler::balance_of(LP_DOT_BTC, &ALICE),
+			lp_of_alice_0
+		);
+
+		let reserve_0 =
+			<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
+		let reserve_1 =
+			<Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
+
+		assert_eq!(reserve_0, total_supply_dot + DOT_UNIT);
+
+		// (amount_in_dot * fee_rate * total_supply_btc) / (total_supply_dot + amount_in_dot *
+		// fee_rate)
+		// (10**15 * 0.995 * (1_000_000 * 10**8)) / ((1_000_000 * 10**15) + 10**15 *
+		// 0.995) = 99499900
+		assert_eq!(
+			reserve_1,
+			total_supply_btc - get_amount_out(DOT_UNIT, total_supply_dot, total_supply_btc, 995)
+		);
 	});
 }
