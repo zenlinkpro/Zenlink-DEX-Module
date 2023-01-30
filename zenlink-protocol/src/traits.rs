@@ -17,6 +17,16 @@ pub trait ConvertMultiLocation<AssetId> {
 	fn make_x3_location(asset_id: &AssetId) -> MultiLocation;
 }
 
+impl<AssetId> ConvertMultiLocation<AssetId> for () {
+	fn chain_id(_asset_id: &AssetId) -> u32 {
+		Default::default()
+	}
+
+	fn make_x3_location(asset_id: &AssetId) -> MultiLocation {
+		Default::default()
+	}
+}
+
 pub trait LocalAssetHandler<AccountId> {
 	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance;
 
