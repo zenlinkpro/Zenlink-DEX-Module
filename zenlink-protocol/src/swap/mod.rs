@@ -94,7 +94,7 @@ impl<T: Config> Pallet<T> {
 					parameter.total_supply,
 				)?;
 				if let Some(fee_to) = Self::fee_meta().0 {
-					if mint_fee > 0 && Self::fee_meta().1 > 0 {
+					if mint_fee > 0 {
 						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee)
 							.map(|_| mint_fee)?;
 						parameter.total_supply = parameter
@@ -125,18 +125,16 @@ impl<T: Config> Pallet<T> {
 				T::MultiAssetsHandler::transfer(asset_1, who, &parameter.pair_account, amount_1)?;
 
 				if let Some(_fee_to) = Self::fee_meta().0 {
-					if Self::fee_meta().1 > 0 {
-						// update reserve_0 and reserve_1
-						let reserve_0 =
-							T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
-						let reserve_1 =
-							T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
+					// update reserve_0 and reserve_1
+					let reserve_0 =
+						T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
+					let reserve_1 =
+						T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
-						let last_k_value = U256::from(reserve_0)
-							.checked_mul(U256::from(reserve_1))
-							.ok_or(Error::<T>::Overflow)?;
-						Self::mutate_k_last(asset_0, asset_1, last_k_value);
-					}
+					let last_k_value = U256::from(reserve_0)
+						.checked_mul(U256::from(reserve_1))
+						.ok_or(Error::<T>::Overflow)?;
+					Self::mutate_k_last(asset_0, asset_1, last_k_value);
 				}
 
 				Self::deposit_event(Event::LiquidityAdded(
@@ -198,7 +196,7 @@ impl<T: Config> Pallet<T> {
 					parameter.total_supply,
 				)?;
 				if let Some(fee_to) = Self::fee_meta().0 {
-					if mint_fee > 0 && Self::fee_meta().1 > 0 {
+					if mint_fee > 0 {
 						//Self::mutate_liquidity(asset_0, asset_1, &fee_to, mint_fee, true)?;
 						T::MultiAssetsHandler::deposit(lp_asset_id, &fee_to, mint_fee)
 							.map(|_| mint_fee)?;
@@ -232,18 +230,16 @@ impl<T: Config> Pallet<T> {
 				)?;
 
 				if let Some(_fee_to) = Self::fee_meta().0 {
-					if Self::fee_meta().1 > 0 {
-						// update reserve_0 and reserve_1
-						let reserve_0 =
-							T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
-						let reserve_1 =
-							T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
+					// update reserve_0 and reserve_1
+					let reserve_0 =
+						T::MultiAssetsHandler::balance_of(asset_0, &parameter.pair_account);
+					let reserve_1 =
+						T::MultiAssetsHandler::balance_of(asset_1, &parameter.pair_account);
 
-						let last_k_value = U256::from(reserve_0)
-							.checked_mul(U256::from(reserve_1))
-							.ok_or(Error::<T>::Overflow)?;
-						Self::mutate_k_last(asset_0, asset_1, last_k_value);
-					}
+					let last_k_value = U256::from(reserve_0)
+						.checked_mul(U256::from(reserve_1))
+						.ok_or(Error::<T>::Overflow)?;
+					Self::mutate_k_last(asset_0, asset_1, last_k_value);
 				}
 
 				Self::deposit_event(Event::LiquidityRemoved(
@@ -362,7 +358,7 @@ impl<T: Config> Pallet<T> {
 		let mut mint_fee: AssetBalance = 0;
 
 		if let Some(_fee_to) = Self::fee_meta().0 {
-			if !new_k_last.is_zero() && Self::fee_meta().1 > 0 {
+			if !new_k_last.is_zero() {
 				let root_k = U256::from(reserve_0)
 					.checked_mul(U256::from(reserve_1))
 					.map(|n| n.integer_sqrt())
@@ -371,13 +367,12 @@ impl<T: Config> Pallet<T> {
 				let root_k_last = new_k_last.integer_sqrt();
 				if root_k > root_k_last {
 					let fee_point = Self::fee_meta().1;
-					let fix_fee_point = (30 - fee_point) / fee_point;
 					let numerator = U256::from(total_liquidity)
 						.checked_mul(root_k.checked_sub(root_k_last).ok_or(Error::<T>::Overflow)?)
 						.ok_or(Error::<T>::Overflow)?;
 
 					let denominator = root_k
-						.checked_mul(U256::from(fix_fee_point))
+						.checked_mul(U256::from(fee_point))
 						.and_then(|n| n.checked_add(root_k_last))
 						.ok_or(Error::<T>::Overflow)?;
 

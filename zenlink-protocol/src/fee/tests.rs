@@ -2,7 +2,7 @@
 // Licensed under Apache 2.0.
 
 use super::mock::*;
-use crate::{AssetId, Error, MultiAssetsHandler};
+use crate::{AssetId, MultiAssetsHandler};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use frame_system::RawOrigin;
 use sp_core::U256;
@@ -44,11 +44,6 @@ fn fee_meta_setter_should_not_work() {
 		);
 
 		assert_noop!(DexPallet::set_fee_point(RawOrigin::Signed(BOB).into(), 0), BadOrigin);
-
-		assert_noop!(
-			DexPallet::set_fee_point(RawOrigin::Root.into(), 31u8),
-			Error::<Test>::InvalidFeePoint
-		);
 	})
 }
 
