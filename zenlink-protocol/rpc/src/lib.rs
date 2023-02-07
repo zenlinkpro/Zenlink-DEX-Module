@@ -73,6 +73,15 @@ pub trait ZenlinkProtocolApi<BlockHash, AccountId, AssetId> {
 		amount_1_min: AssetBalance,
 		at: Option<BlockHash>,
 	) -> RpcResult<NumberOrHex>;
+
+	#[method(name = "zenlinkProtocol_calculateRemoveLiquidity")]
+	fn calculate_remove_liquidity(
+		&self,
+		asset_0: AssetId,
+		asset_1: AssetId,
+		amount: AssetBalance,
+		at: Option<BlockHash>,
+	) -> RpcResult<Option<(AssetBalance, AssetBalance)>>;
 }
 
 pub struct ZenlinkProtocol<C, M> {
@@ -210,6 +219,20 @@ where
 					status: pair.status,
 				})
 			})
+			.map_err(runtime_error_into_rpc_err)
+	}
+
+	fn calculate_remove_liquidity(
+		&self,
+		asset_0: AssetId,
+		asset_1: AssetId,
+		amount: AssetBalance,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> RpcResult<Option<(AssetBalance, AssetBalance)>> {
+		let api = self.client.runtime_api();
+		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+		api.calculate_remove_liquidity(&at, asset_0, asset_1, amount)
 			.map_err(runtime_error_into_rpc_err)
 	}
 }

@@ -40,5 +40,11 @@ sp_api::decl_runtime_apis! {
 			amount_0_min: AssetBalance,
 			amount_1_min: AssetBalance,
 		) -> AssetBalance;
+
+		fn calculate_remove_liquidity(
+			asset_0: AssetId,
+			asset_1: AssetId,
+			amount: AssetBalance,
+		) -> Option<(AssetBalance, AssetBalance)>;
 	 }
 }
