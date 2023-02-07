@@ -494,10 +494,8 @@ pub mod pallet {
 		/// # Arguments
 		///
 		/// - `fee_point`:
-		/// The fee_point which integer between [0,30]
-		/// 0 means no protocol fee.
-		/// 30 means 0.3% * 100% = 0.0030.
-		/// default is 5 and means 0.3% * 1 / 6 = 0.0005.
+		/// 0 means that all exchange fees belong to the liquidity provider.
+		/// 30 means that all exchange fees belong to the fee receiver.
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::set_fee_point())]
 		pub fn set_fee_point(origin: OriginFor<T>, fee_point: u8) -> DispatchResult {
