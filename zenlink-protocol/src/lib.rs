@@ -232,14 +232,10 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	/// Refer: https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2Pair.sol#L88
 	pub struct GenesisConfig<T: Config> {
-		/// The admin of the protocol fee.
-		// pub fee_admin: T::AccountId,
 		/// The receiver of the protocol fee.
 		pub fee_receiver: Option<T::AccountId>,
-		/// The fee point which integer between [0,30]
-		/// 0 means no protocol fee.
-		/// 30 means 0.3% * 100% = 0.0030.
-		/// default is 5 and means 0.3% * 1 / 6 = 0.0005.
+		/// The higher the fee point, the smaller the
+		/// cut of the exchange fee taken from LPs.
 		pub fee_point: u8,
 	}
 
@@ -391,8 +387,6 @@ pub mod pallet {
 		RequireProtocolAdmin,
 		/// Require the admin candidate who can become new admin after confirm.
 		RequireProtocolAdminCandidate,
-		/// Invalid fee_point
-		InvalidFeePoint,
 		/// Unsupported AssetId by this ZenlinkProtocol Version.
 		UnsupportedAssetType,
 		/// Account balance must be greater than or equal to the transfer amount.
@@ -469,7 +463,7 @@ pub mod pallet {
 		/// - `send_to`:
 		/// (1) Some(receiver): it turn on the protocol fee and the new receiver account.
 		/// (2) None: it turn off the protocol fee.
-	    #[pallet::call_index(0)]
+		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::set_fee_receiver())]
 		pub fn set_fee_receiver(
 			origin: OriginFor<T>,
@@ -495,15 +489,15 @@ pub mod pallet {
 		/// # Arguments
 		///
 		/// - `fee_point`:
-		/// The fee_point which integer between [0,30]
-		/// 0 means no protocol fee.
-		/// 30 means 0.3% * 100% = 0.0030.
-		/// default is 5 and means 0.3% * 1 / 6 = 0.0005.
+		/// An integer y which satisfies the equation `1/x-1=y`
+		/// where x is the percentage of the exchange fee, a
+		/// value of 0 gives everything to the fee receiver
+		/// e.g. 1/(1/6)-1=5, 1/(1/2)-1=1
+		/// See section 2.4 of the Uniswap v2 whitepaper
 		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::set_fee_point())]
 		pub fn set_fee_point(origin: OriginFor<T>, fee_point: u8) -> DispatchResult {
 			ensure_root(origin)?;
-			ensure!(fee_point <= 30, Error::<T>::InvalidFeePoint);
 
 			FeeMeta::<T>::mutate(|fee_meta| fee_meta.1 = fee_point);
 

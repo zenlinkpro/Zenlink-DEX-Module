@@ -2,7 +2,7 @@
 // Licensed under Apache 2.0.
 
 use super::mock::*;
-use crate::{AssetId, Error, MultiAssetsHandler};
+use crate::{AssetId, MultiAssetsHandler};
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use frame_system::RawOrigin;
 use sp_core::U256;
@@ -44,11 +44,6 @@ fn fee_meta_setter_should_not_work() {
 		);
 
 		assert_noop!(DexPallet::set_fee_point(RawOrigin::Signed(BOB).into(), 0), BadOrigin);
-
-		assert_noop!(
-			DexPallet::set_fee_point(RawOrigin::Root.into(), 31u8),
-			Error::<Test>::InvalidFeePoint
-		);
 	})
 }
 
@@ -505,5 +500,70 @@ fn turn_on_protocol_fee_swap_have_fee_at_should_work() {
 			expect_fee
 		);
 		assert_eq!(lp_total, lp_of_alice_0 + alice_lp_add + lp_of_bob);
+	});
+}
+
+#[test]
+fn assert_higher_fee_point_decreases_protocol_fee() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(DexPallet::set_fee_receiver(RawOrigin::Root.into(), Some(BOB)));
+
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &ALICE, 100_000_000 * DOT_UNIT));
+		assert_ok!(DexPallet::foreign_mint(BTC_ASSET_ID, &ALICE, 100_000_000 * BTC_UNIT));
+		assert_ok!(DexPallet::foreign_mint(DOT_ASSET_ID, &CHARLIE, 100_000_000 * DOT_UNIT));
+
+		assert_ok!(DexPallet::create_pair(RawOrigin::Root.into(), DOT_ASSET_ID, BTC_ASSET_ID,));
+
+		let total_supply_dot: u128 = 1_000_000 * DOT_UNIT;
+		let total_supply_btc: u128 = 1_000_000 * BTC_UNIT;
+
+		assert_ok!(DexPallet::add_liquidity(
+			RawOrigin::Signed(ALICE).into(),
+			DOT_ASSET_ID,
+			BTC_ASSET_ID,
+			total_supply_dot,
+			total_supply_btc,
+			0,
+			0,
+			100
+		));
+
+		assert_ok!(DexPallet::inner_swap_exact_assets_for_assets(
+			&CHARLIE,
+			DOT_UNIT,
+			1,
+			&vec![DOT_ASSET_ID, BTC_ASSET_ID],
+			&CHARLIE,
+		));
+
+		fn mint_fee_for_point(fee_point: u8) -> u128 {
+			let reserve_0 =
+				<Test as Config>::MultiAssetsHandler::balance_of(DOT_ASSET_ID, &PAIR_DOT_BTC);
+			let reserve_1 =
+				<Test as Config>::MultiAssetsHandler::balance_of(BTC_ASSET_ID, &PAIR_DOT_BTC);
+			let total_supply = <Test as Config>::MultiAssetsHandler::total_supply(LP_DOT_BTC);
+			assert_ok!(DexPallet::set_fee_point(RawOrigin::Root.into(), fee_point));
+			DexPallet::mint_protocol_fee(
+				reserve_0,
+				reserve_1,
+				DOT_ASSET_ID,
+				BTC_ASSET_ID,
+				total_supply,
+			)
+			.unwrap()
+		}
+
+		// 1/(1/1)-1=0
+		let total_fee = mint_fee_for_point(0);
+		// 1/(1/2)-1=1
+		assert_eq!(mint_fee_for_point(1), total_fee / 2);
+		// 1/(1/4)-1=3
+		assert_eq!(mint_fee_for_point(3), total_fee / 4);
+		// 1/(1/6)-1=5
+		assert_eq!(mint_fee_for_point(5), total_fee / 6);
+		// 1/(1/10)-1=9
+		assert_eq!(mint_fee_for_point(9), total_fee / 10);
+		// 1/(1/100)-1=99
+		assert_eq!(mint_fee_for_point(99), total_fee / 100);
 	});
 }
