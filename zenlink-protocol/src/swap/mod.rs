@@ -371,13 +371,13 @@ impl<T: Config> Pallet<T> {
 				let root_k_last = new_k_last.integer_sqrt();
 				if root_k > root_k_last {
 					let fee_point = Self::fee_meta().1;
-					let fix_fee_point = (30 - fee_point) / fee_point;
 					let numerator = U256::from(total_liquidity)
 						.checked_mul(root_k.checked_sub(root_k_last).ok_or(Error::<T>::Overflow)?)
 						.ok_or(Error::<T>::Overflow)?;
 
 					let denominator = root_k
-						.checked_mul(U256::from(fix_fee_point))
+						.checked_mul(U256::from(30 - fee_point))
+						.and_then(|n| n.checked_div(U256::from(fee_point)))
 						.and_then(|n| n.checked_add(root_k_last))
 						.ok_or(Error::<T>::Overflow)?;
 
