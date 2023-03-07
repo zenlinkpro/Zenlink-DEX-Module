@@ -279,111 +279,158 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Foreign Asset
 
-		/// Some assets were transferred. \[asset_id, owner, target, amount\]
-		Transferred(T::AssetId, T::AccountId, T::AccountId, AssetBalance),
-		/// Some assets were burned. \[asset_id, owner, amount\]
-		Burned(T::AssetId, T::AccountId, AssetBalance),
-		/// Some assets were minted. \[asset_id, owner, amount\]
-		Minted(T::AssetId, T::AccountId, AssetBalance),
+		/// Some assets were transferred.
+		Transferred {	
+			asset_id: T::AssetId, 
+			owner: T::AccountId, 
+			target: T::AccountId, 
+			amount: AssetBalance
+		},
+		/// Some assets were burned.
+		Burned {
+			asset_id: T::AssetId, 
+			owner: T::AccountId, 
+			amount: AssetBalance
+		},
+		/// Some assets were minted.
+		Minted { 
+			asset_id: T::AssetId, 
+			owner: T::AccountId, 
+			amount: AssetBalance 
+		},
 
 		/// Swap
 
-		/// Create a trading pair. \[asset_0, asset_1\]
-		PairCreated(T::AssetId, T::AssetId),
-		/// Add liquidity. \[owner, asset_0, asset_1, add_balance_0, add_balance_1,
-		/// mint_balance_lp\]
-		LiquidityAdded(
-			T::AccountId,
-			T::AssetId,
-			T::AssetId,
-			AssetBalance,
-			AssetBalance,
-			AssetBalance,
-		),
-		/// Remove liquidity. \[owner, recipient, asset_0, asset_1, rm_balance_0, rm_balance_1,
-		/// burn_balance_lp\]
-		LiquidityRemoved(
-			T::AccountId,
-			T::AccountId,
-			T::AssetId,
-			T::AssetId,
-			AssetBalance,
-			AssetBalance,
-			AssetBalance,
-		),
-		/// Transact in trading \[owner, recipient, swap_path, balances\]
-		AssetSwap(T::AccountId, T::AccountId, Vec<T::AssetId>, Vec<AssetBalance>),
+		/// Create a trading pair.
+		PairCreated {
+			asset_0: T::AssetId, 
+			asset_1: T::AssetId
+		},
+		/// Add liquidity.
+		LiquidityAdded {
+			owner: T::AccountId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
+			add_balance_0: AssetBalance,
+			add_balance_1: AssetBalance,
+			mint_balance_lp: AssetBalance
+		},
+		/// Remove liquidity.
+		LiquidityRemoved {
+			owner: T::AccountId,
+			recipient: T::AccountId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
+			rm_balance_0: AssetBalance,
+			rm_balance_1: AssetBalance,
+			burn_balance_lp: AssetBalance,
+		},
+		/// Transact in trading.
+		AssetSwap {
+			owner: T::AccountId, 
+			recipient: T::AccountId, 
+			swap_path: Vec<T::AssetId>, 
+			balances: Vec<AssetBalance>
+		},
 
 		/// Transfer by xcm
 
-		/// Transferred to parachain. \[asset_id, src, para_id, dest, amount, used_weight\]
-		TransferredToParachain(T::AssetId, T::AccountId, ParaId, T::AccountId, AssetBalance, u64),
+		/// Transferred to parachain.
+		TransferredToParachain { 
+			asset_id: T::AssetId, 
+			src: T::AccountId, 
+			para_id: ParaId, 
+			dest: T::AccountId, 
+			amount: AssetBalance, 
+			used_weight: u64
+		},
 
-		/// Contribute to bootstrap pair. \[who, asset_0, asset_0_contribute, asset_1_contribute\]
-		BootstrapContribute(T::AccountId, T::AssetId, AssetBalance, T::AssetId, AssetBalance),
+		/// Contribute to bootstrap pair.
+		BootstrapContribute {
+			who: T::AccountId, 
+			asset_0: T::AssetId, 
+			asset_0_contribute: AssetBalance, 
+			asset_1: T::AssetId, 
+			asset_1_contribute: AssetBalance
+		},
 
-		/// A bootstrap pair end. \[asset_0, asset_1, asset_0_amount, asset_1_amount,
-		/// total_lp_supply]
-		BootstrapEnd(T::AssetId, T::AssetId, AssetBalance, AssetBalance, AssetBalance),
+		/// A bootstrap pair end.
+		BootstrapEnd {
+			asset_0: T::AssetId, 
+			asset_1: T::AssetId, 
+			asset_0_amount: AssetBalance, 
+			asset_1_amount: AssetBalance, 
+			total_lp_supply: AssetBalance
+		},
 
-		/// Create a bootstrap pair. \[bootstrap_pair_account, asset_0, asset_1,
-		/// total_supply_0,total_supply_1, capacity_supply_0,capacity_supply_1, end\]
-		BootstrapCreated(
-			T::AccountId,
-			T::AssetId,
-			T::AssetId,
-			AssetBalance,
-			AssetBalance,
-			AssetBalance,
-			AssetBalance,
-			T::BlockNumber,
-		),
+		/// Create a bootstrap pair.
+		BootstrapCreated {
+			bootstrap_pair_account: T::AccountId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
+			total_supply_0: AssetBalance,
+			total_supply_1: AssetBalance,
+			capacity_supply_0: AssetBalance,
+			capacity_supply_1: AssetBalance,
+			end: T::BlockNumber,
+		},
 
-		/// Claim a bootstrap pair. \[bootstrap_pair_account, claimer, receiver, asset_0, asset_1,
-		/// asset_0_refund, asset_1_refund, lp_amount\]
-		BootstrapClaim(
-			T::AccountId,
-			T::AccountId,
-			T::AccountId,
-			T::AssetId,
-			T::AssetId,
-			AssetBalance,
-			AssetBalance,
-			AssetBalance,
-		),
+		/// Claim a bootstrap pair.
+		BootstrapClaim {
+			bootstrap_pair_account: T::AccountId,
+			claimer: T::AccountId,
+			receiver: T::AccountId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
+			asset_0_refund: AssetBalance,
+			asset_1_refund: AssetBalance,
+			lp_amount: AssetBalance,
+		},
 
-		/// Update a bootstrap pair. \[caller, asset_0, asset_1,
-		/// total_supply_0,total_supply_1, capacity_supply_0,capacity_supply_1\]
-		BootstrapUpdate(
-			T::AccountId,
-			T::AssetId,
-			T::AssetId,
-			AssetBalance,
-			AssetBalance,
-			AssetBalance,
-			AssetBalance,
-			T::BlockNumber,
-		),
+		/// Update a bootstrap pair.
+		BootstrapUpdate {
+			caller: T::AccountId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
+			total_supply_0: AssetBalance,
+			total_supply_1: AssetBalance,
+			capacity_supply_0: AssetBalance,
+			capacity_supply_1: AssetBalance,
+			end: T::BlockNumber,
+		},
 
-		/// Refund from disable bootstrap pair. \[bootstrap_pair_account, caller, asset_0, asset_1,
-		/// asset_0_refund, asset_1_refund\]
-		BootstrapRefund(
-			T::AccountId,
-			T::AccountId,
-			T::AssetId,
-			T::AssetId,
-			AssetBalance,
-			AssetBalance,
-		),
+		/// Refund from disable bootstrap pair.
+		BootstrapRefund {
+			bootstrap_pair_account: T::AccountId,
+			caller: T::AccountId,
+			asset_0: T::AssetId,
+			asset_1: T::AssetId,
+			asset_0_refund: AssetBalance,
+			asset_1_refund: AssetBalance,
+		},
 
 		/// Bootstrap distribute some rewards to contributors.
-		DistributeReward(T::AssetId, T::AssetId, T::AccountId, Vec<(T::AssetId, AssetBalance)>),
+		DistributeReward {
+			asset_0: T::AssetId, 
+			asset_1: T::AssetId, 
+			reward_holder: T::AccountId, 
+			distribute_rewards: Vec<(T::AssetId, AssetBalance)>
+		},
 
 		/// Charge reward into a bootstrap.
-		ChargeReward(T::AssetId, T::AssetId, T::AccountId, Vec<(T::AssetId, AssetBalance)>),
+		ChargeReward {
+			asset_0: T::AssetId, 
+			asset_1: T::AssetId, 
+			who: T::AccountId, 
+			charge_rewards: Vec<(T::AssetId, AssetBalance)>
+		},
 
 		/// Withdraw all reward from a bootstrap.
-		WithdrawReward(T::AssetId, T::AssetId, T::AccountId),
+		WithdrawReward { 
+			asset_0: T::AssetId, 
+			asset_1: T::AssetId, 
+			recipient: T::AccountId32
+		},
 	}
 	#[pallet::error]
 	pub enum Error<T> {
@@ -583,9 +630,14 @@ pub mod pallet {
 			let out_come = T::XcmExecutor::execute_xcm(xcm_origin, xcm, max_weight);
 			match out_come {
 				Outcome::Complete(weight) => {
-					Self::deposit_event(Event::<T>::TransferredToParachain(
-						asset_id, who, para_id, recipient, amount, weight,
-					));
+					Self::deposit_event(Event::<T>::TransferredToParachain {
+						asset_id, 
+						src: who, 
+						para_id, 
+						dest: recipient, 
+						amount, 
+						used_weight: weight,
+					});
 
 					Ok(())
 				},
@@ -660,7 +712,10 @@ pub mod pallet {
 
 			Self::mutate_lp_pairs(asset_0, asset_1)?;
 
-			Self::deposit_event(Event::PairCreated(asset_0, asset_1));
+			Self::deposit_event(Event::PairCreated {
+				asset_0, 
+				asset_1
+			});
 			Ok(())
 		}
 
@@ -924,16 +979,16 @@ pub mod pallet {
 				},
 			})?;
 
-			Self::deposit_event(Event::BootstrapCreated(
-				Self::account_id(),
-				pair.0,
-				pair.1,
-				target_supply_0,
-				target_supply_1,
-				capacity_supply_1,
-				capacity_supply_0,
+			Self::deposit_event(Event::BootstrapCreated {
+				bootstrap_pair_account: Self::account_id(),
+				asset_0: pair.0,
+				asset_1: pair.1,
+				total_supply_0: target_supply_0,
+				total_supply_1: target_supply_1,
+				capacity_supply_0: capacity_supply_1,
+				capacity_supply_1: capacity_supply_0,
 				end,
-			));
+			});
 			Ok(())
 		}
 
@@ -1099,16 +1154,16 @@ pub mod pallet {
 				Disable => Err(Error::<T>::NotInBootstrap),
 			})?;
 
-			Self::deposit_event(Event::BootstrapUpdate(
-				pair_account,
-				pair.0,
-				pair.1,
-				target_supply_0,
-				target_supply_1,
+			Self::deposit_event(Event::BootstrapUpdate {
+				caller: pair_account,
+				asset_0: pair.0,
+				asset_1: pair.1,
+				total_supply_0: target_supply_0,
+				total_supply_1: target_supply_1,
 				capacity_supply_0,
 				capacity_supply_1,
 				end,
-			));
+			});
 			Ok(())
 		}
 
@@ -1156,7 +1211,12 @@ pub mod pallet {
 					rewards.insert(*asset_id, new_charge_amount);
 				}
 
-				Self::deposit_event(Event::ChargeReward(pair.0, pair.1, who, charge_rewards));
+				Self::deposit_event(Event::ChargeReward {
+					asset_0: pair.0, 
+					asset_1: pair.1, 
+					who, 
+					charge_rewards
+				});
 
 				Ok(())
 			})?;
@@ -1191,7 +1251,11 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			Self::deposit_event(Event::WithdrawReward(pair.0, pair.1, recipient));
+			Self::deposit_event(Event::WithdrawReward {
+				asset_0: pair.0, 
+				asset_1: pair.1, 
+				recipient
+			});
 
 			Ok(())
 		}
