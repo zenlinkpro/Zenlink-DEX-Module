@@ -27,8 +27,8 @@ use sp_runtime::{
 
 use crate as pallet_zenlink;
 pub use crate::{
-	AssetBalance, AssetId, AssetIdConverter, Config, LocalAssetHandler, MultiAssetsHandler,
-	PairLpGenerate, Pallet, ParaId, ZenlinkMultiAssets, LIQUIDITY, LOCAL, NATIVE, RESERVED,
+	AssetBalance, AssetId, Config, LocalAssetHandler, MultiAssetsHandler, PairLpGenerate, Pallet,
+	ParaId, ZenlinkMultiAssets, LIQUIDITY, LOCAL, NATIVE, RESERVED,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -149,9 +149,6 @@ impl Config for Test {
 	type LpGenerate = PairLpGenerate<Self>;
 	type TargetChains = ();
 	type SelfParaId = ();
-	type XcmExecutor = ();
-	type AccountIdConverter = ();
-	type AssetIdConverter = AssetIdConverter;
 	type WeightInfo = ();
 }
 
