@@ -84,17 +84,6 @@ impl Into<MultiLocation> for AssetId {
 	}
 }
 
-pub struct AssetIdConverter;
-impl ConvertMultiLocation<AssetId> for AssetIdConverter {
-	fn chain_id(asset_id: &AssetId) -> u32 {
-		asset_id.chain_id
-	}
-
-	fn make_x3_location(asset_id: &AssetId) -> MultiLocation {
-		asset_id.clone().into()
-	}
-}
-
 /// Status for TradingPair
 #[derive(Clone, Copy, Encode, Decode, RuntimeDebug, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
 pub enum PairStatus<Balance, BlockNumber, Account> {
