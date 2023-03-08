@@ -100,8 +100,6 @@ pub mod pallet {
 		/// Generate the AssetId for the pair.
 		type LpGenerate: GenerateLpAssetId<Self::AssetId>;
 
-		/// XCM
-
 		/// The set of parachains which the xcm can reach.
 		type TargetChains: Get<Vec<(MultiLocation, u128)>>;
 		/// This parachain id.
