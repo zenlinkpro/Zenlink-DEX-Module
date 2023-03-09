@@ -29,9 +29,6 @@ impl zenlink_protocol::Config for Runtime {
 	type LpGenerate = PairLpGenerate<Self>;
 	type TargetChains = ZenlinkRegisteredParaChains;
 	type SelfParaId = SelfParaId;
-	type AccountIdConverter = ();
-	type AssetIdConverter = AssetIdConverter;
-	type XcmExecutor = ();
 	type WeightInfo = ();
 }
 
