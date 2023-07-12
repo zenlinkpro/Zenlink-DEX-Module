@@ -102,7 +102,7 @@ where
 					.try_into()
 					.map_err(|_| DispatchError::Other("AmountToBalanceConversionFailed"))?;
 
-				NativeCurrency::transfer(origin, target, balance_amount, KeepAlive)
+				NativeCurrency::transfer(origin, target, balance_amount, AllowDeath)
 			},
 			LOCAL | LIQUIDITY if asset_id.chain_id == self_chain_id =>
 				Local::local_transfer(asset_id, origin, target, amount),
