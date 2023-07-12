@@ -21,7 +21,7 @@ use std::sync::Arc;
 use zenlink_protocol::{AssetBalance, PairInfo};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
-#[rpc(client, server)]
+#[rpc(server)]
 pub trait ZenlinkProtocolApi<BlockHash, AccountId, AssetId> {
 	#[method(name = "zenlinkProtocol_getBalance")]
 	fn get_balance(

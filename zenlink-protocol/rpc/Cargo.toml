@@ -11,7 +11,7 @@ targets = ['x86_64-unknown-linux-gnu']
 # alias "parity-scale-code" to "codec"
 [dependencies]
 serde = { version = "1.0.119", features = ["derive"], optional = true }
-codec = { package = "parity-scale-codec", version = "3.2.2" }
+codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false }
 
 jsonrpsee = { version = "0.16.2", features = ["server", "macros"] }
 

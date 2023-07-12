@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 use zenlink_stable_amm_runtime_api::StableAmmApi as StableAmmRuntimeApi;
 
-#[rpc(client, server)]
+#[rpc(server)]
 pub trait StableAmmApi<BlockHash, CurrencyId, Balance, AccountId, PoolId> {
 	#[method(name = "zenlinkStableAmm_getVirtualPrice")]
 	fn get_virtual_price(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<NumberOrHex>;
