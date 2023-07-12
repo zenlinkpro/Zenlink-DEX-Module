@@ -7,7 +7,7 @@ license = "Apache 2.0"
 
 [dependencies]
 # alias "parity-scale-code" to "codec"
-codec = { package = "parity-scale-codec", version = "3.2.2" }
+codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false }
 
 sp-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }
 sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.42" }

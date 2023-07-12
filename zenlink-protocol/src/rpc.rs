@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::*;
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub struct PairInfo<AccountId, AssetBalance, AssetId> {
