@@ -1119,8 +1119,7 @@ fn remove_liquidity_one_currency_with_lp_token_amount_exceed_own_should_work() {
 }
 
 #[test]
-fn remove_liquidity_one_currency_with_min_amount_not_reached_due_to_front_running_should_not_work()
-{
+fn remove_liquidity_one_currency_with_min_amount_not_reached_due_to_front_running_should_not_work(){
 	new_test_ext().execute_with(|| {
 		let (_, meta_pool_id) = setup_test_meta_pool();
 		let pool = StableAmm::pools(meta_pool_id).unwrap().get_pool_info();

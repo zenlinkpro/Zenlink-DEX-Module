@@ -26,7 +26,7 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::SaturatedConversion,
 	traits::{
-		Currency, ExistenceRequirement, ExistenceRequirement::KeepAlive, Get, WithdrawReasons,
+		Currency, ExistenceRequirement, ExistenceRequirement::AllowDeath, Get, WithdrawReasons,
 	},
 	PalletId, RuntimeDebug,
 };
