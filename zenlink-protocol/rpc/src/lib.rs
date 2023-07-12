@@ -15,7 +15,7 @@ use jsonrpsee::{
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+use sp_runtime::traits::Block as BlockT;
 use std::sync::Arc;
 
 use zenlink_protocol::{AssetBalance, PairInfo};
@@ -107,9 +107,9 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
-		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_amount_in_price(&at, supply, path)
+		api.get_amount_in_price(at, supply, path)
 			.map(|price| price.into())
 			.map_err(runtime_error_into_rpc_err)
 	}
@@ -122,9 +122,9 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
-		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_amount_out_price(&at, supply, path)
+		api.get_amount_out_price(at, supply, path)
 			.map(|price| price.into())
 			.map_err(runtime_error_into_rpc_err)
 	}
@@ -140,10 +140,10 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
-		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
 		api.get_estimate_lptoken(
-			&at,
+			at,
 			asset_0,
 			asset_1,
 			amount_0_desired,
@@ -162,9 +162,9 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
-		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_balance(&at, asset_id, account)
+		api.get_balance(at, asset_id, account)
 			.map(|asset_balance| asset_balance.into())
 			.map_err(runtime_error_into_rpc_err)
 	}
@@ -176,9 +176,9 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<Option<PairInfo<AccountId, NumberOrHex, AssetId>>> {
 		let api = self.client.runtime_api();
-		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.get_pair_by_asset_id(&at, asset_0, asset_1)
+		api.get_pair_by_asset_id(at, asset_0, asset_1)
 			.map(|pairs| {
 				pairs.map(|pair| PairInfo {
 					asset_0: pair.asset_0,
@@ -203,9 +203,9 @@ where
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<Option<(AssetBalance, AssetBalance)>> {
 		let api = self.client.runtime_api();
-		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 
-		api.calculate_remove_liquidity(&at, asset_0, asset_1, amount)
+		api.calculate_remove_liquidity(at, asset_0, asset_1, amount)
 			.map_err(runtime_error_into_rpc_err)
 	}
 }
