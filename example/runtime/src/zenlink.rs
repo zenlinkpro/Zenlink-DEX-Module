@@ -33,6 +33,7 @@ impl zenlink_protocol::Config for Runtime {
 	type TargetChains = ();
 	type SelfParaId = SelfParaId;
 	type WeightInfo = ();
+	type ControlOrigin = EnsureRoot<AccountId>;
 }
 
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Tokens>>;

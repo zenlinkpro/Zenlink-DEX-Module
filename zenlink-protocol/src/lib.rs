@@ -80,6 +80,8 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		/// The only origin that can create pair.
+		type ControlOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 		/// The assets interface beyond native currency and other assets.
 		type MultiAssetsHandler: MultiAssetsHandler<Self::AccountId, Self::AssetId>;
 		/// This pallet id.
@@ -521,7 +523,7 @@ pub mod pallet {
 			asset_0: T::AssetId,
 			asset_1: T::AssetId,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 			ensure!(asset_0.is_support() && asset_1.is_support(), Error::<T>::UnsupportedAssetType);
 
 			ensure!(asset_0 != asset_1, Error::<T>::DeniedCreatePair);
