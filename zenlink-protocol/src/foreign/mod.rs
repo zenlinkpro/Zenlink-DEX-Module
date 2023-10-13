@@ -37,7 +37,12 @@ impl<T: Config> Pallet<T> {
 			Ok(())
 		})?;
 
-		Self::deposit_event(Event::Transferred(id, owner.clone(), target.clone(), amount));
+		Self::deposit_event(Event::Transferred {
+			asset_id: id, 
+			owner: owner.clone(), 
+			target: target.clone(), 
+			amount
+		});
 
 		Ok(())
 	}
@@ -69,7 +74,11 @@ impl<T: Config> Pallet<T> {
 			Ok(())
 		})?;
 
-		Self::deposit_event(Event::Minted(id, owner.clone(), amount));
+		Self::deposit_event(Event::Minted {
+			asset_id: id, 
+			owner: owner.clone(), 
+			amount
+		});
 
 		Ok(())
 	}
@@ -92,7 +101,11 @@ impl<T: Config> Pallet<T> {
 			Ok(())
 		})?;
 
-		Self::deposit_event(Event::Burned(id, owner.clone(), amount));
+		Self::deposit_event(Event::Burned {
+			asset_id: id, 
+			owner: owner.clone(), 
+			amount
+		});
 
 		Ok(())
 	}
