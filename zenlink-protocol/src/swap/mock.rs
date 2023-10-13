@@ -154,6 +154,7 @@ impl Config for Test {
 	type TargetChains = ();
 	type SelfParaId = ();
 	type WeightInfo = ();
+	type ControlOrigin = frame_system::EnsureRoot<u128>;
 }
 
 pub type DexPallet = Pallet<Test>;
